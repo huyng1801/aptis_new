@@ -18,6 +18,8 @@ import {
   ListItemAvatar,
   Divider,
   LinearProgress,
+  Alert,
+  Skeleton,
 } from '@mui/material';
 import {
   Quiz as QuizIcon,
@@ -34,43 +36,9 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/config/app.config';
+import dashboardService from '@/services/dashboardService';
 
-// Mock data for dashboard
-const mockStats = {
-  questions: {
-    total: 1247,
-    change: +12,
-    trend: 'up',
-  },
-  exams: {
-    total: 89,
-    change: +5,
-    trend: 'up',
-  },
-  users: {
-    total: 2156,
-    change: -8,
-    trend: 'down',
-  },
-  submissions: {
-    total: 445,
-    change: +23,
-    trend: 'up',
-  },
-};
-
-const mockRecentExams = [
-  { id: 1, title: 'Toán học lớp 12 - Kỳ thi cuối kỳ', students: 125, status: 'published', date: '2024-01-15' },
-  { id: 2, title: 'Vật lý - Kiểm tra giữa kỳ', students: 89, status: 'draft', date: '2024-01-18' },
-  { id: 3, title: 'Hóa học cơ bản', students: 156, status: 'scheduled', date: '2024-01-20' },
-  { id: 4, title: 'Sinh học tế bào', students: 78, status: 'published', date: '2024-01-22' },
-];
-
-const mockPendingGrading = [
-  { id: 1, examTitle: 'Toán học lớp 12', submissions: 23, deadline: '2024-01-16' },
-  { id: 2, examTitle: 'Vật lý nâng cao', submissions: 15, deadline: '2024-01-17' },
-  { id: 3, examTitle: 'Hóa học', submissions: 8, deadline: '2024-01-18' },
-];
+// Remove all mock data - using real data now
 
 const StatCard = ({ title, value, change, trend, icon: Icon, onClick }) => (
   <Card
@@ -137,14 +105,33 @@ export default function DashboardPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Load dashboard data
+  const loadDashboardData = async () => {
+    try {
+      setError(null);
+      const data = await dashboardService.getSystemOverview();
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Error loading dashboard data:', err);
+      setError('Không thể tải dữ liệu dashboard. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
   const handleRefresh = () => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+    setRefreshing(true);
+    loadDashboardData();
   };
 
   const getCurrentGreeting = () => {
@@ -162,134 +149,212 @@ export default function DashboardPage() {
           <Typography variant="h4" fontWeight="bold">
             {getCurrentGreeting()}, {user?.name || 'Admin'}! 👋
           </Typography>
-          <IconButton onClick={handleRefresh} disabled={loading}>
+          <IconButton onClick={handleRefresh} disabled={loading || refreshing}>
             <RefreshIcon />
           </IconButton>
         </Box>
         <Typography variant="body1" color="text.secondary">
           Đây là tổng quan về hệ thống APTIS của bạn
         </Typography>
-        {loading && <LinearProgress sx={{ mt: 2 }} />}
+        {(loading || refreshing) && <LinearProgress sx={{ mt: 2 }} />}
       </Box>
 
-      {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Tổng số câu hỏi"
-            value={mockStats.questions.total}
-            change={mockStats.questions.change}
-            trend={mockStats.questions.trend}
-            icon={QuizIcon}
-            onClick={() => router.push(ROUTES.QUESTIONS.LIST)}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Tổng số bài thi"
-            value={mockStats.exams.total}
-            change={mockStats.exams.change}
-            trend={mockStats.exams.trend}
-            icon={AssignmentIcon}
-            onClick={() => router.push(ROUTES.EXAMS.LIST)}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Tổng số người dùng"
-            value={mockStats.users.total}
-            change={mockStats.users.change}
-            trend={mockStats.users.trend}
-            icon={PeopleIcon}
-            onClick={() => router.push(ROUTES.USERS.LIST)}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Bài thi cần chấm"
-            value={mockStats.submissions.total}
-            change={mockStats.submissions.change}
-            trend={mockStats.submissions.trend}
-            icon={GradingIcon}
-            onClick={() => router.push(ROUTES.SUBMISSIONS.LIST)}
-          />
-        </Grid>
-      </Grid>
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 4 }}>
+          {error}
+        </Alert>
+      )}
 
-      <Grid container spacing={3}>
-        {/* Recent Exams */}
-        <Grid item xs={12} lg={8}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Bài thi gần đây
-            </Typography>
-            <List>
-              {mockRecentExams.map((exam, index) => (
-                <Box key={exam.id}>
-                  <ListItem sx={{ px: 0 }}>
-                    <ListItemAvatar>
-                      <Avatar>
-                        <AssignmentIcon />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={exam.title}
-                      secondary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            {exam.students} học sinh
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            • {exam.date}
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    {getStatusChip(exam.status)}
-                  </ListItem>
-                  {index < mockRecentExams.length - 1 && <Divider />}
-                </Box>
-              ))}
-            </List>
-          </Paper>
-        </Grid>
+      {/* Loading Skeleton */}
+      {loading ? (
+        <>
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {[1, 2, 3, 4].map((item) => (
+              <Grid item xs={12} sm={6} md={3} key={item}>
+                <Card>
+                  <CardContent>
+                    <Skeleton variant="text" width="60%" />
+                    <Skeleton variant="text" width="40%" height={40} />
+                    <Skeleton variant="text" width="80%" />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+          <Grid container spacing={3}>
+            <Grid item xs={12} lg={8}>
+              <Paper sx={{ p: 3 }}>
+                <Skeleton variant="text" width="30%" />
+                {[1, 2, 3].map((item) => (
+                  <Box key={item} sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+                    <Skeleton variant="circular" width={40} height={40} />
+                    <Box sx={{ flex: 1 }}>
+                      <Skeleton variant="text" width="70%" />
+                      <Skeleton variant="text" width="50%" />
+                    </Box>
+                  </Box>
+                ))}
+              </Paper>
+            </Grid>
+            <Grid item xs={12} lg={4}>
+              <Paper sx={{ p: 3 }}>
+                <Skeleton variant="text" width="40%" />
+                {[1, 2, 3].map((item) => (
+                  <Box key={item} sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+                    <Skeleton variant="circular" width={40} height={40} />
+                    <Box sx={{ flex: 1 }}>
+                      <Skeleton variant="text" width="70%" />
+                      <Skeleton variant="text" width="50%" />
+                    </Box>
+                  </Box>
+                ))}
+              </Paper>
+            </Grid>
+          </Grid>
+        </>
+      ) : dashboardData ? (
+        <>
+          {/* Stats Cards */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard
+                title="Tổng số câu hỏi"
+                value={dashboardData.stats?.questions?.total || 0}
+                change={dashboardData.stats?.questions?.change || 0}
+                trend={dashboardData.stats?.questions?.trend || 'stable'}
+                icon={QuizIcon}
+                onClick={() => router.push(ROUTES.QUESTIONS.LIST)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard
+                title="Tổng số bài thi"
+                value={dashboardData.stats?.exams?.total || 0}
+                change={dashboardData.stats?.exams?.change || 0}
+                trend={dashboardData.stats?.exams?.trend || 'stable'}
+                icon={AssignmentIcon}
+                onClick={() => router.push(ROUTES.EXAMS.LIST)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard
+                title="Tổng số người dùng"
+                value={dashboardData.stats?.users?.total || 0}
+                change={dashboardData.stats?.users?.change || 0}
+                trend={dashboardData.stats?.users?.trend || 'stable'}
+                icon={PeopleIcon}
+                onClick={() => router.push(ROUTES.USERS.LIST)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard
+                title="Bài thi cần chấm"
+                value={dashboardData.stats?.submissions?.ungraded || 0}
+                change={dashboardData.stats?.submissions?.change || 0}
+                trend={dashboardData.stats?.submissions?.trend || 'stable'}
+                icon={GradingIcon}
+                onClick={() => router.push(ROUTES.SUBMISSIONS.LIST)}
+              />
+            </Grid>
+          </Grid>
 
-        {/* Pending Grading */}
-        <Grid item xs={12} lg={4}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Cần chấm bài
-            </Typography>
-            <List>
-              {mockPendingGrading.map((item, index) => (
-                <Box key={item.id}>
+          <Grid container spacing={3}>
+            {/* Recent Activities */}
+            <Grid item xs={12} lg={8}>
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Hoạt động gần đây
+                </Typography>
+                <List>
+                  {dashboardData.recentActivities && dashboardData.recentActivities.length > 0 ? (
+                    dashboardData.recentActivities.map((activity, index) => (
+                      <Box key={activity.id}>
+                        <ListItem sx={{ px: 0 }}>
+                          <ListItemAvatar>
+                            <Avatar>
+                              <AssignmentIcon />
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={activity.title}
+                            secondary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                  {activity.subtitle}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  • {new Date(activity.timestamp).toLocaleDateString('vi-VN')}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                          <Chip 
+                            label={activity.type === 'exam_created' ? 'Tạo bài thi' : 'Bài làm mới'} 
+                            color={activity.type === 'exam_created' ? 'primary' : 'success'} 
+                            size="small" 
+                          />
+                        </ListItem>
+                        {index < dashboardData.recentActivities.length - 1 && <Divider />}
+                      </Box>
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                      Chưa có hoạt động gần đây
+                    </Typography>
+                  )}
+                </List>
+              </Paper>
+            </Grid>
+
+            {/* Grading Summary */}
+            <Grid item xs={12} lg={4}>
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Tình trạng chấm bài
+                </Typography>
+                <List>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemAvatar>
                       <Avatar sx={{ bgcolor: 'warning.main' }}>
-                        <GradingIcon />
+                        <Schedule />
                       </Avatar>
                     </ListItemAvatar>
                     <ListItemText
-                      primary={item.examTitle}
-                      secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            {item.submissions} bài cần chấm
-                          </Typography>
-                          <Typography variant="caption" color="error.main">
-                            Hạn: {item.deadline}
-                          </Typography>
-                        </Box>
-                      }
+                      primary="Chưa chấm"
+                      secondary={`${dashboardData.stats?.submissions?.ungraded || 0} bài`}
                     />
                   </ListItem>
-                  {index < mockPendingGrading.length - 1 && <Divider />}
-                </Box>
-              ))}
-            </List>
-          </Paper>
-        </Grid>
-      </Grid>
+                  <Divider />
+                  <ListItem sx={{ px: 0 }}>
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: 'info.main' }}>
+                        <Warning />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary="Cần review"
+                      secondary={`${dashboardData.stats?.submissions?.needs_review || 0} bài`}
+                    />
+                  </ListItem>
+                  <Divider />
+                  <ListItem sx={{ px: 0 }}>
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: 'success.main' }}>
+                        <CheckCircle />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary="Đã chấm xong"
+                      secondary={`${dashboardData.stats?.submissions?.manually_graded || 0} bài`}
+                    />
+                  </ListItem>
+                </List>
+              </Paper>
+            </Grid>
+          </Grid>
+        </>
+      ) : null}
 
       {/* Quick Actions or Recent Activities could go here */}
     </Box>

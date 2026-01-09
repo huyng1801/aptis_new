@@ -18,12 +18,6 @@ export default function QuestionsPage() {
     setIsClient(true);
   }, []);
 
-  const handleQuestionEdit = (question) => {
-    if (question?.id) {
-      router.push(`/teacher/questions/${question.id}`);
-    }
-  };
-
   // Don't render until client-side to prevent hydration mismatch
   if (!isClient) {
     return (
@@ -61,7 +55,7 @@ export default function QuestionsPage() {
         viewMode="table"
         showActions={true}
         showFilters={true}
-        onQuestionSelect={handleQuestionEdit}
+        readOnlyMode={true}
       />
     </Box>
   );

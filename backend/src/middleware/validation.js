@@ -148,14 +148,16 @@ const questionSchemas = {
     aptis_type_id: Joi.number().integer().positive().required(),
     difficulty: Joi.string().valid('easy', 'medium', 'hard').required(),
     content: Joi.string().required(),
-    duration_seconds: Joi.number().integer().positive().optional(),
+    media_url: Joi.string().allow('').allow(null).optional(),
+    duration_seconds: Joi.number().integer().positive().allow(null).optional(),
     status: Joi.string().valid('draft', 'active').optional(),
   }),
 
   updateQuestion: Joi.object({
     difficulty: Joi.string().valid('easy', 'medium', 'hard').optional(),
     content: Joi.string().optional(),
-    duration_seconds: Joi.number().integer().positive().optional(),
+    media_url: Joi.string().allow('').allow(null).optional(),
+    duration_seconds: Joi.number().integer().positive().allow(null).optional(),
     status: Joi.string().valid('draft', 'active', 'inactive').optional(),
   }),
 };

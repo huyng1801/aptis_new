@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Box,
   TextField,
@@ -28,6 +28,7 @@ import WritingPromptForm from './WritingPromptForm';
 import SpeakingTaskForm from './SpeakingTaskForm';
 import TrueFalseForm from './TrueFalseForm';
 import NoteCompletionForm from './NoteCompletionForm';
+import QuestionStructureGuide from './QuestionStructureGuide';
 
 const DIFFICULTY_LEVELS = [
   { value: 'easy', label: 'Dễ', color: '#4caf50' },
@@ -36,9 +37,59 @@ const DIFFICULTY_LEVELS = [
 ];
 
 const questionSchema = Yup.object().shape({
-  content: Yup.string().required('Nội dung câu hỏi là bắt buộc'),
   difficulty: Yup.string().required('Độ khó là bắt buộc'),
+  // Remove content validation from Formik - we handle it separately with questionContent state
 });
+
+// Validation function for question content (moved outside component to prevent recreation)
+const validateQuestionContent = (content) => {
+  if (!content) {
+    return { isValid: false, error: 'Nội dung câu hỏi không được để trống' };
+  }
+  
+  try {
+    // If it's a JSON string, parse and check if it has meaningful content
+    const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+    
+    // Check if it's empty object or has some content
+    if (typeof parsed === 'object' && parsed !== null) {
+      // For objects, check if it has any meaningful properties
+      const keys = Object.keys(parsed);
+      if (keys.length === 0) {
+        return { isValid: false, error: 'Câu hỏi chưa có nội dung' };
+      }
+      
+      // Check if any property has meaningful content
+      for (const key of keys) {
+        const value = parsed[key];
+        if (typeof value === 'string' && value.trim()) {
+          return { isValid: true, error: null };
+        }
+        if (Array.isArray(value) && value.length > 0) {
+          return { isValid: true, error: null };
+        }
+        if (typeof value === 'object' && value !== null && Object.keys(value).length > 0) {
+          return { isValid: true, error: null };
+        }
+      }
+      return { isValid: false, error: 'Câu hỏi chưa có nội dung hợp lệ' };
+    }
+    
+    // For string content, check if it's not empty
+    const isValid = typeof parsed === 'string' && parsed.trim().length > 0;
+    return { 
+      isValid, 
+      error: isValid ? null : 'Nội dung câu hỏi không được để trống' 
+    };
+  } catch (error) {
+    // If it's not JSON, treat as plain string
+    const isValid = typeof content === 'string' && content.trim().length > 0;
+    return { 
+      isValid, 
+      error: isValid ? null : 'Nội dung câu hỏi không hợp lệ' 
+    };
+  }
+};
 
 export default function QuestionForm({
   aptisType,
@@ -62,37 +113,11 @@ export default function QuestionForm({
   const selectedSkill = skillData;
   const selectedQuestionType = questionTypeData;
 
-  // Validation function for question content
-  const isValidQuestionContent = (content) => {
-    if (!content) return false;
-    
-    try {
-      // If it's a JSON string, parse and check if it has meaningful content
-      const parsed = typeof content === 'string' ? JSON.parse(content) : content;
-      
-      // Check if it's empty object or has some content
-      if (typeof parsed === 'object' && parsed !== null) {
-        // For objects, check if it has any meaningful properties
-        const keys = Object.keys(parsed);
-        if (keys.length === 0) return false;
-        
-        // Check if any property has meaningful content
-        for (const key of keys) {
-          const value = parsed[key];
-          if (typeof value === 'string' && value.trim()) return true;
-          if (Array.isArray(value) && value.length > 0) return true;
-          if (typeof value === 'object' && value !== null && Object.keys(value).length > 0) return true;
-        }
-        return false;
-      }
-      
-      // For string content, check if it's not empty
-      return typeof parsed === 'string' && parsed.trim().length > 0;
-    } catch {
-      // If it's not JSON, treat as plain string
-      return typeof content === 'string' && content.trim().length > 0;
-    }
-  };
+  // Get current validation state (memoized to prevent infinite loops)
+  const validationResult = useMemo(() => {
+    return validateQuestionContent(questionContent);
+  }, [questionContent]);
+  const isValidQuestionContent = validationResult.isValid;
 
   const formik = useFormik({
     initialValues: {
@@ -103,19 +128,45 @@ export default function QuestionForm({
       status: initialData.status || 'draft'
     },
     validationSchema: questionSchema,
-    enableReinitialize: true,
-    onSubmit: (values) => {
+    enableReinitialize: false, // Disable to prevent infinite loops
+    onSubmit: async (values) => {
+      if (!isValidQuestionContent) {
+        console.error('Question content validation failed:', validationResult.error);
+        return;
+      }
+      
       const submissionData = {
         ...values,
         content: questionContent,
         media_url: mediaUrl,
         duration_seconds: hasDuration ? duration * 60 : null
       };
-      onSubmit(submissionData);
+      
+      try {
+        await onSubmit(submissionData);
+      } catch (error) {
+        console.error('[QuestionForm] Error in onSubmit:', error);
+        // Re-throw để parent component có thể xử lý
+        throw new Error(`Lỗi submit form: ${error.message || error}`);
+      }
     }
   });
 
   const renderSpecificForm = () => {
+    // Safety check
+    if (!selectedQuestionType) {
+      return (
+        <Box textAlign="center" py={4}>
+          <Typography color="error">
+            ❌ Loại câu hỏi không được chọn
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mt={1}>
+            Vui lòng quay lại và chọn loại câu hỏi
+          </Typography>
+        </Box>
+      );
+    }
+
     const props = {
       content: questionContent,
       onChange: setQuestionContent,
@@ -168,10 +219,16 @@ export default function QuestionForm({
       default:
         return (
           <Box textAlign="center" py={4}>
-            <Typography color="text.secondary">
-              Loại câu hỏi này chưa được hỗ trợ: {questionCode}
+            <Typography color="error" gutterBottom>
+              ⚠️ Loại câu hỏi này chưa được hỗ trợ
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mt={1} sx={{ wordBreak: 'break-all' }}>
+              Question Code: {questionCode}
             </Typography>
             <Typography variant="body2" color="text.secondary" mt={1}>
+              Selected Type: {JSON.stringify(selectedQuestionType, null, 2)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mt={2}>
               Cần thêm form component cho loại câu hỏi này.
             </Typography>
           </Box>
@@ -279,6 +336,44 @@ export default function QuestionForm({
         <Typography variant="h6" gutterBottom>
           Nội dung câu hỏi
         </Typography>
+        
+        {/* Debug Panel - only show in development */}
+        {process.env.NODE_ENV === 'development' && (
+          <Box sx={{ mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+            <Typography variant="subtitle2" color="primary" gutterBottom>
+              Debug Info (Dev Mode)
+            </Typography>
+            <Typography variant="caption" display="block">
+              Question Type: {selectedQuestionType?.code}
+            </Typography>
+            <Typography variant="caption" display="block">
+              Content Length: {questionContent?.length || 0}
+            </Typography>
+            <Typography variant="caption" display="block" color={isValidQuestionContent ? 'success.main' : 'error.main'}>
+              Content Validation: {isValidQuestionContent ? 'PASSED' : 'FAILED'}
+            </Typography>
+            <Typography variant="caption" display="block" color={Object.keys(formik.errors).length === 0 ? 'success.main' : 'error.main'}>
+              Form Validation: {Object.keys(formik.errors).length === 0 ? 'PASSED' : 'FAILED'}
+            </Typography>
+            {Object.keys(formik.errors).length > 0 && (
+              <Typography variant="caption" display="block" color="error">
+                Formik Errors: {JSON.stringify(formik.errors)}
+              </Typography>
+            )}
+            {validationResult.error && (
+              <Typography variant="caption" display="block" color="error">
+                Content Error: {validationResult.error}
+              </Typography>
+            )}
+            <Typography variant="caption" display="block">
+              Submit Disabled: {formik.isSubmitting || !isValidQuestionContent || Object.keys(formik.errors).length > 0}
+            </Typography>
+          </Box>
+        )}
+        
+        {/* Hiển thị hướng dẫn cấu trúc câu hỏi */}
+        <QuestionStructureGuide questionType={selectedQuestionType} />
+        
         {renderSpecificForm()}
       </Paper>
 
@@ -293,15 +388,31 @@ export default function QuestionForm({
           Quay lại
         </Button>
         
-        <Button
-          type="submit"
-          variant="contained"
-          startIcon={<Save />}
-          disabled={formik.isSubmitting || !isValidQuestionContent(questionContent)}
-          size="large"
-        >
-          {isEditing ? 'Cập nhật câu hỏi' : 'Tiếp tục'}
-        </Button>
+        <Box display="flex" flexDirection="column" alignItems="flex-end">
+          {!isValidQuestionContent && validationResult.error && (
+            <Typography 
+              variant="caption" 
+              color="error" 
+              sx={{ mb: 1 }}
+            >
+              {validationResult.error}
+            </Typography>
+          )}
+          
+          <Button
+            type="submit"
+            variant="contained"
+            startIcon={<Save />}
+            disabled={
+              formik.isSubmitting || 
+              !isValidQuestionContent || 
+              Object.keys(formik.errors).length > 0
+            }
+            size="large"
+          >
+            {isEditing ? 'Cập nhật câu hỏi' : 'Tiếp tục'}
+          </Button>
+        </Box>
       </Box>
     </Box>
   );

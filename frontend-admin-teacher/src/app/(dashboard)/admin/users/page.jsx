@@ -16,7 +16,10 @@ import {
   MenuItem,
   IconButton,
   Chip,
-  Avatar
+  Avatar,
+  Grid,
+  Alert,
+  Skeleton
 } from '@mui/material';
 import {
   Search,
@@ -25,10 +28,13 @@ import {
   Delete,
   PersonAdd,
   Block,
-  CheckCircle
+  CheckCircle,
+  LockReset,
+  Download,
+  Refresh
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-import { fetchUsers, deleteUser, updateUserStatus } from '@/store/slices/userSlice';
+import { fetchUsers, deleteUser, updateUserStatus, resetUserPassword, createUser, updateUser } from '@/store/slices/userSlice';
 import DataTable from '@/components/shared/DataTable';
 import UserForm from '@/components/admin/users/UserForm';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
@@ -36,7 +42,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog';
 export default function UsersPage() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { users, isLoading: loading, pagination } = useSelector(state => state.users);
+  const { users, isLoading: loading, pagination, error } = useSelector(state => state.users);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
@@ -44,57 +50,31 @@ export default function UsersPage() {
     status: ''
   });
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmReset, setConfirmReset] = useState(null);
   const [userFormOpen, setUserFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
+  // Fetch users on component mount and when filters change
   useEffect(() => {
     handleFetchUsers();
   }, [searchTerm, filters]);
 
-  const handleFetchUsers = (page = 1) => {
-    dispatch(fetchUsers({
+  const handleFetchUsers = (page = 1, limit = 20) => {
+    const filterParams = {
       page,
-      search: searchTerm,
-      ...filters
-    }));
-  };
-
-  const handleEdit = (user) => {
-    setEditingUser(user);
-    setUserFormOpen(true);
-  };
-
-  const handleToggleStatus = async (user) => {
-    await dispatch(updateUserStatus({
-      id: user.id,
-      is_active: !user.is_active
-    }));
-    handleFetchUsers();
-  };
-
-  const handleDelete = (user) => {
-    setConfirmDelete(user);
-  };
-
-  const confirmDeleteUser = async () => {
-    if (confirmDelete) {
-      await dispatch(deleteUser(confirmDelete.id));
-      setConfirmDelete(null);
-      handleFetchUsers();
-    }
-  };
-
-  const handleUserFormClose = () => {
-    setUserFormOpen(false);
-    setEditingUser(null);
-    handleFetchUsers();
+      limit,
+      search: searchTerm || undefined,
+      role: filters.role || undefined,
+      status: filters.status || undefined
+    };
+    dispatch(fetchUsers(filterParams));
   };
 
   const getRoleColor = (role) => {
     switch (role) {
       case 'admin': return 'error';
-      case 'teacher': return 'primary';
-      case 'student': return 'secondary';
+      case 'teacher': return 'warning';
+      case 'student': return 'primary';
       default: return 'default';
     }
   };
@@ -108,13 +88,84 @@ export default function UsersPage() {
     }
   };
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active': return 'success';
+      case 'inactive': return 'warning';
+      case 'banned': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const handleEdit = (user) => {
+    setEditingUser(user);
+    setUserFormOpen(true);
+  };
+
+  const handleDelete = (user) => {
+    if (user.role === 'admin') return;
+    setConfirmDelete(user);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (confirmDelete) {
+      try {
+        await dispatch(deleteUser(confirmDelete.id));
+        setConfirmDelete(null);
+        handleFetchUsers(pagination.page);
+      } catch (error) {
+        console.error('Delete failed:', error);
+      }
+    }
+  };
+
+  const handleToggleStatus = async (user) => {
+    try {
+      const newStatus = user.status === 'active' ? 'inactive' : 'active';
+      await dispatch(updateUser({ 
+        id: user.id, 
+        userData: { status: newStatus }
+      }));
+      handleFetchUsers(pagination.page);
+    } catch (error) {
+      console.error('Status update failed:', error);
+    }
+  };
+
+  const handleResetPassword = (user) => {
+    setConfirmReset(user);
+  };
+
+  const confirmResetPassword = async () => {
+    if (confirmReset) {
+      try {
+        await dispatch(resetUserPassword(confirmReset.id));
+        setConfirmReset(null);
+        alert('Password reset successfully. New password sent to user email.');
+      } catch (error) {
+        console.error('Password reset failed:', error);
+      }
+    }
+  };
+
+  const handleUserFormClose = () => {
+    setUserFormOpen(false);
+    setEditingUser(null);
+    handleFetchUsers(pagination.page);
+  };
+
+
+
   const columns = [
     {
       id: 'user',
       label: 'Người dùng',
       render: (row) => (
         <Box display="flex" alignItems="center" gap={1}>
-          <Avatar sx={{ width: 40, height: 40 }}>
+          <Avatar 
+            src={row.avatar_url}
+            sx={{ width: 40, height: 40 }}
+          >
             {row.full_name?.charAt(0) || row.email?.charAt(0)}
           </Avatar>
           <Box>
@@ -124,6 +175,11 @@ export default function UsersPage() {
             <Typography variant="caption" color="text.secondary">
               {row.email}
             </Typography>
+            {row.phone && (
+              <Typography variant="caption" display="block" color="text.secondary">
+                {row.phone}
+              </Typography>
+            )}
           </Box>
         </Box>
       )
@@ -151,14 +207,14 @@ export default function UsersPage() {
       render: (row) => row.last_login ? new Date(row.last_login).toLocaleDateString('vi-VN') : 'Chưa từng'
     },
     {
-      id: 'is_active',
+      id: 'status',
       label: 'Trạng thái',
       render: (row) => (
         <Chip 
-          label={row.is_active ? 'Hoạt động' : 'Tạm khóa'} 
+          label={row.status === 'active' ? 'Hoạt động' : row.status === 'inactive' ? 'Tạm khóa' : 'Bị cấm'} 
           size="small"
-          color={row.is_active ? 'success' : 'default'}
-          icon={row.is_active ? <CheckCircle /> : <Block />}
+          color={getStatusColor(row.status)}
+          icon={row.status === 'active' ? <CheckCircle /> : <Block />}
         />
       )
     },
@@ -167,26 +223,37 @@ export default function UsersPage() {
       label: 'Hành động',
       align: 'center',
       render: (row) => (
-        <Box>
+        <Box display="flex" gap={0.5}>
           <IconButton
             size="small"
             onClick={() => handleEdit(row)}
             color="primary"
+            title="Chỉnh sửa"
           >
             <Edit />
           </IconButton>
           <IconButton
             size="small"
-            onClick={() => handleToggleStatus(row)}
-            color={row.is_active ? "warning" : "success"}
+            onClick={() => handleResetPassword(row)}
+            color="warning"
+            title="Đặt lại mật khẩu"
           >
-            {row.is_active ? <Block /> : <CheckCircle />}
+            <LockReset />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleToggleStatus(row)}
+            color={row.status === 'active' ? "warning" : "success"}
+            title={row.status === 'active' ? 'Khóa tài khoản' : 'Kích hoạt tài khoản'}
+          >
+            {row.status === 'active' ? <Block /> : <CheckCircle />}
           </IconButton>
           <IconButton
             size="small"
             onClick={() => handleDelete(row)}
             color="error"
             disabled={row.role === 'admin'}
+            title="Xóa người dùng"
           >
             <Delete />
           </IconButton>
@@ -201,15 +268,24 @@ export default function UsersPage() {
         <Typography variant="h4" fontWeight="bold">
           Quản lý người dùng
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<PersonAdd />}
-          onClick={() => setUserFormOpen(true)}
-          size="large"
-        >
-          Thêm người dùng
-        </Button>
+        <Box display="flex" gap={1}>
+
+          <Button
+            variant="contained"
+            startIcon={<PersonAdd />}
+            onClick={() => setUserFormOpen(true)}
+            size="large"
+          >
+            Thêm người dùng
+          </Button>
+        </Box>
       </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
@@ -279,6 +355,14 @@ export default function UsersPage() {
         content={`Bạn có chắc muốn xóa người dùng "${confirmDelete?.email}"? Hành động này không thể hoàn tác.`}
         onConfirm={confirmDeleteUser}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={!!confirmReset}
+        title="Đặt lại mật khẩu"
+        content={`Bạn có chắc muốn đặt lại mật khẩu cho người dùng "${confirmReset?.email}"? Mật khẩu mới sẽ được gửi qua email.`}
+        onConfirm={confirmResetPassword}
+        onCancel={() => setConfirmReset(null)}
       />
     </Box>
   );

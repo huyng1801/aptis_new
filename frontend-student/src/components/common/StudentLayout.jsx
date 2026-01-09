@@ -44,16 +44,16 @@ import Footer from './Footer';
 const bottomNavItems = [
   { label: 'Trang chủ', icon: <Home />, path: '/home' },
   { label: 'Đề thi', icon: <Assessment />, path: '/exams' },
+  { label: 'Ôn tập', icon: <TrendingUp />, path: '/practice' },
   { label: 'Kết quả', icon: <History />, path: '/results' },
-
   { label: 'Cá nhân', icon: <Person />, path: '/profile' },
 ];
 
 const drawerItems = [
   { label: 'Trang chủ', icon: <Home />, path: '/home' },
   { label: 'Đề thi', icon: <Assessment />, path: '/exams' },
+  { label: 'Ôn tập', icon: <TrendingUp />, path: '/practice' },
   { label: 'Kết quả', icon: <History />, path: '/results' },
-
   { label: 'Cá nhân', icon: <Person />, path: '/profile' },
 ];
 

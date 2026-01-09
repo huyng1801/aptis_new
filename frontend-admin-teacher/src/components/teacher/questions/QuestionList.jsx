@@ -18,7 +18,7 @@ import {
   Grid,
   IconButton
 } from '@mui/material';
-import { Search, Add, FilterList, Visibility, Edit } from '@mui/icons-material';
+import { Search, Add, FilterList, Visibility } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { fetchQuestions, fetchFilterOptions } from '@/store/slices/questionSlice';
 import { 
@@ -37,7 +37,7 @@ export default function QuestionList({
   viewMode = 'table',
   showActions = true,
   showFilters = true,
-  onQuestionSelect
+  readOnlyMode = false
 }) {
   const router = useRouter();
   const dispatch = useDispatch();
@@ -163,13 +163,6 @@ export default function QuestionList({
             color="info"
           >
             <Visibility />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => onQuestionSelect && onQuestionSelect(row)}
-            color="primary"
-          >
-            <Edit />
           </IconButton>
         </Box>
       )
@@ -323,7 +316,6 @@ export default function QuestionList({
               <QuestionCard 
                 question={question}
                 onPreview={() => handlePreview(question)}
-                onSelect={onQuestionSelect}
                 showActions={showActions}
               />
             </Grid>

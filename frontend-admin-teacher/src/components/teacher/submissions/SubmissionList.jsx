@@ -14,32 +14,17 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControlLabel,
-  Checkbox,
-  Alert,
   LinearProgress,
-  Tooltip,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText
+  Tooltip
 } from '@mui/material';
 import {
   Visibility,
   Edit,
   Refresh,
-  MoreVert,
   Psychology,
   Person,
-  CheckCircle,
   Warning,
-  Schedule,
-  Assignment
+  Schedule
 } from '@mui/icons-material';
 
 export default function SubmissionList({ 
@@ -47,13 +32,9 @@ export default function SubmissionList({
   loading = false,
   onRefresh,
   onViewSubmission,
-  onGradeSubmission,
-  onRegradeSubmissions
+  onGradeSubmission
 }) {
-  const [selectedSubmissions, setSelectedSubmissions] = useState([]);
-  const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
-  const [regradeDialogOpen, setRegradeDialogOpen] = useState(false);
-  const [regradeType, setRegradeType] = useState('ai');
+  // Bỏ selectedSubmissions và các state không cần thiết
 
   const getStatusChip = (submission) => {
     const { grading_status, needs_review, has_ai_feedback } = submission;
@@ -94,46 +75,7 @@ export default function SubmissionList({
         </Tooltip>
       );
     }
-    if (submission.can_regrade) {
-      return (
-        <Tooltip title="Có thể chấm lại">
-          <Refresh color="info" />
-        </Tooltip>
-      );
-    }
     return null;
-  };
-
-  const handleSelectSubmission = (submissionId) => {
-    setSelectedSubmissions(prev => 
-      prev.includes(submissionId)
-        ? prev.filter(id => id !== submissionId)
-        : [...prev, submissionId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    const eligibleSubmissions = submissions
-      .filter(s => s.can_regrade)
-      .map(s => s.id);
-    
-    setSelectedSubmissions(
-      selectedSubmissions.length === eligibleSubmissions.length 
-        ? [] 
-        : eligibleSubmissions
-    );
-  };
-
-  const handleRegradeSubmissions = async () => {
-    if (selectedSubmissions.length === 0) return;
-
-    try {
-      await onRegradeSubmissions(selectedSubmissions, regradeType);
-      setSelectedSubmissions([]);
-      setRegradeDialogOpen(false);
-    } catch (error) {
-      console.error('Error regrading submissions:', error);
-    }
   };
 
   const getScoreDisplay = (submission) => {
@@ -162,29 +104,14 @@ export default function SubmissionList({
         <Typography variant="h6">
           Danh sách bài làm ({submissions.length})
         </Typography>
-        <Box display="flex" gap={2} alignItems="center">
-          {selectedSubmissions.length > 0 && (
-            <Alert severity="info" sx={{ mr: 2 }}>
-              Đã chọn {selectedSubmissions.length} bài làm
-            </Alert>
-          )}
-          <Button
-            variant="outlined"
-            startIcon={<Refresh />}
-            onClick={onRefresh}
-            disabled={loading}
-          >
-            Làm mới
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<Psychology />}
-            onClick={() => setRegradeDialogOpen(true)}
-            disabled={selectedSubmissions.length === 0}
-          >
-            Chấm lại bằng AI
-          </Button>
-        </Box>
+        <Button
+          variant="outlined"
+          startIcon={<Refresh />}
+          onClick={onRefresh}
+          disabled={loading}
+        >
+          Làm mới
+        </Button>
       </Box>
 
       {/* Table */}
@@ -192,19 +119,6 @@ export default function SubmissionList({
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell padding="checkbox">
-                <Checkbox
-                  checked={
-                    submissions.filter(s => s.can_regrade).length > 0 &&
-                    selectedSubmissions.length === submissions.filter(s => s.can_regrade).length
-                  }
-                  indeterminate={
-                    selectedSubmissions.length > 0 && 
-                    selectedSubmissions.length < submissions.filter(s => s.can_regrade).length
-                  }
-                  onChange={handleSelectAll}
-                />
-              </TableCell>
               <TableCell>Học sinh</TableCell>
               <TableCell>Bài thi</TableCell>
               <TableCell>Kỹ năng</TableCell>
@@ -219,7 +133,7 @@ export default function SubmissionList({
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={10} sx={{ p: 3 }}>
+                <TableCell colSpan={9} sx={{ p: 3 }}>
                   <LinearProgress />
                   <Typography align="center" sx={{ mt: 2 }}>
                     Đang tải...
@@ -229,7 +143,7 @@ export default function SubmissionList({
             )}
             {!loading && submissions.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} sx={{ p: 3, textAlign: 'center' }}>
+                <TableCell colSpan={9} sx={{ p: 3, textAlign: 'center' }}>
                   <Typography color="text.secondary">
                     Không có bài làm nào
                   </Typography>
@@ -238,13 +152,6 @@ export default function SubmissionList({
             )}
             {!loading && submissions.map((submission) => (
               <TableRow key={submission.id} hover>
-                <TableCell padding="checkbox">
-                  <Checkbox
-                    checked={selectedSubmissions.includes(submission.id)}
-                    onChange={() => handleSelectSubmission(submission.id)}
-                    disabled={!submission.can_regrade}
-                  />
-                </TableCell>
                 <TableCell>
                   <Box>
                     <Typography variant="body2" fontWeight="medium">
@@ -319,63 +226,7 @@ export default function SubmissionList({
         </Table>
       </TableContainer>
 
-      {/* Regrade Dialog */}
-      <Dialog 
-        open={regradeDialogOpen} 
-        onClose={() => setRegradeDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Chấm lại bằng AI</DialogTitle>
-        <DialogContent>
-          <Typography gutterBottom>
-            Bạn muốn chấm lại {selectedSubmissions.length} bài làm được chọn?
-          </Typography>
-          
-          <Box mt={3}>
-            <Typography variant="subtitle2" gutterBottom>
-              Loại chấm lại:
-            </Typography>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={regradeType === 'ai'}
-                  onChange={(e) => setRegradeType(e.target.checked ? 'ai' : 'reset')}
-                />
-              }
-              label="Chỉ chấm lại bằng AI (giữ nguyên kết quả cũ)"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={regradeType === 'reset'}
-                  onChange={(e) => setRegradeType(e.target.checked ? 'reset' : 'ai')}
-                />
-              }
-              label="Xóa kết quả cũ và chấm lại hoàn toàn"
-            />
-          </Box>
-
-          <Alert severity="info" sx={{ mt: 2 }}>
-            {regradeType === 'ai' 
-              ? 'AI sẽ chấm lại và cung cấp feedback mới. Điểm số cũ sẽ được backup.'
-              : 'Tất cả kết quả chấm điểm trước đó sẽ bị xóa và AI sẽ chấm lại từ đầu.'
-            }
-          </Alert>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRegradeDialogOpen(false)}>
-            Hủy
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={handleRegradeSubmissions}
-            startIcon={<Psychology />}
-          >
-            Bắt đầu chấm lại
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Đã bỏ dialog chấm lại bằng AI */}
     </Paper>
   );
 }

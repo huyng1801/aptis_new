@@ -25,18 +25,14 @@ export default function SubmissionsPage() {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState(null);
   const [availableExams, setAvailableExams] = useState([]);
-  const [availableStudents, setAvailableStudents] = useState([]);
   
   const [filters, setFilters] = useState({
     grading_status: '',
     skill_type: '',
     exam_id: '',
-    student_id: '',
     has_ai_feedback: '',
-    needs_review: '',
     answer_type: '', // 'text' for writing, 'audio' for speaking
     score_range: { min: 0, max: 100 },
-    date_range: { start: null, end: null },
     page: 1,
     limit: 20
   });
@@ -68,16 +64,36 @@ export default function SubmissionsPage() {
 
   const loadStats = async () => {
     try {
+      // Chỉ gọi API stats khi có filter cụ thể
+      const hasFilters = filters.exam_id || filters.skill_type;
+      
+      if (!hasFilters) {
+        // Set default stats khi chưa có filter
+        setStats({
+          total: 0,
+          ungraded: 0,
+          ai_graded: 0,
+          manually_graded: 0,
+          needs_review: 0
+        });
+        return;
+      }
+
       const response = await submissionApi.getGradingStats({
         exam_id: filters.exam_id,
-        student_id: filters.student_id,
-        skill_type: filters.skill_type,
-        date_from: filters.date_range?.start,
-        date_to: filters.date_range?.end
+        skill_type: filters.skill_type
       });
       setStats(response.data);
     } catch (error) {
       console.error('Error loading stats:', error);
+      // Set default stats on error
+      setStats({
+        total: 0,
+        ungraded: 0,
+        ai_graded: 0,
+        manually_graded: 0,
+        needs_review: 0
+      });
     }
   };
 
@@ -90,12 +106,9 @@ export default function SubmissionsPage() {
       grading_status: '',
       skill_type: '',
       exam_id: '',
-      student_id: '',
       has_ai_feedback: '',
-      needs_review: '',
       answer_type: '',
       score_range: { min: 0, max: 100 },
-      date_range: { start: null, end: null },
       page: 1,
       limit: 20
     });
@@ -230,7 +243,6 @@ export default function SubmissionsPage() {
           onFiltersChange={handleFiltersChange}
           onClearFilters={handleClearFilters}
           availableExams={availableExams}
-          availableStudents={availableStudents}
         />
 
         {/* Main Content */}

@@ -25,7 +25,7 @@ export default function SpeakingTaskForm({ content = {}, onChange }) {
       preparation_time: parseInt(preparationTime) || 0,
       criteria_id: criteriaId
     });
-  }, [task, instructions, recordingTime, preparationTime, criteriaId]);
+  }, [task, instructions, recordingTime, preparationTime, criteriaId]); // Remove onChange from dependencies
 
   return (
     <Box>

@@ -100,7 +100,7 @@ export default function MCQForm({ content, onChange, skillType, questionType, ap
     if (jsonString !== content) {
       onChange(jsonString);
     }
-  }, [title, questionText, passage, audioScript, options, explanation, isListeningMCQ]);
+  }, [title, questionText, passage, audioScript, options, explanation, isListeningMCQ, content]); // Add content, remove onChange
 
   const handleTitleChange = (value) => {
     setTitle(value);

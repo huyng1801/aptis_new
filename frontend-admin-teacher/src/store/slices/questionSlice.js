@@ -64,23 +64,42 @@ export const createQuestion = createAsyncThunk(
   'questions/createQuestion',
   async (questionData, { rejectWithValue }) => {
     try {
-      // Get IDs for question type and aptis type
-      const questionTypeResponse = await questionApi.getQuestionTypeByCode(questionData.question_type_code);
-      const aptisTypeResponse = await questionApi.getAptisTypeByCode(questionData.aptis_type_id);
+      console.log('[createQuestion thunk] Input data:', questionData);
+      
+      // Use question_type_code and aptis_type_code directly if provided
+      let question_type_id = questionData.question_type_id;
+      let aptis_type_id = questionData.aptis_type_id;
+      
+      // If codes are provided, fetch the IDs
+      if (questionData.question_type_code && !question_type_id) {
+        const questionTypeResponse = await questionApi.getQuestionTypeByCode(questionData.question_type_code);
+        question_type_id = questionTypeResponse.data.id;
+      }
+      
+      if (questionData.aptis_type_code && !aptis_type_id) {
+        const aptisTypeResponse = await questionApi.getAptisTypeByCode(questionData.aptis_type_code);
+        aptis_type_id = aptisTypeResponse.data.id;
+      }
+      
+      if (!question_type_id || !aptis_type_id) {
+        throw new Error('Missing required question_type_id or aptis_type_id');
+      }
 
       const backendData = {
-        question_type_id: questionTypeResponse.data.id,
-        aptis_type_id: aptisTypeResponse.data.id,
-        difficulty: questionData.difficulty,
+        question_type_id,
+        aptis_type_id,
+        difficulty: questionData.difficulty || 'medium',
         content: questionData.content,
-        media_url: questionData.media_url,
-        duration_seconds: questionData.duration_seconds,
-        status: questionData.status
+        media_url: questionData.media_url || '',
+        duration_seconds: questionData.duration_seconds ? parseInt(questionData.duration_seconds) : 0,
+        status: questionData.status || 'draft'
       };
-
+      
+      console.log('[createQuestion thunk] Backend data:', backendData);
       const response = await questionApi.createQuestion(backendData);
       return response.data;
     } catch (error) {
+      console.error('[createQuestion thunk] Error:', error);
       return rejectWithValue(error.message || 'Failed to create question');
     }
   }

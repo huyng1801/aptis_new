@@ -161,20 +161,6 @@ export default function CriteriaPreview({ open, onClose, criteria, onEdit }) {
         >
           Đóng
         </Button>
-        <Button 
-          variant="contained" 
-          onClick={() => {
-            onClose();
-            if (onEdit) {
-              onEdit();
-            }
-          }}
-          startIcon={<Edit />}
-          color="primary"
-          size="small"
-        >
-          Chỉnh sửa
-        </Button>
       </DialogActions>
     </Dialog>
   );

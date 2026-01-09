@@ -118,7 +118,7 @@ export default function MatchingForm({
     if (jsonString !== content) {
       onChange(jsonString);
     }
-  }, [title, passage, items, options]);
+  }, [title, passage, items, options, content]); // Add content to dependencies but NOT onChange
 
   const getFormTitle = () => {
     if (headingMatching) return 'Reading - Matching Headings';
@@ -145,6 +145,38 @@ export default function MatchingForm({
       ? { speaker: `Speaker ${items.length + 1}`, text: '', correct: 'A' }
       : { statement: `Statement ${items.length + 1}`, text: '', correct: 'Person A' };
     setItems([...items, newItem]);
+  };
+
+  const loadSampleTemplate = () => {
+    if (headingMatching) {
+      setTitle('Vegetarian Food');
+      setPassage('Read the passage quickly. Choose a heading for each numbered paragraph (1-5) from the drop-down box.\n\nAvailable Headings:\n- Understanding the possible global food crisis and its causes\n- Recipes for popular vegetarian dishes\n- Diverse types of vegetarian meals\n- The ethical and environmental implications of factory farming\n- Numerous health benefits of plant-based diets\n- Shared global responsibility towards sustainable eating\n- Respect for life: embracing compassion for all living beings\n- Various explanations behind dietary choices and preferences\n\nPARAGRAPH 1:\nNo longer seeing food as simply protein from animals, there are innumerable options for those opting not to eat meat. From vibrant salads loaded with fresh vegetables to hearty plant-based entrees and numerous delicious desserts, the possibilities are endless.\n\nPARAGRAPH 2:\nUnderstanding the different reasons individuals are making them. Many people opt for a vegetarian diet for health considerations. Some may be motivated by cultural traditions or personal beliefs.');
+      setItems([
+        { num: 1, text: 'PARAGRAPH 1: No longer seeing food as simply protein from animals, there are innumerable options for those opting not to eat meat. From vibrant salads loaded with fresh vegetables to hearty plant-based entrees and numerous delicious desserts, the possibilities are endless.', correct: 3 },
+        { num: 2, text: 'PARAGRAPH 2: Understanding the different reasons individuals are making them. Many people opt for a vegetarian diet for health considerations. Some may be motivated by cultural traditions or personal beliefs, while others seek new culinary experiences.', correct: 8 }
+      ]);
+      setOptions([
+        'Understanding the possible global food crisis and its causes',
+        'Recipes for popular vegetarian dishes',
+        'Diverse types of vegetarian meals',
+        'The ethical and environmental implications of factory farming',
+        'Numerous health benefits of plant-based diets',
+        'Shared global responsibility towards sustainable eating',
+        'Respect for life: embracing compassion for all living beings',
+        'Various explanations behind dietary choices and preferences'
+      ]);
+    } else if (personMatching) {
+      setTitle('Four people share their feelings about reading books');
+      setPassage('Four people share their feelings about reading books. Read their answers and answer the questions below.\n\nPerson A: I have to read a lot for my job, and I find that reading factual books is often boring. The material tends to be dry and lacks excitement. After a long day at work, I usually feel too exhausted to read much, which means I have limited time for reading anything enjoyable.\n\nPerson B: My wife is always complaining that she can\'t read many books. I don\'t have that problem because I plan the reading schedule carefully. I set aside specific times each week for reading, which helps me stay on track.\n\nPerson C: When I was a child, I struggled to finish one book at a time. It felt overwhelming to stay focused on a single story. However, now that I\'m older, I enjoy exploring many genres and even read multiple books at once.\n\nPerson D: I keep a novel on the bedside table because I want to read before sleeping. However, I often find myself getting sleepy as soon as I start reading, which makes it difficult to concentrate.');
+      setItems([
+        { text: 'Who thinks reading factual books is boring?', correct: 'A' },
+        { text: 'Who reads more than another family member?', correct: 'B' },
+        { text: 'Who has limited time for reading?', correct: 'A' },
+        { text: 'Who has difficulty in finishing a book?', correct: 'D' },
+        { text: 'Who reads many books at once?', correct: 'C' }
+      ]);
+      setOptions(['Person A', 'Person B', 'Person C', 'Person D']);
+    }
   };
 
   const removeItem = (index) => {
@@ -187,12 +219,25 @@ export default function MatchingForm({
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        {getFormTitle()}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" mb={3}>
-        {getFormDescription()}
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            {getFormTitle()}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {getFormDescription()}
+          </Typography>
+        </Box>
+        {(headingMatching || personMatching) && (
+          <Button 
+            variant="outlined" 
+            size="small"
+            onClick={loadSampleTemplate}
+          >
+            Tải mẫu
+          </Button>
+        )}
+      </Box>
 
       {/* Title */}
       <TextField

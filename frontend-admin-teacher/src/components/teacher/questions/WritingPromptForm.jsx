@@ -30,7 +30,7 @@ export default function WritingPromptForm({ content = {}, onChange }) {
       criteria_id: criteriaId,
       time_limit: hasTimeLimit ? parseInt(timeLimit) || 0 : null
     });
-  }, [prompt, minWords, maxWords, guidelines, criteriaId, hasTimeLimit, timeLimit]);
+  }, [prompt, minWords, maxWords, guidelines, criteriaId, hasTimeLimit, timeLimit]); // Remove onChange from dependencies
 
   return (
     <Box>

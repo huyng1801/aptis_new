@@ -5,6 +5,7 @@ const attemptController = require('../controllers/studentController/attemptContr
 const answerController = require('../controllers/studentController/answerController');
 const resultController = require('../controllers/studentController/resultController');
 const dashboardController = require('../controllers/studentController/dashboardController');
+const practiceController = require('../controllers/studentController/practiceController');
 const { authMiddleware } = require('../middleware/auth');
 const { isStudent } = require('../middleware/roleCheck');
 const { validate, examSchemas, attemptSchemas } = require('../middleware/validation');
@@ -72,5 +73,17 @@ router.get(
   isStudent,
   resultController.getAnswerFeedback,
 );
+
+// Practice routes
+router.get('/practice/questions', authMiddleware, isStudent, apiLimiter, practiceController.getPracticeQuestions);
+
+router.post(
+  '/practice/submit',
+  authMiddleware,
+  isStudent,
+  practiceController.submitPracticeAnswer,
+);
+
+router.get('/practice/stats', authMiddleware, isStudent, apiLimiter, practiceController.getPracticeStats);
 
 module.exports = router;

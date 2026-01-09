@@ -1,17 +1,23 @@
 import { apiClient } from './apiClient';
 import { API_ENDPOINTS } from '@/config/api.config';
 
+// Helper to ensure response data is always defined (handles 304 responses)
+const getResponseData = (response, defaultValue = null) => {
+  return response.data ?? defaultValue;
+};
+
 export const questionApi = {
   // Get all questions with pagination and filters
   getQuestions: async (params) => {
     const response = await apiClient.get(API_ENDPOINTS.TEACHER.QUESTIONS.LIST, { params });
-    return response.data;
+    return getResponseData(response, { questions: [], total: 0 });
   },
 
   // Get a single question by ID
   getQuestionById: async (id) => {
     const response = await apiClient.get(API_ENDPOINTS.TEACHER.QUESTIONS.BY_ID(id));
-    return response.data;
+    // Ensure we return the data even if response is 304
+    return getResponseData(response, {});
   },
 
   // Create a new question with proper backend structure
@@ -50,32 +56,32 @@ export const questionApi = {
   // Get APTIS types
   getAptisTypes: async () => {
     const response = await apiClient.get('/api/aptis-types');
-    return response.data;
+    return getResponseData(response, []);
   },
 
   // Get skill types
   getSkillTypes: async () => {
     const response = await apiClient.get('/api/skill-types');
-    return response.data;
+    return getResponseData(response, []);
   },
 
   // Get question types by skill
   getQuestionTypes: async (skillCode = null) => {
     const params = skillCode ? { skill_code: skillCode } : {};
     const response = await apiClient.get('/api/question-types', { params });
-    return response.data;
+    return getResponseData(response, []);
   },
 
   // Get question type by code
   getQuestionTypeByCode: async (code) => {
     const response = await apiClient.get(`/api/question-types/${code}`);
-    return response.data;
+    return getResponseData(response, {});
   },
 
   // Get APTIS type by code  
   getAptisTypeByCode: async (code) => {
     const response = await apiClient.get(`/api/aptis-types/${code}`);
-    return response.data;
+    return getResponseData(response, {});
   },
 
   // Delete a question
@@ -87,7 +93,7 @@ export const questionApi = {
   // Get question usage
   getQuestionUsage: async (id) => {
     const response = await apiClient.get(API_ENDPOINTS.TEACHER.QUESTIONS.USAGE(id));
-    return response.data;
+    return getResponseData(response, []);
   },
 
   // Delete multiple questions
@@ -132,13 +138,13 @@ export const questionApi = {
   // Get question types
   getQuestionTypes: async () => {
     const response = await apiClient.get(API_ENDPOINTS.TEACHER.QUESTIONS.TYPES);
-    return response.data;
+    return getResponseData(response, []);
   },
 
   // Get categories
   getCategories: async () => {
     const response = await apiClient.get(API_ENDPOINTS.TEACHER.QUESTIONS.CATEGORIES);
-    return response.data;
+    return getResponseData(response, []);
   },
 
   // Bulk update questions
@@ -153,6 +159,6 @@ export const questionApi = {
   // Get filter options from API
   getFilterOptions: async () => {
     const response = await apiClient.get(API_ENDPOINTS.TEACHER.QUESTIONS.FILTER_OPTIONS);
-    return response.data;
+    return getResponseData(response, {});
   }
 };

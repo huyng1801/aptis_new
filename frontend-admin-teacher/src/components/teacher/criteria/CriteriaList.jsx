@@ -17,16 +17,13 @@ import {
 } from '@mui/material';
 import {
   Search,
-  Edit,
-  Delete,
   Visibility,
   Clear
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-import { fetchCriteria, deleteCriteria } from '@/store/slices/criteriaSlice';
+import { fetchCriteria } from '@/store/slices/criteriaSlice';
 import DataTable from '@/components/shared/DataTable';
 import CriteriaPreview from './CriteriaPreview';
-import ConfirmDialog from '@/components/common/ConfirmDialog';
 
 export default function CriteriaList() {
   const router = useRouter();
@@ -36,7 +33,6 @@ export default function CriteriaList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCriteria, setSelectedCriteria] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null);
 
   // Track if component is mounted (for hydration safety)
   const [isMounted, setIsMounted] = useState(false);
@@ -76,22 +72,6 @@ export default function CriteriaList() {
   const handlePreview = (criteria) => {
     setSelectedCriteria(criteria);
     setPreviewOpen(true);
-  };
-
-  const handleEdit = (criteriaId) => {
-    router.push(`/teacher/criteria/${criteriaId}?edit=true`);
-  };
-
-  const handleDelete = (criteria) => {
-    setConfirmDelete(criteria);
-  };
-
-  const confirmDeleteCriteria = async () => {
-    if (confirmDelete) {
-      await dispatch(deleteCriteria(confirmDelete.id));
-      setConfirmDelete(null);
-      handleFetchCriteria();
-    }
   };
 
   if (!isMounted) {
@@ -187,24 +167,6 @@ export default function CriteriaList() {
               <Visibility />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Chỉnh sửa">
-            <IconButton
-              size="small"
-              onClick={() => handleEdit(row.id)}
-              color="primary"
-            >
-              <Edit />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Xóa">
-            <IconButton
-              size="small"
-              onClick={() => handleDelete(row)}
-              color="error"
-            >
-              <Delete />
-            </IconButton>
-          </Tooltip>
         </Box>
       )
     }
@@ -265,17 +227,8 @@ export default function CriteriaList() {
           criteria={selectedCriteria}
           open={previewOpen}
           onClose={() => setPreviewOpen(false)}
-          onEdit={() => handleEdit(selectedCriteria.id)}
         />
       )}
-
-      <ConfirmDialog
-        open={!!confirmDelete}
-        title="Xóa tiêu chí"
-        content={`Bạn có chắc muốn xóa tiêu chí "${confirmDelete?.criteria_name}"?`}
-        onConfirm={confirmDeleteCriteria}
-        onCancel={() => setConfirmDelete(null)}
-      />
     </Box>
   );
 }

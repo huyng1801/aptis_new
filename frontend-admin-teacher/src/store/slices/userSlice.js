@@ -53,7 +53,9 @@ export const createUser = createAsyncThunk(
       const response = await userApi.createUser(userData);
       return response;
     } catch (error) {
-      return rejectWithValue(error.message || 'Failed to create user');
+      const errorMessage = error.response?.data?.message || error.message || 'Tạo người dùng thất bại';
+      console.error('Create user error:', errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -65,7 +67,9 @@ export const updateUser = createAsyncThunk(
       const response = await userApi.updateUser(id, userData);
       return response;
     } catch (error) {
-      return rejectWithValue(error.message || 'Failed to update user');
+      const errorMessage = error.response?.data?.message || error.message || 'Cập nhật người dùng thất bại';
+      console.error('Update user error:', errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -125,7 +129,9 @@ export const resetUserPassword = createAsyncThunk(
       const response = await userApi.resetUserPassword(id);
       return response;
     } catch (error) {
-      return rejectWithValue(error.message || 'Failed to reset user password');
+      const errorMessage = error.response?.data?.message || error.message || 'Đặt lại mật khẩu thất bại';
+      console.error('Reset password error:', errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -232,12 +238,14 @@ const userSlice = createSlice({
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.users = action.payload.data;
+        // Backend trả về cấu trúc: { data: { users, pagination } }
+        const { users, pagination } = action.payload.data || action.payload;
+        state.users = users || action.payload.data || [];
         state.pagination = {
-          page: action.payload.page,
-          limit: action.payload.limit,
-          total: action.payload.total,
-          totalPages: action.payload.totalPages,
+          page: pagination?.page || 1,
+          limit: pagination?.limit || 20,
+          total: pagination?.total || 0,
+          pages: pagination?.pages || 1,
         };
         state.error = null;
       })
@@ -254,7 +262,8 @@ const userSlice = createSlice({
       })
       .addCase(fetchUserById.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.currentUser = action.payload;
+        // Backend trả về { data: { user } }
+        state.currentUser = action.payload.data?.user || action.payload.user || action.payload.data;
         state.error = null;
       })
       .addCase(fetchUserById.rejected, (state, action) => {
@@ -270,8 +279,12 @@ const userSlice = createSlice({
       })
       .addCase(createUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.users.unshift(action.payload);
-        state.pagination.total += 1;
+        // Backend trả về { data: { user, tempPassword } }
+        const newUser = action.payload.data?.user || action.payload.user || action.payload.data;
+        if (newUser) {
+          state.users.unshift(newUser);
+          state.pagination.total += 1;
+        }
         state.error = null;
       })
       .addCase(createUser.rejected, (state, action) => {
@@ -287,12 +300,16 @@ const userSlice = createSlice({
       })
       .addCase(updateUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        const index = state.users.findIndex(user => user.id === action.payload.id);
-        if (index !== -1) {
-          state.users[index] = action.payload;
-        }
-        if (state.currentUser?.id === action.payload.id) {
-          state.currentUser = action.payload;
+        // Backend trả về { data: user }
+        const updatedUser = action.payload.data?.user || action.payload.user || action.payload.data;
+        if (updatedUser) {
+          const index = state.users.findIndex(user => user.id === updatedUser.id);
+          if (index !== -1) {
+            state.users[index] = updatedUser;
+          }
+          if (state.currentUser?.id === updatedUser.id) {
+            state.currentUser = updatedUser;
+          }
         }
         state.error = null;
       })

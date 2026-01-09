@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
  */
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 10000,
   message: {
     success: false,
     error: {
@@ -24,7 +24,7 @@ const apiLimiter = rateLimit({
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Increased for development/testing
+  max: 10000, // Increased for development/testing
   message: {
     success: false,
     error: {
@@ -66,7 +66,7 @@ const uploadLimiter = rateLimit({
  */
 const submissionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 3,
+  max: 300,
   message: {
     success: false,
     error: {

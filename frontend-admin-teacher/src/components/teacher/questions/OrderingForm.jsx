@@ -55,7 +55,7 @@ export default function OrderingForm({ content, onChange }) {
     if (jsonString !== content) {
       onChange(jsonString);
     }
-  }, [title, passage, sentences]);
+  }, [title, passage, sentences, content]); // Add content to dependencies but NOT onChange
 
   const handleSentenceChange = (index, text) => {
     const newSentences = [...sentences];
@@ -76,6 +76,18 @@ export default function OrderingForm({ content, onChange }) {
     }
   };
 
+  const loadSampleTemplate = () => {
+    setTitle('Tom Harper (Biography Ordering)');
+    setPassage('This is the short summary of Tom Harper life.');
+    setSentences([
+      'When he was young, he began writing short stories for a magazine.',
+      'He soon wrote regularly for that magazine, sharing his creative ideas with many readers.',
+      'At one point, he almost left his job, but then he decided to create unusual characters.',
+      'The characters he imagined became some of the most famous in literature.',
+      'This popularity made him rich and successful.'
+    ]);
+  };
+
   const moveSentence = (index, direction) => {
     if (
       (direction === 'up' && index > 0) ||
@@ -92,12 +104,23 @@ export default function OrderingForm({ content, onChange }) {
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Reading - Ordering
-      </Typography>
-      <Typography variant="body2" color="text.secondary" mb={3}>
-        Tạo câu hỏi sắp xếp câu theo thứ tự đúng
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Reading - Ordering
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Tạo câu hỏi sắp xếp câu theo thứ tự đúng
+          </Typography>
+        </Box>
+        <Button 
+          variant="outlined" 
+          size="small"
+          onClick={loadSampleTemplate}
+        >
+          Tải mẫu
+        </Button>
+      </Box>
 
       {/* Title */}
       <TextField

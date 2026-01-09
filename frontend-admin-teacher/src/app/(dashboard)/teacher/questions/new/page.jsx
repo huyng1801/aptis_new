@@ -99,7 +99,25 @@ export default function NewQuestionPage() {
   const handleSave = async (shouldContinue = false) => {
     setLoading(true);
     try {
-      const result = await dispatch(createQuestion(questionData));
+      // Validate question data before submitting
+      if (!questionData.content || !questionData.content.trim()) {
+        throw new Error('Nội dung câu hỏi không được để trống');
+      }
+      
+      if (!questionData.aptis_type_id || !questionData.skill_type_id || !questionData.question_type_id) {
+        throw new Error('Vui lòng chọn đầy đủ loại APTIS, kỹ năng và loại câu hỏi');
+      }
+      
+      // Build complete question data with codes for API
+      const completeQuestionData = {
+        ...questionData,
+        aptis_type_code: aptisTypes.find(a => a.id == selectedAptis)?.aptis_type_code,
+        skill_type_code: skillTypes.find(s => s.id == selectedSkill)?.skill_type_code,
+        question_type_code: selectedQuestionType?.code
+      };
+      
+      console.log('Submitting question data:', completeQuestionData);
+      const result = await dispatch(createQuestion(completeQuestionData));
       
       if (createQuestion.fulfilled.match(result)) {
         dispatch(showNotification({
@@ -128,10 +146,16 @@ export default function NewQuestionPage() {
         } else {
           router.push('/teacher/questions');
         }
+      } else if (createQuestion.rejected.match(result)) {
+        const errorMessage = result.payload || 'Không thể tạo câu hỏi';
+        throw new Error(errorMessage);
       }
     } catch (error) {
+      console.error('Error creating question:', error);
+      const errorMessage = error.message || 'Có lỗi xảy ra khi tạo câu hỏi';
+      
       dispatch(showNotification({
-        message: 'Có lỗi xảy ra khi tạo câu hỏi',
+        message: errorMessage,
         type: 'error'
       }));
     } finally {
@@ -293,6 +317,7 @@ export default function NewQuestionPage() {
       case 2:
         return (
           <QuestionForm
+            key={`question-form-${selectedAptis}-${selectedSkill}-${selectedQuestionType?.id}`}
             aptisType={selectedAptis}
             skillType={selectedSkill}
             questionType={selectedQuestionType}
@@ -317,6 +342,7 @@ export default function NewQuestionPage() {
               skillData={skillTypes.find(s => s.id == selectedSkill)}
               questionTypeData={selectedQuestionType}
               showActions={false}
+              open={false}
             />
             <Box mt={3} display="flex" gap={2}>
               <Button

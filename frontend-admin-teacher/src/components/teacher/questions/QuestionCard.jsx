@@ -16,20 +16,15 @@ import {
 import {
   MoreVert,
   Visibility,
-  Edit,
-  Delete,
-  ContentCopy
+  Delete
 } from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
 
 export default function QuestionCard({ 
   question,
   onPreview,
-  onSelect,
   onDelete,
   showActions = true 
 }) {
-  const router = useRouter();
   const [anchorEl, setAnchorEl] = useState(null);
   
   const handleMenuClick = (event) => {
@@ -39,11 +34,6 @@ export default function QuestionCard({
 
   const handleMenuClose = () => {
     setAnchorEl(null);
-  };
-
-  const handleEdit = () => {
-    router.push(`/teacher/questions/${question.id}`);
-    handleMenuClose();
   };
 
   const handlePreview = () => {
@@ -57,11 +47,7 @@ export default function QuestionCard({
   };
 
   const handleCardClick = () => {
-    if (onSelect) {
-      onSelect(question);
-    } else {
-      onPreview?.(question);
-    }
+    onPreview?.(question);
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -170,14 +156,6 @@ export default function QuestionCard({
                 <Visibility />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Chỉnh sửa">
-              <IconButton size="small" onClick={(e) => {
-                e.stopPropagation();
-                handleEdit();
-              }}>
-                <Edit />
-              </IconButton>
-            </Tooltip>
           </Box>
           <Typography variant="caption" color="primary">
             #{question.id}
@@ -194,17 +172,6 @@ export default function QuestionCard({
         <MenuItem onClick={handlePreview}>
           <Visibility fontSize="small" sx={{ mr: 1 }} />
           Xem trước
-        </MenuItem>
-        <MenuItem onClick={handleEdit}>
-          <Edit fontSize="small" sx={{ mr: 1 }} />
-          Chỉnh sửa
-        </MenuItem>
-        <MenuItem onClick={() => {
-          // Copy question functionality
-          handleMenuClose();
-        }}>
-          <ContentCopy fontSize="small" sx={{ mr: 1 }} />
-          Sao chép
         </MenuItem>
         <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
           <Delete fontSize="small" sx={{ mr: 1 }} />

@@ -5,6 +5,7 @@ const examController = require('../controllers/teacherController/examController'
 const criteriaController = require('../controllers/teacherController/criteriaController');
 const reviewController = require('../controllers/teacherController/reviewController');
 const reportController = require('../controllers/teacherController/reportController');
+const dashboardController = require('../controllers/teacherController/dashboardController');
 const { authMiddleware } = require('../middleware/auth');
 const { isTeacherOrAdmin } = require('../middleware/roleCheck');
 const {
@@ -14,6 +15,28 @@ const {
   criteriaSchemas,
 } = require('../middleware/validation');
 const { apiLimiter } = require('../middleware/rateLimiter');
+
+// Dashboard routes
+router.get(
+  '/dashboard/stats',
+  authMiddleware,
+  isTeacherOrAdmin,
+  dashboardController.getDashboardStats,
+);
+
+router.get(
+  '/dashboard/activities',
+  authMiddleware,
+  isTeacherOrAdmin,
+  dashboardController.getRecentActivities,
+);
+
+router.get(
+  '/dashboard/overview',
+  authMiddleware,
+  isTeacherOrAdmin,
+  dashboardController.getSystemOverview,
+);
 
 // Question routes
 router.post(
