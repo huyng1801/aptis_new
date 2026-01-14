@@ -17,9 +17,6 @@ async function startServer() {
       await sequelize.sync({ alter: false });
     }
     
-    // Initialize Whisper for speech-to-text
-    await SpeechToTextService.initializeWhisper();
-    
     // Schedule cleanup jobs
     scheduleCleanupJobs();
     

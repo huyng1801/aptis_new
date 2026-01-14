@@ -229,7 +229,8 @@ export const useExamState = (examId, attemptId, attemptType, selectedSkill) => {
     const targetIndex = index;
     
     // If current question is a speaking question and we're trying to go backward, prevent navigation
-    if (currentQuestion?.questionType?.code?.includes('SPEAKING') && targetIndex < currentQuestionIndex) {
+    // currentQuestion is now an answer object with nested question
+    if (currentQuestion?.question?.questionType?.code?.includes('SPEAKING') && targetIndex < currentQuestionIndex) {
       console.log('[useExamState] Backward navigation blocked for speaking question');
       return;
     }
@@ -240,10 +241,11 @@ export const useExamState = (examId, attemptId, attemptType, selectedSkill) => {
   const getQuestionStatus = useCallback((questionId) => {
     const answer = answers.find(a => a.question_id === questionId);
     const currentQuestion = questions[currentQuestionIndex];
-    const targetQuestionIndex = questions.findIndex(q => q.id === questionId);
+    // questions array now contains answer objects with nested question data
+    const targetQuestionIndex = questions.findIndex(q => q.question_id === questionId);
     
     // Special logic for speaking questions: mark all previous questions as completed
-    if (currentQuestion?.questionType?.code?.includes('SPEAKING') && targetQuestionIndex < currentQuestionIndex) {
+    if (currentQuestion?.question?.questionType?.code?.includes('SPEAKING') && targetQuestionIndex < currentQuestionIndex) {
       console.log(`[getQuestionStatus] Q${questionId}: FORCED COMPLETED (speaking navigation)`);
       return 'answered';
     }

@@ -96,18 +96,41 @@ class SpeechToTextService {
     try {
       this.validateAudioFile(file);
       
-      const fileName = `${Date.now()}-${file.originalname}`;
-      const filePath = path.join(STORAGE_CONFIG.AUDIO_UPLOAD_PATH, fileName);
+      // Case 1: File already saved by multer (has path)
+      if (file.path && file.filename) {
+        const fileName = file.filename;
+        const filePath = file.path;
+        
+        return {
+          path: filePath,
+          url: `/uploads/${fileName}`, // Direct filename since multer saves to uploads/
+          fileName,
+          originalName: file.originalname,
+          size: file.size,
+          duration: 0 // Will be extracted from audio metadata if needed
+        };
+      }
       
-      await fs.mkdir(STORAGE_CONFIG.AUDIO_UPLOAD_PATH, { recursive: true });
-      await fs.writeFile(filePath, file.buffer);
+      // Case 2: File in memory (has buffer) - need to save
+      if (file.buffer) {
+        const fileName = `${Date.now()}-${file.originalname}`;
+        const filePath = path.join(STORAGE_CONFIG.AUDIO_UPLOAD_PATH, fileName);
+        
+        await fs.mkdir(STORAGE_CONFIG.AUDIO_UPLOAD_PATH, { recursive: true });
+        await fs.writeFile(filePath, file.buffer);
+        
+        return {
+          path: filePath,
+          url: `/uploads/audio/${fileName}`,
+          fileName,
+          originalName: file.originalname,
+          size: file.size,
+          duration: 0 // Will be extracted from audio metadata if needed
+        };
+      }
       
-      return {
-        filePath,
-        fileName,
-        originalName: file.originalname,
-        size: file.size
-      };
+      throw new Error('Invalid file object - missing both path and buffer');
+      
     } catch (error) {
       throw new BadRequestError(`File upload failed: ${error.message}`);
     }
@@ -133,13 +156,22 @@ class SpeechToTextService {
       throw new BadRequestError('No audio file provided');
     }
 
-    if (!allowedTypes.includes(file.mimetype)) {
+    // Handle both multer file object and regular File object
+    const mimeType = file.mimetype || file.type;
+    if (!mimeType || !allowedTypes.includes(mimeType)) {
       throw new BadRequestError(`Invalid file type. Allowed: ${allowedTypes.join(', ')}`);
     }
 
-    if (file.size > UPLOAD_LIMITS.MAX_AUDIO_SIZE) {
-      const maxMB = UPLOAD_LIMITS.MAX_AUDIO_SIZE / (1024 * 1024);
+    const maxSize = UPLOAD_LIMITS.MAX_AUDIO_SIZE;
+    if (file.size > maxSize) {
+      const maxMB = maxSize / (1024 * 1024);
       throw new BadRequestError(`File too large. Maximum size: ${maxMB}MB`);
+    }
+
+    // Additional check for minimum file size
+    const minSize = 1024; // 1KB minimum
+    if (file.size < minSize) {
+      throw new BadRequestError('File too small. Minimum size: 1KB');
     }
 
     return true;

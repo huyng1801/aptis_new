@@ -143,3 +143,47 @@ a {
   border-radius: 4px;
   padding: 8px;
 }
+
+/* Fullscreen exam mode - hide layout header/footer but keep exam header */
+body.exam-fullscreen .MuiAppBar-root:not(.exam-header),
+body.exam-fullscreen header:not(.exam-header),
+body.exam-fullscreen footer,
+body.exam-fullscreen nav:not(.exam-nav),
+body.exam-fullscreen [data-testid="header"]:not(.exam-header),
+body.exam-fullscreen [data-testid="footer"],
+body.exam-fullscreen .layout-header:not(.exam-header),
+body.exam-fullscreen .layout-footer,
+body.exam-fullscreen .student-layout-header,
+body.exam-fullscreen .student-layout-footer {
+  display: none !important;
+}
+
+/* Keep exam-specific headers visible */
+body.exam-fullscreen .exam-header,
+body.exam-fullscreen .MuiAppBar-root.exam-header {
+  display: flex !important;
+}
+
+body.exam-fullscreen {
+  overflow: hidden;
+}
+
+/* Remove layout padding when header is hidden */
+body.exam-fullscreen main {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Question text styling - same size as answers but bold */
+.question-content {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.answer-option {
+  font-size: 16px !important;
+  font-weight: 400;
+  line-height: 1.5;
+}

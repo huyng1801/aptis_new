@@ -8,7 +8,7 @@ import NextLink from 'next/link';
 const pathLabels = {
   dashboard: 'Trang chủ',
   home: 'Trang chủ',
-  exams: 'Duyệt bài thi',
+  exams: 'Danh sách bài thi',
   results: 'Kết quả',
   progress: 'Tiến độ học',
   profile: 'Hồ sơ',
@@ -45,7 +45,6 @@ export default function Breadcrumb() {
           alignItems="center"
           gap={0.5}
         >
-          <Home fontSize="small" />
           Trang chủ
         </Link>
         

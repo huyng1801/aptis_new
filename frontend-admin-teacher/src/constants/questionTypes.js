@@ -128,32 +128,27 @@ export const QUESTION_TYPES = {
     },
   ],
   
-  // Writing
+  // Writing - Based on APTIS Technical Report (3 tasks)
   WRITING: [
     {
-      code: 'WRITING_SHORT',
-      name: 'Short Writing (50-100 words)',
+      code: 'WRITING_FORM',
+      name: 'Form Filling (A2 - 20-30 words)',
       scoring: 'ai',
       component: 'WritingPromptForm',
     },
     {
       code: 'WRITING_LONG', 
-      name: 'Long Writing (150-200 words)',
+      name: 'Chat Responses (B1 - 30-40 words)',
       scoring: 'ai',
       component: 'WritingPromptForm',
     },
     {
       code: 'WRITING_EMAIL',
-      name: 'Email Writing',
+      name: 'Email Writing (B2 - friend & authority)',
       scoring: 'ai', 
       component: 'WritingPromptForm',
     },
-    {
-      code: 'WRITING_ESSAY',
-      name: 'Essay Writing',
-      scoring: 'ai',
-      component: 'WritingPromptForm',
-    },
+    // WRITING_ESSAY removed per APTIS Technical Report  
   ],
   
   // Speaking

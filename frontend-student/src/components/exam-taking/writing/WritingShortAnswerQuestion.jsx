@@ -5,10 +5,7 @@ import {
   Box,
   Typography,
   TextField,
-  Paper,
-  Chip,
   Grid,
-  Divider,
 } from '@mui/material';
 
 export default function WritingShortAnswerQuestion({ question, onAnswerChange }) {
@@ -17,21 +14,25 @@ export default function WritingShortAnswerQuestion({ question, onAnswerChange })
   // Initialize answers from question.answer_data
   useEffect(() => {
     if (question.answer_data && typeof question.answer_data === 'object') {
-      // If answer_data has answer_json (from database), parse it
-      if (question.answer_data.answer_json) {
+      if (question.answer_data.text_answer) {
         try {
-          const parsedAnswers = JSON.parse(question.answer_data.answer_json);
-          setAnswers(parsedAnswers || {});
-        } catch (error) {
-          console.error('[WritingShortAnswerQuestion] Failed to parse answer_json:', error);
-          setAnswers({});
-        }
-      } else if (question.answer_data.text_answer) {
-        // Try to parse text_answer as JSON for compatibility
-        try {
-          const parsedAnswers = JSON.parse(question.answer_data.text_answer || '{}');
+          // Parse formatted text like "Answer 1: text\n\nAnswer 2: text"
+          const textAnswer = question.answer_data.text_answer;
+          const parsedAnswers = {};
+          
+          // Split by double newlines and parse each answer
+          const answerParts = textAnswer.split('\n\n');
+          answerParts.forEach(part => {
+            const match = part.match(/^Answer (\d+):\s*(.*)$/s);
+            if (match) {
+              const [, index, text] = match;
+              parsedAnswers[index] = text;
+            }
+          });
+          
           setAnswers(parsedAnswers);
         } catch (error) {
+          console.error('[WritingShortAnswerQuestion] Failed to parse text_answer:', error);
           setAnswers({});
         }
       } else {
@@ -45,84 +46,104 @@ export default function WritingShortAnswerQuestion({ question, onAnswerChange })
   const handleAnswerChange = (messageIndex, value) => {
     const newAnswers = {
       ...answers,
-      [messageIndex]: value
+      [messageIndex + 1]: value  // Convert 0-based index to 1-based string key
     };
     
     setAnswers(newAnswers);
     
+    // Convert to formatted text for consistent storage
+    const formattedText = Object.entries(newAnswers)
+      .map(([key, value]) => `Answer ${key}: ${value}`)
+      .join('\n\n');
+    
     // Send update to parent
     onAnswerChange({
-      answer_type: 'json',
-      answer_json: JSON.stringify(newAnswers)
+      answer_type: 'text',
+      text_answer: formattedText
     });
   };
 
   // Parse question content
   const questionData = React.useMemo(() => {
     try {
+      // If content is text format, parse it
+      if (typeof question.content === 'string' && !question.content.startsWith('{')) {
+        // Parse the text content to extract title and input fields
+        const lines = question.content.split('\n').filter(line => line.trim());
+        const title = lines[0] || "Short Answer Questions";
+        
+        // For form-like content, extract fields marked with _______
+        let messages = [];
+        
+        // Check if this is a form completion task
+        if (question.content.includes('_______') || question.content.includes('Complete the registration')) {
+          // Extract form fields from content
+          const content = question.content;
+          
+          // Parse form fields like "First name: _______"
+          const fieldMatches = content.match(/([^:]+):\s*_+/g);
+          if (fieldMatches) {
+            messages = fieldMatches.map(match => {
+              const field = match.replace(/:\s*_+/, '').trim();
+              return `What is your ${field.toLowerCase()}?`;
+            });
+          }
+          
+          // If no fields found, create generic questions
+          if (messages.length === 0) {
+            messages = [
+              "What is your first name?",
+              "What is your last name?", 
+              "What is your phone number?",
+              "What is your address?",
+              "What is your country?"
+            ];
+          }
+        } else {
+          // Extract questions that end with '?'
+          messages = lines.filter(line => line.trim().endsWith('?'));
+        }
+        
+        return {
+          title,
+          messages: messages.length > 0 ? messages : ["Please provide your answer:"]
+        };
+      }
+      
+      // Legacy JSON format support
       return typeof question.content === 'string' ? JSON.parse(question.content) : question.content;
     } catch (error) {
       console.error('Failed to parse question content:', error);
-      return {
-        title: "Book Club Membership",
-        description: "You want to join a Book club. Write short answers (1-5 words) to each message.",
-        messages: [
-          "Which sport is the most popular in your country?",
-          "What do you like doing with your friend?", 
-          "Which sport do you like to play the most?",
-          "Where do you usually go at weekends?",
-          "How often do you play sport with friends?"
-        ]
-      };
+      return null;
     }
   }, [question.content]);
-
-  const messages = questionData.messages || [];
-  const wordLimit = 5; // 1-5 words per answer
 
   const countWords = (text) => {
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   };
 
+  if (!questionData) {
+    return <Box sx={{ p: 2 }}><Typography color="error">Không thể tải câu hỏi</Typography></Box>;
+  }
+
+  const messages = questionData.messages || [];
+
   return (
-    <Box>
-      {/* Header */}
-      <Paper sx={{ p: 3, mb: 3, backgroundColor: 'primary.light', color: 'primary.contrastText' }}>
-        <Typography variant="h6" gutterBottom>
-          Writing Part 1: Short Answers
-        </Typography>
-        <Typography variant="body2">
-          {questionData.description}
-        </Typography>
-        <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
-          Recommended time: 3 minutes.
-        </Typography>
-      </Paper>
+    <Box sx={{ maxHeight: '100vh', overflow: 'auto', p: 2 }}>
+      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+        {questionData.title}
+      </Typography>
 
-      {/* Requirements */}
-      <Paper sx={{ p: 2, mb: 3, backgroundColor: 'info.light' }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Requirements:
-        </Typography>
-        <Box display="flex" gap={1} flexWrap="wrap">
-          <Chip size="small" label="1-5 words per answer" color="primary" variant="outlined" />
-          <Chip size="small" label="5 questions total" color="info" variant="outlined" />
-          <Chip size="small" label="3 minutes" color="warning" variant="outlined" />
-        </Box>
-      </Paper>
-
-      {/* Questions */}
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         {messages.map((message, index) => {
-          const answerText = answers[index] || '';
+          const answerText = answers[index + 1] || '';  // Use 1-based key to get answer
           const wordCount = countWords(answerText);
-          const isOverLimit = wordCount > wordLimit;
           
           return (
             <Grid item xs={12} key={index}>
-              <Paper sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
-                <Typography variant="body1" gutterBottom fontWeight="medium">
-                  Message {index + 1}: {message}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body1" gutterBottom sx={{ mb: 1 }}>
+                  {index + 1}. {message}
                 </Typography>
                 
                 <TextField
@@ -130,42 +151,19 @@ export default function WritingShortAnswerQuestion({ question, onAnswerChange })
                   size="small"
                   value={answerText}
                   onChange={(e) => handleAnswerChange(index, e.target.value)}
-                  placeholder="Write your short answer here..."
                   variant="outlined"
-                  error={isOverLimit}
-                  helperText={
-                    <Box display="flex" justifyContent="space-between" alignItems="center">
-                      <span>1-5 words only</span>
-                      <span style={{ 
-                        color: isOverLimit ? 'red' : wordCount === 0 ? 'gray' : 'green',
-                        fontWeight: 'bold'
-                      }}>
-                        {wordCount}/5 words
-                      </span>
-                    </Box>
-                  }
-                  sx={{ mt: 1 }}
+                  helperText={`${wordCount} words`}
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'white'
+                    }
+                  }}
                 />
-              </Paper>
-              
-              {index < messages.length - 1 && <Divider sx={{ my: 2 }} />}
+              </Box>
             </Grid>
           );
         })}
       </Grid>
-
-      {/* Tips */}
-      <Paper sx={{ p: 2, mt: 3, backgroundColor: 'grey.50' }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Tips for Part 1:
-        </Typography>
-        <Typography variant="body2" component="ul" sx={{ pl: 2, m: 0 }}>
-          <li>Keep answers short and direct</li>
-          <li>Use 1-5 words maximum per answer</li>
-          <li>Answer all questions to get full marks</li>
-          <li>Simple phrases work best (e.g., "Football", "Very often", "At the park")</li>
-        </Typography>
-      </Paper>
     </Box>
   );
 }

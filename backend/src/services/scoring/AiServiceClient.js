@@ -3,7 +3,7 @@
  * Handles AI API calls and response parsing
  */
 
-const { callAI, GEMINI_CONFIG, OLLAMA_CONFIG, isUsingGemini } = require('../../config/ai');
+const { callAI, GEMINI_CONFIG, GROQ_CONFIG, isUsingGemini, isUsingGroq } = require('../../config/ai');
 const { AI_SCORING_CONFIG } = require('../../utils/constants');
 const { delay } = require('../../utils/helpers');
 
@@ -23,8 +23,8 @@ class AiServiceClient {
         const fullPrompt = `${systemPrompt}\n\n${prompt}`;
         
         const content = await callAI(fullPrompt, {
-          temperature: isUsingGemini() ? GEMINI_CONFIG.temperature : OLLAMA_CONFIG.temperature,
-          max_tokens: isUsingGemini() ? GEMINI_CONFIG.maxTokens : 256
+          temperature: isUsingGemini() ? GEMINI_CONFIG.temperature : (isUsingGroq() ? GROQ_CONFIG.temperature : 0.3),
+          max_tokens: isUsingGemini() ? GEMINI_CONFIG.maxTokens : (isUsingGroq() ? GROQ_CONFIG.maxTokens : 512)
         });
 
         if (!content || content.trim().length === 0) {
@@ -171,14 +171,33 @@ class AiServiceClient {
    * Get AI service status and configuration
    */
   getServiceStatus() {
-    return {
-      available: true, // Ollama is generally available
-      model: OLLAMA_CONFIG.model,
-      maxRetries: AI_SCORING_CONFIG.MAX_RETRIES,
-      retryDelay: AI_SCORING_CONFIG.RETRY_DELAY,
-      temperature: OLLAMA_CONFIG.temperature,
-      maxTokens: 2048
-    };
+    if (isUsingGemini()) {
+      return {
+        available: true,
+        provider: 'Gemini',
+        model: GEMINI_CONFIG.model,
+        maxRetries: AI_SCORING_CONFIG.MAX_RETRIES,
+        retryDelay: AI_SCORING_CONFIG.RETRY_DELAY,
+        temperature: GEMINI_CONFIG.temperature,
+        maxTokens: GEMINI_CONFIG.maxTokens
+      };
+    } else if (isUsingGroq()) {
+      return {
+        available: true,
+        provider: 'Groq',
+        model: GROQ_CONFIG.model,
+        maxRetries: AI_SCORING_CONFIG.MAX_RETRIES,
+        retryDelay: AI_SCORING_CONFIG.RETRY_DELAY,
+        temperature: GROQ_CONFIG.temperature,
+        maxTokens: GROQ_CONFIG.maxTokens
+      };
+    } else {
+      return {
+        available: false,
+        provider: 'None',
+        error: 'No AI provider configured'
+      };
+    }
   }
 }
 

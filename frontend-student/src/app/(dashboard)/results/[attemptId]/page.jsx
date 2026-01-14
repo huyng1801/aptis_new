@@ -140,26 +140,41 @@ export default function ResultDetailPage() {
   // Extract exam from nested structure
   const exam = attempt.exam || {};
   
-  // Convert sectionScores to skillScores array format
-  const skillScores = Object.values(sectionScores).map(section => {
+  // Convert sectionScores to skillScores array format, grouping by skill type
+  const skillScoresMap = {};
+  Object.values(sectionScores).forEach(section => {
     const examSection = section.section;
-    return {
-      skillName: examSection?.skillType?.skill_type_name || 'Unknown',
-      score: section.score || 0,
-      maxScore: examSection?.section_max_score || 0,
-      percentage: examSection?.section_max_score 
-        ? Math.round((section.score / examSection?.section_max_score) * 100) 
-        : 0
-    };
+    const skillName = examSection?.skillType?.skill_type_name || 'Unknown';
+    
+    if (!skillScoresMap[skillName]) {
+      skillScoresMap[skillName] = {
+        skillName: skillName,
+        score: 0,
+        maxScore: 0,
+        sectionCount: 0
+      };
+    }
+    
+    skillScoresMap[skillName].score += section.score || 0;
+    skillScoresMap[skillName].maxScore += examSection?.section_max_score || 0;
+    skillScoresMap[skillName].sectionCount += 1;
   });
+
+  // Convert map to array and calculate percentages
+  const skillScores = Object.values(skillScoresMap).map(skill => ({
+    ...skill,
+    percentage: skill.maxScore > 0 
+      ? Math.round((skill.score / skill.maxScore) * 100) 
+      : 0
+  }));
 
   // Calculate time spent in minutes
   const timeSpent = attempt.end_time && attempt.start_time 
     ? Math.round((new Date(attempt.end_time) - new Date(attempt.start_time)) / 60000)
     : 0;
 
-  // Create questionResults array from attempt (placeholder structure)
-  // This would typically come from the backend
+  // Create questionResults array from attempt
+  // Backend returns this in attemptResults.answers array
   const questionResults = attemptResults.answers || [];
 
   // Create overallStats object with safe values
@@ -338,14 +353,17 @@ export default function ResultDetailPage() {
               </Typography>
               {attempt.attempt_type === 'skill_practice' && skillScores.length === 1 ? (
                 <Typography variant="body2">
-                  <strong>{skillScores[0].skillName || skillScores[0].skill_type || 'Unknown'}:</strong> {overallStats.totalScore || 0}/{overallStats.maxScore || 0} 
+                  <strong>{skillScores[0].skillName || 'Unknown'}:</strong> {overallStats.totalScore || 0}/{overallStats.maxScore || 0} 
                   ({overallStats.percentage ?? 0}%)
                 </Typography>
               ) : (
                 skillScores.map((skill) => (
                   <Typography key={skill.skillName || 'unknown'} variant="body2">
-                    <strong>{skill.skillName || 'Unknown'}:</strong> {skill.score || 0}/{skill.maxScore || skill.max_score || 0} 
+                    <strong>{skill.skillName || 'Unknown'}:</strong> {skill.score || 0}/{skill.maxScore || 0} 
                     ({skill.percentage ?? 0}%)
+                    {skill.sectionCount > 1 && (
+                      <span style={{ fontSize: '0.85em', color: '#666' }}> ({skill.sectionCount} phần)</span>
+                    )}
                   </Typography>
                 ))
               )}

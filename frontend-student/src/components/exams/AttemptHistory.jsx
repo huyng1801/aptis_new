@@ -80,11 +80,14 @@ export default function AttemptHistory({ attempts, examId }) {
     router.push(`/exams/${examId}/take?attemptId=${attemptId}`);
   };
 
-  if (!attempts || attempts.length === 0) {
+  // Lọc chỉ hiển thị những bài thi đã nộp (submitted)
+  const submittedAttempts = attempts.filter(attempt => attempt.status === 'submitted');
+
+  if (!submittedAttempts || submittedAttempts.length === 0) {
     return (
       <Box textAlign="center" py={4}>
         <Typography variant="body1" color="textSecondary">
-          Bạn chưa làm bài thi này lần nào.
+          Bạn chưa nộp bài thi nào.
         </Typography>
       </Box>
     );
@@ -93,7 +96,7 @@ export default function AttemptHistory({ attempts, examId }) {
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Lịch sử làm bài ({attempts.length} lần)
+        Lịch sử làm bài ({submittedAttempts.length} lần)
       </Typography>
       
       <TableContainer component={Paper} variant="outlined">
@@ -105,14 +108,13 @@ export default function AttemptHistory({ attempts, examId }) {
               <TableCell>Loại</TableCell>
               <TableCell>Thời gian</TableCell>
               <TableCell>Điểm</TableCell>
-              <TableCell>Trạng thái</TableCell>
               <TableCell align="center">Thao tác</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {attempts.map((attempt, index) => (
+            {submittedAttempts.map((attempt, index) => (
               <TableRow key={attempt.id}>
-                <TableCell>{attempts.length - index}</TableCell>
+                <TableCell>{submittedAttempts.length - index}</TableCell>
                 <TableCell>
                   {formatAttemptDate(attempt.start_time)}
                 </TableCell>
@@ -133,37 +135,16 @@ export default function AttemptHistory({ attempts, examId }) {
                     </Typography>
                   ) : ('-')}
                 </TableCell>
-                <TableCell>
-                  <Chip
-                    icon={getStatusIcon(attempt.status)}
-                    label={getStatusLabel(attempt.status)}
-                    size="small"
-                    color={getStatusColor(attempt.status)}
-                  />
-                </TableCell>
                 <TableCell align="center">
                   <Box display="flex" justifyContent="center" gap={1}>
-                    {attempt.status === 'in_progress' && (
-                      <Tooltip title="Tiếp tục làm bài">
-                        <IconButton 
-                          size="small"
-                          color="primary"
-                          onClick={() => handleContinue(attempt.id)}
-                        >
-                          <PlayArrow />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {attempt.status === 'completed' && (
-                      <Tooltip title="Xem kết quả">
-                        <IconButton 
-                          size="small"
-                          onClick={() => handleViewResult(attempt.id)}
-                        >
-                          <Visibility />
-                        </IconButton>
-                      </Tooltip>
-                    )}
+                    <Tooltip title="Xem kết quả">
+                      <IconButton 
+                        size="small"
+                        onClick={() => handleViewResult(attempt.id)}
+                      >
+                        <Visibility />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </TableCell>
               </TableRow>

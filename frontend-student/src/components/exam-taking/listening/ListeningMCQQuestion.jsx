@@ -69,7 +69,11 @@ export default function ListeningMCQQuestion({
     }
   }, [question.media_url, question.question_content?.audio_url, question.question_content?.media_url, question.id]);
 
+  const canPlay = playCount < 2;
+
   const handlePlayPause = () => {
+    if (!canPlay) return; // Don't allow if already played 2 times
+    
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
@@ -77,12 +81,16 @@ export default function ListeningMCQQuestion({
       } else {
         audioRef.current.play();
         setIsPlaying(true);
-        setPlayCount(prev => prev + 1);
+        if (audioRef.current.currentTime === 0) {
+          setPlayCount(prev => prev + 1);
+        }
       }
     }
   };
 
   const handleReplay = () => {
+    if (!canPlay) return; // Don't allow if already played 2 times
+    
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.play();
@@ -135,22 +143,39 @@ export default function ListeningMCQQuestion({
           elevation={3}
           sx={{ 
             p: 3, 
-            mb: 3, 
-            backgroundColor: 'primary.light',
-            borderLeft: '4px solid',
-            borderLeftColor: 'primary.main'
+            mb: 3,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 2,
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: 300,
+              height: 300,
+              background: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '50%',
+              transform: 'translate(50%, -50%)'
+            }
           }}
         >
-          <Box display="flex" alignItems="center" gap={2}>
+          <Box display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
             {/* Play/Pause Button */}
             <IconButton
               onClick={handlePlayPause}
-              color="primary"
+              disabled={!canPlay}
               sx={{
-                backgroundColor: 'primary.main',
-                color: 'primary.contrastText',
+                backgroundColor: canPlay ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                border: '2px solid rgba(255, 255, 255, 0.5)',
                 '&:hover': {
-                  backgroundColor: 'primary.dark',
+                  backgroundColor: canPlay ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.1)',
+                },
+                '&:disabled': {
+                  color: 'rgba(255, 255, 255, 0.5)',
                 },
                 width: 56,
                 height: 56,
@@ -167,32 +192,33 @@ export default function ListeningMCQQuestion({
             {/* Progress Bar */}
             <Box sx={{ flex: 1 }}>
               <Box
-                onClick={handleProgressClick}
+                onClick={canPlay ? handleProgressClick : undefined}
                 sx={{
                   width: '100%',
                   height: 6,
-                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   borderRadius: 3,
-                  cursor: 'pointer',
+                  cursor: canPlay ? 'pointer' : 'not-allowed',
                   position: 'relative',
                   mb: 1,
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  opacity: canPlay ? 1 : 0.6
                 }}
               >
                 <Box
                   sx={{
                     height: '100%',
-                    backgroundColor: 'primary.main',
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
                     width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%',
                     transition: isPlaying ? 'none' : 'width 0.1s'
                   }}
                 />
               </Box>
               <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="caption" fontWeight="bold">
+                <Typography variant="caption" fontWeight="bold" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>
                   {formatTime(currentTime)}
                 </Typography>
-                <Typography variant="caption">
+                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>
                   {formatTime(duration)}
                 </Typography>
               </Box>
@@ -201,8 +227,16 @@ export default function ListeningMCQQuestion({
             {/* Replay Button */}
             <IconButton
               onClick={handleReplay}
-              color="primary"
+              disabled={!canPlay}
               sx={{
+                color: 'white',
+                border: '2px solid rgba(255, 255, 255, 0.5)',
+                '&:hover': {
+                  backgroundColor: canPlay ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                },
+                '&:disabled': {
+                  color: 'rgba(255, 255, 255, 0.5)',
+                },
                 flexShrink: 0
               }}
             >
@@ -210,16 +244,24 @@ export default function ListeningMCQQuestion({
             </IconButton>
           </Box>
 
-          {/* Play Counter */}
-          {playCount > 0 && (
-            <Box mt={2} display="flex" alignItems="center" gap={1}>
-              <Chip 
-                label={`Played ${playCount} time${playCount > 1 ? 's' : ''}`}
-                size="small"
-                color="primary"
-              />
-            </Box>
-          )}
+          {/* Play Counter & Limit Warning */}
+          <Box mt={2} display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
+            <Chip 
+              label={`${playCount}/2 Số lần phát đã dùng`}
+              size="small"
+              sx={{
+                backgroundColor: playCount < 2 ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 100, 100, 0.4)',
+                color: 'white',
+                fontWeight: 'bold',
+                border: '1px solid rgba(255, 255, 255, 0.5)'
+              }}
+            />
+            {playCount >= 2 && (
+              <Typography variant="caption" sx={{ color: '#ffcccc', fontWeight: 'bold' }}>
+                ⚠ Đã đạt số lượt phát tối đa
+              </Typography>
+            )}
+          </Box>
 
           {/* Hidden Audio Element */}
           <audio

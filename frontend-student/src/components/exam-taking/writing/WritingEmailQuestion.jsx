@@ -5,10 +5,6 @@ import {
   Box,
   Typography,
   TextField,
-  Paper,
-  Chip,
-  LinearProgress,
-  Divider,
 } from '@mui/material';
 
 export default function WritingEmailQuestion({ question, onAnswerChange }) {
@@ -20,52 +16,102 @@ export default function WritingEmailQuestion({ question, onAnswerChange }) {
   // Parse question content
   const questionData = React.useMemo(() => {
     try {
+      // If content is text format, parse it
+      if (typeof question.content === 'string' && !question.content.startsWith('{')) {
+        // Parse the text content to extract email information
+        const lines = question.content.split('\n').filter(line => line.trim());
+        const title = lines[0] || "Email Writing Task";
+        
+        // Extract email content between "From:" and "---"
+        let inEmailSection = false;
+        let emailLines = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          
+          if (line.startsWith('From:')) {
+            inEmailSection = true;
+            continue;
+          }
+          
+          if (line.startsWith('---')) {
+            inEmailSection = false;
+            break;
+          }
+          
+          if (inEmailSection) {
+            emailLines.push(line);
+          }
+        }
+        
+        let managerEmail = { subject: "Email", body: "Please respond to this email." };
+        if (emailLines.length > 0) {
+          const subject = emailLines.find(line => line.startsWith('Subject:'))?.replace('Subject:', '').trim() || "Email";
+          const bodyStartIndex = emailLines.findIndex(line => line.startsWith('Dear') || line.includes('student') || line.includes('applicant'));
+          const body = bodyStartIndex >= 0 ? emailLines.slice(bodyStartIndex).join('\n\n') : emailLines.join('\n\n');
+          
+          managerEmail = { subject, body };
+        }
+        
+        return {
+          title,
+          managerEmail,
+          tasks: [
+            { type: "friend", description: "Email to a friend (50 words)" },
+            { type: "manager", description: "Email to manager (100-120 words)" }
+          ]
+        };
+      }
+      
+      // Legacy JSON format support
       return typeof question.content === 'string' ? JSON.parse(question.content) : question.content;
     } catch (error) {
       console.error('Failed to parse question content:', error);
-      return {
-        title: "Book Club Author Event",
-        description: "You are a member of the book club. You received this email from the club's manager.",
-        managerEmail: {
-          subject: "Author Event Planning",
-          body: "Dear member,\n\nOur club wants to organize an event for the public by inviting a famous author as a speaker. What kind of author do you suggest? What topic should the speaker speak on?\n\nI am writing to ask all members for their suggestions. Please send me your ideas in an email.\n\nThe manager."
-        },
-        tasks: [
-          {
-            type: "friend",
-            description: "Write an email to your friend, who is also a member of the group. (50 words)",
-            wordLimit: 50
-          },
-          {
-            type: "manager", 
-            description: "Write an email to the manager of the club. Tell the manager about your opinion. (120-150 words)",
-            wordLimit: {min: 120, max: 150}
-          }
-        ]
-      };
+      return null;
     }
   }, [question.content]);
 
   // Initialize answers from question.answer_data
   useEffect(() => {
+    console.log('[WritingEmailQuestion] Initializing for question:', question.id);
+    
     if (question.answer_data && typeof question.answer_data === 'object') {
-      if (question.answer_data.answer_json) {
-        try {
-          const parsedAnswers = JSON.parse(question.answer_data.answer_json);
-          setAnswers(parsedAnswers || { friendEmail: '', managerEmail: '' });
-        } catch (error) {
-          console.error('[WritingEmailQuestion] Failed to parse answer_json:', error);
-          setAnswers({ friendEmail: '', managerEmail: '' });
+      if (question.answer_data.text_answer) {
+        console.log('[WritingEmailQuestion] Found existing answer:', question.answer_data.text_answer);
+        
+        // Parse structured text format: Friend Email:\n<content>\n\nManager Email:\n<content>
+        const textAnswer = question.answer_data.text_answer;
+        
+        let friendEmail = '';
+        let managerEmail = '';
+        
+        if (textAnswer.includes('Friend Email:') && textAnswer.includes('Manager Email:')) {
+          // Standard format
+          const friendMatch = textAnswer.match(/Friend Email:\n([\s\S]*?)(?:\n\nManager Email:|$)/);
+          const managerMatch = textAnswer.match(/Manager Email:\n([\s\S]*?)$/);
+          
+          friendEmail = friendMatch ? friendMatch[1].trim() : '';
+          managerEmail = managerMatch ? managerMatch[1].trim() : '';
+        } else {
+          // Fallback - treat as friend email if format doesn't match
+          friendEmail = textAnswer.trim();
         }
+        
+        console.log('[WritingEmailQuestion] Parsed emails:', { friendEmail, managerEmail });
+        setAnswers({ friendEmail, managerEmail });
       } else {
+        console.log('[WritingEmailQuestion] No existing answer, resetting');
         setAnswers({ friendEmail: '', managerEmail: '' });
       }
     } else {
+      console.log('[WritingEmailQuestion] No answer_data, resetting');
       setAnswers({ friendEmail: '', managerEmail: '' });
     }
   }, [question.id, question.answer_data]);
 
   const handleAnswerChange = (emailKey, value) => {
+    console.log(`[WritingEmailQuestion] Updating ${emailKey}:`, value);
+    
     const newAnswers = {
       ...answers,
       [emailKey]: value
@@ -73,10 +119,15 @@ export default function WritingEmailQuestion({ question, onAnswerChange }) {
     
     setAnswers(newAnswers);
     
+    // Convert to formatted text for consistent storage
+    const formattedText = `Friend Email:\n${newAnswers.friendEmail}\n\nManager Email:\n${newAnswers.managerEmail}`;
+    
+    console.log(`[WritingEmailQuestion] Sending formatted answer:`, formattedText);
+    
     // Send update to parent
     onAnswerChange({
-      answer_type: 'json',
-      answer_json: JSON.stringify(newAnswers)
+      answer_type: 'text',
+      text_answer: formattedText
     });
   };
 
@@ -84,219 +135,108 @@ export default function WritingEmailQuestion({ question, onAnswerChange }) {
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   };
 
+  if (!questionData) {
+    return <Box sx={{ p: 2 }}><Typography color="error">Không thể tải câu hỏi</Typography></Box>;
+  }
+
   const friendWordCount = countWords(answers.friendEmail);
   const managerWordCount = countWords(answers.managerEmail);
 
-  const friendMinWords = 50;
-  const friendMaxWords = 75;
-  const managerMinWords = 120;
-  const managerMaxWords = 150;
-
-  const getWordCountColor = (wordCount, minWords, maxWords) => {
-    if (wordCount < minWords) return 'error';
-    if (wordCount > maxWords) return 'warning';
-    return 'success';
-  };
-
-  const getProgress = (wordCount, maxWords) => {
-    return Math.min((wordCount / maxWords) * 100, 100);
-  };
-
   return (
-    <Box>
-      {/* Header */}
-      <Paper sx={{ p: 3, mb: 3, backgroundColor: 'warning.light', color: 'warning.contrastText' }}>
-        <Typography variant="h6" gutterBottom>
-          Writing Part 4: Email Writing
-        </Typography>
-        <Typography variant="body2">
-          {questionData.description}
-        </Typography>
-        <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
-          Recommended time: 30 minutes.
-        </Typography>
-      </Paper>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h5" gutterBottom sx={{ mb: 4, fontWeight: 'bold' }}>
+        {questionData.title}
+      </Typography>
 
-      {/* Email Context */}
-      <Paper sx={{ p: 3, mb: 3, backgroundColor: 'info.light', border: '1px solid', borderColor: 'info.main' }}>
-        <Typography variant="h6" gutterBottom>
-          📧 Email from Manager
+      {/* Manager Email - Simplified */}
+      <Box sx={{ mb: 4, p: 2.5, border: '1px solid #ddd', borderRadius: 1, bgcolor: '#f5f5f5' }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Email from Manager</Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          From: manager@company.com
         </Typography>
-        <Box sx={{ p: 2, backgroundColor: 'white', borderRadius: 1, border: '1px solid #ccc' }}>
-          <Typography variant="body1" paragraph>
-            {questionData.managerEmail.body.split('\n').map((line, index) => (
-              <React.Fragment key={index}>
-                {line}
-                {index < questionData.managerEmail.body.split('\n').length - 1 && <br />}
-              </React.Fragment>
-            ))}
-          </Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
+          Subject: {questionData.managerEmail.subject}
+        </Typography>
+        
+        <Box sx={{ 
+          bgcolor: 'white', 
+          p: 2, 
+          borderRadius: 0.5,
+          border: '1px solid #e0e0e0',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          lineHeight: 1.6,
+          fontSize: '0.95rem'
+        }}>
+          {questionData.managerEmail.body}
         </Box>
-      </Paper>
+      </Box>
 
-      {/* Requirements */}
-      <Paper sx={{ p: 2, mb: 3, backgroundColor: 'grey.100' }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Your Task:
-        </Typography>
-        <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
-          <Chip size="small" label="Write 2 emails" color="primary" variant="outlined" />
-          <Chip size="small" label="Different word counts" color="info" variant="outlined" />
-          <Chip size="small" label="Different tones" color="secondary" variant="outlined" />
-          <Chip size="small" label="30 minutes total" color="warning" variant="outlined" />
+      {/* Friend Email - Simplified */}
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 1.5 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>Email to a Friend</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>Write a casual email (50 words)</Typography>
         </Box>
-      </Paper>
-
-      {/* Email to Friend */}
-      <Paper sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'primary.main' }}>
-        <Typography variant="h6" gutterBottom color="primary">
-          Email 1: To Your Friend
-        </Typography>
-        <Typography variant="body2" gutterBottom>
-          {questionData.tasks[0]?.description}
-        </Typography>
-
-        <Box sx={{ mb: 2 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="body2" color={getWordCountColor(friendWordCount, friendMinWords, friendMaxWords)}>
-              Words: {friendWordCount} / {friendMinWords} minimum
-            </Typography>
-            <Chip 
-              size="small"
-              label={`Target: ${friendMinWords} words`}
-              color={friendWordCount >= friendMinWords ? 'success' : 'error'}
-              variant="outlined"
-            />
-          </Box>
-          
-          <LinearProgress
-            variant="determinate"
-            value={getProgress(friendWordCount, friendMaxWords)}
-            color={getWordCountColor(friendWordCount, friendMinWords, friendMaxWords)}
-            sx={{ height: 6, borderRadius: 3 }}
-          />
-        </Box>
-
+        
         <TextField
           multiline
           fullWidth
-          rows={6}
+          rows={4}
           value={answers.friendEmail}
           onChange={(e) => handleAnswerChange('friendEmail', e.target.value)}
-          placeholder="Hi [Friend's name],
-
-Did you see the manager's email about the author event? I think we should suggest...
-
-What do you think?
-
-Best,
-[Your name]"
           variant="outlined"
-          error={friendWordCount > friendMaxWords}
-          helperText={
-            friendWordCount < friendMinWords ? `Need ${friendMinWords - friendWordCount} more words` :
-            friendWordCount > friendMaxWords ? `${friendWordCount - friendMaxWords} words over limit` :
-            'Good! Appropriate length'
-          }
+          placeholder="Dear Friend,
+
+I wanted to tell you about..."
           sx={{
+            mb: 1,
             '& .MuiOutlinedInput-root': {
-              fontSize: '0.95rem',
-              lineHeight: 1.5,
-              fontFamily: 'inherit'
+              backgroundColor: 'white',
+              fontSize: '0.95rem'
             }
           }}
         />
-      </Paper>
-
-      <Divider sx={{ my: 3 }}>
-        <Chip label="Second Email" />
-      </Divider>
-
-      {/* Email to Manager */}
-      <Paper sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'secondary.main' }}>
-        <Typography variant="h6" gutterBottom color="secondary">
-          Email 2: To The Manager
+        
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {friendWordCount} words 
+          {friendWordCount >= 45 && friendWordCount <= 55 ? ' ✓' : friendWordCount < 45 ? ` (need ${45 - friendWordCount} more)` : ` (${friendWordCount - 55} too many)`}
         </Typography>
-        <Typography variant="body2" gutterBottom>
-          {questionData.tasks[1]?.description}
-        </Typography>
+      </Box>
 
-        <Box sx={{ mb: 2 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="body2" color={getWordCountColor(managerWordCount, managerMinWords, managerMaxWords)}>
-              Words: {managerWordCount} / {managerMinWords}-{managerMaxWords}
-            </Typography>
-            <Chip 
-              size="small"
-              label={`Target: ${managerMinWords}-${managerMaxWords} words`}
-              color={
-                managerWordCount >= managerMinWords && managerWordCount <= managerMaxWords 
-                  ? 'success' 
-                  : 'error'
-              }
-              variant="outlined"
-            />
-          </Box>
-          
-          <LinearProgress
-            variant="determinate"
-            value={getProgress(managerWordCount, managerMaxWords)}
-            color={getWordCountColor(managerWordCount, managerMinWords, managerMaxWords)}
-            sx={{ height: 6, borderRadius: 3 }}
-          />
+      <Box sx={{ my: 3, borderTop: '1px solid #ddd' }} />
+
+      {/* Manager Reply - Simplified */}
+      <Box>
+        <Box sx={{ mb: 1.5 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>Reply to Manager</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>Write a professional email (100-120 words)</Typography>
         </Box>
-
+        
         <TextField
           multiline
           fullWidth
-          rows={10}
+          rows={5}
           value={answers.managerEmail}
           onChange={(e) => handleAnswerChange('managerEmail', e.target.value)}
+          variant="outlined"
           placeholder="Dear Manager,
 
-Thank you for your email about organizing an author event for the public.
-
-I would like to suggest...
-
-The topic should be... because...
-
-I believe this would attract many people and benefit our club...
-
-I look forward to hearing your thoughts.
-
-Best regards,
-[Your name]"
-          variant="outlined"
-          error={managerWordCount < managerMinWords || managerWordCount > managerMaxWords}
-          helperText={
-            managerWordCount < managerMinWords ? `Need ${managerMinWords - managerWordCount} more words` :
-            managerWordCount > managerMaxWords ? `${managerWordCount - managerMaxWords} words over limit` :
-            'Perfect! Within word limit'
-          }
+Thank you for your email..."
           sx={{
+            mb: 1,
             '& .MuiOutlinedInput-root': {
-              fontSize: '0.95rem',
-              lineHeight: 1.5,
-              fontFamily: 'inherit'
+              backgroundColor: 'white',
+              fontSize: '0.95rem'
             }
           }}
         />
-      </Paper>
-
-      {/* Tips */}
-      <Paper sx={{ p: 2, backgroundColor: 'grey.50' }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Tips for Part 4:
+        
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {managerWordCount} words 
+          {managerWordCount >= 100 && managerWordCount <= 120 ? ' ✓' : managerWordCount < 100 ? ` (need ${100 - managerWordCount} more)` : ` (${managerWordCount - 120} too many)`}
         </Typography>
-        <Typography variant="body2" component="ul" sx={{ pl: 2, m: 0 }}>
-          <li><strong>Friend email:</strong> Use informal language, contractions, casual greeting</li>
-          <li><strong>Manager email:</strong> Use formal language, proper structure, polite tone</li>
-          <li>Include greeting, main content, and closing in both emails</li>
-          <li>Answer both questions: what kind of author and what topic</li>
-          <li>Give reasons for your suggestions</li>
-          <li>Check word counts carefully - they're different for each email</li>
-        </Typography>
-      </Paper>
+      </Box>
     </Box>
   );
 }

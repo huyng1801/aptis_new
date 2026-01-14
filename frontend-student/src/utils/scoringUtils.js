@@ -26,21 +26,53 @@ export const scoringUtils = {
    * Score Gap Filling Questions with partial credit
    */
   scoreGapFilling: (userAnswers, correctAnswers, maxScore = 1) => {
-    if (!userAnswers || !correctAnswers) return { score: 0, percentage: 0, feedback: 'No answers provided' };
+    if (!correctAnswers) return { score: 0, percentage: 0, feedback: 'No correct answers provided' };
     
-    const totalGaps = Object.keys(correctAnswers).length;
+    // Handle different correct answers formats
+    let correctAnswersArray = [];
+    if (Array.isArray(correctAnswers)) {
+      correctAnswersArray = correctAnswers;
+    } else if (typeof correctAnswers === 'object') {
+      correctAnswersArray = Object.values(correctAnswers);
+    } else {
+      return { score: 0, percentage: 0, feedback: 'Invalid correct answers format' };
+    }
+    
+    const totalGaps = correctAnswersArray.length;
     if (totalGaps === 0) return { score: 0, percentage: 0, feedback: 'No gaps to fill' };
+    
+    if (!userAnswers) return { score: 0, percentage: 0, feedback: 'No user answers provided' };
     
     let correctCount = 0;
     const scorePerGap = maxScore / totalGaps;
     const gapResults = {};
     
-    Object.entries(correctAnswers).forEach(([gapId, correctAnswer]) => {
-      const userAnswer = userAnswers[gapId];
-      const isCorrect = userAnswer && 
+    // Handle different user answer formats
+    let userAnswersArray = [];
+    if (Array.isArray(userAnswers)) {
+      userAnswersArray = userAnswers;
+    } else if (typeof userAnswers === 'object') {
+      if (userAnswers.gaps) {
+        // Frontend gap format: { gaps: { itemId: answer } }
+        userAnswersArray = correctAnswersArray.map((_, index) => {
+          const key = Object.keys(userAnswers.gaps)[index];
+          return key ? userAnswers.gaps[key] : '';
+        });
+      } else if (userAnswers.gap_answers) {
+        // Backend gap format: { gap_answers: [...] }
+        userAnswersArray = userAnswers.gap_answers;
+      } else {
+        userAnswersArray = Object.values(userAnswers);
+      }
+    }
+    
+    for (let i = 0; i < totalGaps; i++) {
+      const userAnswer = userAnswersArray[i];
+      const correctAnswer = correctAnswersArray[i];
+      const isCorrect = userAnswer && correctAnswer &&
         userAnswer.toString().toLowerCase().trim() === correctAnswer.toString().toLowerCase().trim();
       
-      gapResults[gapId] = {
+      gapResults[i] = {
         userAnswer: userAnswer || '',
         correctAnswer,
         isCorrect,
@@ -48,7 +80,7 @@ export const scoringUtils = {
       };
       
       if (isCorrect) correctCount++;
-    });
+    }
     
     const totalScore = correctCount * scorePerGap;
     const percentage = (totalScore / maxScore) * 100;
@@ -143,21 +175,49 @@ export const scoringUtils = {
    * Score Ordering Questions
    */
   scoreOrdering: (userOrder, correctOrder, maxScore = 1) => {
-    if (!userOrder || !correctOrder) return { score: 0, percentage: 0, feedback: 'No order provided' };
+    if (!correctOrder) return { score: 0, percentage: 0, feedback: 'No correct order provided' };
     
-    const totalItems = Object.keys(correctOrder).length;
+    // Handle different correct order formats
+    let correctOrderArray = [];
+    if (Array.isArray(correctOrder)) {
+      correctOrderArray = correctOrder;
+    } else if (typeof correctOrder === 'object') {
+      correctOrderArray = Object.values(correctOrder);
+    } else {
+      return { score: 0, percentage: 0, feedback: 'Invalid correct order format' };
+    }
+    
+    const totalItems = correctOrderArray.length;
     if (totalItems === 0) return { score: 0, percentage: 0, feedback: 'No items to order' };
+    
+    if (!userOrder) return { score: 0, percentage: 0, feedback: 'No order provided' };
     
     let correctPositions = 0;
     const scorePerPosition = maxScore / totalItems;
     const orderResults = {};
     
-    Object.entries(correctOrder).forEach(([itemId, correctPosition]) => {
-      const userPosition = userOrder[itemId];
+    // Handle different user order formats
+    let userOrderArray = [];
+    if (Array.isArray(userOrder)) {
+      userOrderArray = userOrder;
+    } else if (typeof userOrder === 'object') {
+      if (userOrder.ordered_items) {
+        // Extract order from ordered_items array
+        userOrderArray = userOrder.ordered_items.map(item => item.id || item.original_order);
+      } else if (userOrder.order) {
+        userOrderArray = Object.values(userOrder.order);
+      } else {
+        userOrderArray = Object.values(userOrder);
+      }
+    }
+    
+    for (let i = 0; i < totalItems && i < userOrderArray.length; i++) {
+      const userPosition = userOrderArray[i];
+      const correctPosition = correctOrderArray[i];
       const isCorrect = userPosition && 
         parseInt(userPosition) === parseInt(correctPosition);
       
-      orderResults[itemId] = {
+      orderResults[i] = {
         userPosition: userPosition || '',
         correctPosition,
         isCorrect,
@@ -165,7 +225,7 @@ export const scoringUtils = {
       };
       
       if (isCorrect) correctPositions++;
-    });
+    }
     
     const totalScore = correctPositions * scorePerPosition;
     const percentage = (totalScore / maxScore) * 100;
@@ -343,12 +403,24 @@ export const scoringUtils = {
         
         case 'LISTENING_GAP_FILL':
         case 'READING_GAP_FILL': {
-          const correctAnswers = {};
-          question.question_items?.forEach(item => {
-            if (item.sample_answers?.length > 0) {
-              correctAnswers[item.id] = item.sample_answers[0].answer_text;
-            }
-          });
+          const correctAnswers = [];
+          if (question.question_items) {
+            // Sort items by item_order and extract answer_text
+            question.question_items.sort((a, b) => (a.item_order || 0) - (b.item_order || 0));
+            question.question_items.forEach(item => {
+              if (item.answer_text) {
+                correctAnswers.push(item.answer_text);
+              }
+            });
+          } else if (question.items) {
+            // Alternative data structure
+            question.items.sort((a, b) => (a.item_order || 0) - (b.item_order || 0));
+            question.items.forEach(item => {
+              if (item.answer_text) {
+                correctAnswers.push(item.answer_text);
+              }
+            });
+          }
           return scoringUtils.scoreGapFilling(userAnswer?.gaps || userAnswer, correctAnswers, maxScore);
         }
         
@@ -374,18 +446,31 @@ export const scoringUtils = {
         }
         
         case 'READING_ORDERING': {
-          const correctOrder = {};
-          question.question_items?.forEach((item, index) => {
-            correctOrder[item.id] = item.correct_order || (index + 1);
-          });
-          return scoringUtils.scoreOrdering(userAnswer?.order || userAnswer, correctOrder, maxScore);
+          const correctOrder = [];
+          if (question.question_items) {
+            // Sort items by item_order and extract the correct positions
+            question.question_items.sort((a, b) => (a.item_order || 0) - (b.item_order || 0));
+            question.question_items.forEach(item => {
+              // The correct position should be in answer_text
+              const position = parseInt(item.answer_text);
+              correctOrder.push(isNaN(position) ? item.id : position);
+            });
+          } else if (question.items) {
+            // Alternative data structure  
+            question.items.sort((a, b) => (a.item_order || 0) - (b.item_order || 0));
+            question.items.forEach(item => {
+              const position = parseInt(item.answer_text);
+              correctOrder.push(isNaN(position) ? item.id : position);
+            });
+          }
+          return scoringUtils.scoreOrdering(userAnswer?.order || userAnswer?.ordered_items || userAnswer, correctOrder, maxScore);
         }
         
-        case 'WRITING_SHORT':
+        // WRITING_SHORT removed per APTIS Technical Report
         case 'WRITING_FORM':
         case 'WRITING_LONG':
-        case 'WRITING_EMAIL':
-        case 'WRITING_ESSAY': {
+        case 'WRITING_EMAIL': {
+          // WRITING_ESSAY removed per APTIS Technical Report
           const criteria = {
             minWords: question.min_words || 0,
             maxWords: question.max_words || 1000,

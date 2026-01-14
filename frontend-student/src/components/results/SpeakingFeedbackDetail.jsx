@@ -52,6 +52,9 @@ export default function SpeakingFeedbackDetail({ answer }) {
     answer_type,
   } = answer;
 
+  // Get the comprehensive feedback (now single record instead of array)
+  const comprehensiveFeedback = aiFeedbacks && aiFeedbacks.length > 0 ? aiFeedbacks[0] : null;
+
   // Verify this is an audio answer
   const isAudioAnswer = answer_type === 'audio' || audio_url;
 
@@ -207,150 +210,113 @@ export default function SpeakingFeedbackDetail({ answer }) {
         </Card>
       )}
 
-      {/* AI Feedback by Criteria */}
-      {aiFeedbacks && aiFeedbacks.length > 0 && (
+      {/* AI Comprehensive Feedback */}
+      {comprehensiveFeedback && (
         <Card sx={{ mb: 3 }}>
           <CardContent>
-            <Typography variant="h6" gutterBottom>
-              🤖 Phản hồi chi tiết từ AI
-            </Typography>
-            
-            {aiFeedbacks.map((feedback, index) => (
-              <Accordion 
-                key={feedback.id || index}
-                expanded={expanded === `panel${index}`}
-                onChange={() => setExpanded(expanded === `panel${index}` ? false : `panel${index}`)}
-              >
-                <AccordionSummary expandIcon={<ExpandMore />}>
-                  <Box display="flex" justifyContent="space-between" alignItems="center" width="100%">
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      {feedback.criteria?.criteria_name || 'Tiêu chí'}
-                    </Typography>
-                    <Box display="flex" gap={1} mr={2}>
-                      <Chip 
-                        label={`${feedback.score}/${feedback.max_score}`}
-                        color={feedback.score / feedback.max_score >= 0.8 ? 'success' : 'warning'}
-                        size="small"
-                      />
-                      <Chip 
-                        label={`${Math.round((feedback.score / feedback.max_score) * 100)}%`}
-                        variant="outlined"
-                        size="small"
-                      />
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6" color="primary">
+                🤖 Đánh giá chi tiết của AI
+              </Typography>
+              {comprehensiveFeedback.cefr_level && (
+                <Chip
+                  label={`CEFR: ${comprehensiveFeedback.cefr_level}`}
+                  color="primary"
+                  variant="outlined"
+                  sx={{ fontWeight: 'bold' }}
+                />
+              )}
+            </Box>
+
+            {/* Overall Comment */}
+            {comprehensiveFeedback.comment && (
+              <Box mb={3}>
+                <Typography variant="subtitle2" color="primary" gutterBottom>
+                  💬 Nhận xét tổng quan:
+                </Typography>
+                <Typography variant="body2" paragraph sx={{ 
+                  backgroundColor: 'grey.50', 
+                  p: 2, 
+                  borderRadius: 2,
+                  whiteSpace: 'pre-line'
+                }}>
+                  {comprehensiveFeedback.comment}
+                </Typography>
+              </Box>
+            )}
+
+            <Grid container spacing={2}>
+              {/* Strengths */}
+              {comprehensiveFeedback.strengths && comprehensiveFeedback.strengths !== 'None identified' && comprehensiveFeedback.strengths !== 'Unable to extract specific strengths due to parsing error' && (
+                <Grid item xs={12} md={4}>
+                  <Box>
+                    <Box display="flex" alignItems="center" gap={1} mb={1}>
+                      <CheckCircle color="success" fontSize="small" />
+                      <Typography variant="subtitle2" fontWeight="bold" color="success.main">
+                        Điểm mạnh
+                      </Typography>
                     </Box>
+                    <Paper sx={{ p: 1.5, backgroundColor: 'success.50' }}>
+                      <Typography 
+                        variant="body2" 
+                        component="div"
+                        sx={{ whiteSpace: 'pre-line' }}
+                      >
+                        {comprehensiveFeedback.strengths}
+                      </Typography>
+                    </Paper>
                   </Box>
-                </AccordionSummary>
-                
-                <AccordionDetails>
-                  {/* Progress Bar */}
-                  <LinearProgress 
-                    variant="determinate"
-                    value={(feedback.score / feedback.max_score) * 100}
-                    color={feedback.score / feedback.max_score >= 0.8 ? 'success' : 'warning'}
-                    sx={{ mb: 2, height: 8, borderRadius: 4 }}
-                  />
+                </Grid>
+              )}
 
-                  {/* Comment */}
-                  {feedback.comment && (
-                    <Box mb={2}>
-                      <Typography variant="subtitle2" color="primary" gutterBottom>
-                        💬 Nhận xét:
-                      </Typography>
-                      <Typography variant="body2" paragraph>
-                        {feedback.comment}
+              {/* Weaknesses */}
+              {comprehensiveFeedback.weaknesses && comprehensiveFeedback.weaknesses !== 'None identified' && comprehensiveFeedback.weaknesses !== 'Unable to extract specific weaknesses due to parsing error' && (
+                <Grid item xs={12} md={4}>
+                  <Box>
+                    <Box display="flex" alignItems="center" gap={1} mb={1}>
+                      <WarningIcon color="warning" fontSize="small" />
+                      <Typography variant="subtitle2" fontWeight="bold" color="warning.main">
+                        Cần cải thiện
                       </Typography>
                     </Box>
-                  )}
+                    <Paper sx={{ p: 1.5, backgroundColor: 'warning.50' }}>
+                      <Typography 
+                        variant="body2"
+                        component="div"
+                        sx={{ whiteSpace: 'pre-line' }}
+                      >
+                        {comprehensiveFeedback.weaknesses}
+                      </Typography>
+                    </Paper>
+                  </Box>
+                </Grid>
+              )}
 
-                  <Divider sx={{ my: 2 }} />
-
-                  <Grid container spacing={2}>
-                    {/* Strengths */}
-                    {feedback.strengths && feedback.strengths !== 'None identified' && (
-                      <Grid item xs={12} md={4}>
-                        <Box>
-                          <Box display="flex" alignItems="center" gap={1} mb={1}>
-                            <CheckCircle color="success" fontSize="small" />
-                            <Typography variant="subtitle2" fontWeight="bold" color="success.main">
-                              Điểm mạnh
-                            </Typography>
-                          </Box>
-                          <Paper sx={{ p: 1.5, backgroundColor: 'success.50' }}>
-                            <Typography 
-                              variant="body2" 
-                              component="div"
-                              sx={{ whiteSpace: 'pre-line' }}
-                            >
-                              {feedback.strengths}
-                            </Typography>
-                          </Paper>
-                        </Box>
-                      </Grid>
-                    )}
-
-                    {/* Weaknesses */}
-                    {feedback.weaknesses && feedback.weaknesses !== 'None identified' && (
-                      <Grid item xs={12} md={4}>
-                        <Box>
-                          <Box display="flex" alignItems="center" gap={1} mb={1}>
-                            <WarningIcon color="warning" fontSize="small" />
-                            <Typography variant="subtitle2" fontWeight="bold" color="warning.main">
-                              Cần cải thiện
-                            </Typography>
-                          </Box>
-                          <Paper sx={{ p: 1.5, backgroundColor: 'warning.50' }}>
-                            <Typography 
-                              variant="body2"
-                              component="div"
-                              sx={{ whiteSpace: 'pre-line' }}
-                            >
-                              {feedback.weaknesses}
-                            </Typography>
-                          </Paper>
-                        </Box>
-                      </Grid>
-                    )}
-
-                    {/* Suggestions */}
-                    {feedback.suggestions && feedback.suggestions !== 'No suggestions' && (
-                      <Grid item xs={12} md={4}>
-                        <Box>
-                          <Box display="flex" alignItems="center" gap={1} mb={1}>
-                            <Lightbulb color="primary" fontSize="small" />
-                            <Typography variant="subtitle2" fontWeight="bold" color="primary.main">
-                              Gợi ý
-                            </Typography>
-                          </Box>
-                          <Paper sx={{ p: 1.5, backgroundColor: 'primary.50' }}>
-                            <Typography 
-                              variant="body2"
-                              component="div"
-                              sx={{ whiteSpace: 'pre-line' }}
-                            >
-                              {feedback.suggestions}
-                            </Typography>
-                          </Paper>
-                        </Box>
-                      </Grid>
-                    )}
-                  </Grid>
-                </AccordionDetails>
-              </Accordion>
-            ))}
+              {/* Suggestions */}
+              {comprehensiveFeedback.suggestions && comprehensiveFeedback.suggestions !== 'No suggestions' && comprehensiveFeedback.suggestions !== 'Please review the raw AI response for detailed feedback' && (
+                <Grid item xs={12} md={4}>
+                  <Box>
+                    <Box display="flex" alignItems="center" gap={1} mb={1}>
+                      <Lightbulb color="primary" fontSize="small" />
+                      <Typography variant="subtitle2" fontWeight="bold" color="primary.main">
+                        Gợi ý cải thiện
+                      </Typography>
+                    </Box>
+                    <Paper sx={{ p: 1.5, backgroundColor: 'primary.50' }}>
+                      <Typography 
+                        variant="body2"
+                        component="div"
+                        sx={{ whiteSpace: 'pre-line' }}
+                      >
+                        {comprehensiveFeedback.suggestions}
+                      </Typography>
+                    </Paper>
+                  </Box>
+                </Grid>
+              )}
+            </Grid>
           </CardContent>
         </Card>
-      )}
-
-      {/* Overall AI Feedback */}
-      {ai_feedback && (
-        <Alert severity="info" icon={<TrendingUp />} sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" gutterBottom fontWeight="bold">
-            Tổng quan:
-          </Typography>
-          <Typography variant="body2">
-            {ai_feedback}
-          </Typography>
-        </Alert>
       )}
 
       {/* Teacher Feedback (if reviewed) */}

@@ -11,10 +11,7 @@ import ListeningMatchingQuestion from './listening/ListeningMatchingQuestion';
 import ListeningStatementMatchingQuestion from './listening/ListeningStatementMatchingQuestion';
 import ListeningMultiMCQQuestion from './listening/ListeningMultiMCQQuestion';
 import WritingQuestion from './WritingQuestion';
-import WritingShortAnswerQuestion from './writing/WritingShortAnswerQuestion';
-import WritingFormFillingQuestion from './writing/WritingFormFillingQuestion';
-import WritingChatQuestion from './writing/WritingChatQuestion';
-import WritingEmailQuestion from './writing/WritingEmailQuestion';
+import WritingQuestionDisplay from './writing/WritingQuestionDisplay';
 import SpeakingQuestion from './SpeakingQuestion';
 
 export default function QuestionDisplay({ 
@@ -187,31 +184,14 @@ export default function QuestionDisplay({
           />
         );
       case 'writing_short_answer':
-        return (
-          <WritingShortAnswerQuestion
-            question={questionData}
-            onAnswerChange={handleAnswerChange}
-          />
-        );
       case 'writing_form':
-        return (
-          <WritingFormFillingQuestion
-            question={questionData}
-            onAnswerChange={handleAnswerChange}
-          />
-        );
       case 'writing_chat':
-        return (
-          <WritingChatQuestion
-            question={questionData}
-            onAnswerChange={handleAnswerChange}
-          />
-        );
       case 'writing_email':
         return (
-          <WritingEmailQuestion
-            question={questionData}
-            onAnswerChange={handleAnswerChange}
+          <WritingQuestionDisplay
+            question={question}
+            answer={answer}
+            onAnswerChange={onAnswerChange}
           />
         );
       case 'writing_essay':
@@ -334,11 +314,6 @@ export default function QuestionDisplay({
             </CardContent>
           </Card>
         )}
-
-        {/* Question Text */}
-        <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', lineHeight: 1.6 }}>
-          {question.content}
-        </Typography>
 
         {/* Question Content based on type */}
         {renderQuestionContent()}

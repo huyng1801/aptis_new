@@ -91,12 +91,12 @@ export default function ExamDetailPage() {
   const userAttempts = Array.isArray(myAttempts)
     ? myAttempts.filter(attempt => attempt.exam_id === parseInt(examId))
     : [];
-  const stats = {};
-  const hasActiveAttempt = userAttempts.some(attempt => attempt.status === 'in_progress');
-  const bestScore = userAttempts.length > 0 ? Math.max(...userAttempts.map(a => a.total_score || 0)) : null;
+  // const stats = {};
+  // const hasActiveAttempt = userAttempts.some(attempt => attempt.status === 'in_progress');
+  // const bestScore = userAttempts.length > 0 ? Math.max(...userAttempts.map(a => a.total_score || 0)) : null;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4, minHeight: 'calc(100vh - 300px)', display: 'flex', flexDirection: 'column' }}>
       {/* Custom Breadcrumb for Exam Detail */}
       <Box mb={3}>
         <Breadcrumbs
@@ -121,7 +121,7 @@ export default function ExamDetailPage() {
             underline="hover"
             color="inherit"
           >
-            Duyệt bài thi
+            Danh sách bài thi
           </Link>
           <Typography color="text.primary" sx={{ fontWeight: 500 }}>
             {exam.title}
@@ -153,35 +153,14 @@ export default function ExamDetailPage() {
          
 
           <Box display="flex" gap={1}>
-            {hasActiveAttempt ? (
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<PlayArrow />}
-                onClick={() => handleContinueExam(userAttempts.find(a => a.status === 'in_progress').id)}
-              >
-                Tiếp tục làm bài
-              </Button>
-            ) : (
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<PlayArrow />}
-                onClick={handleStartExam}
-              >
-                Bắt đầu làm bài
-              </Button>
-            )}
-            
-            {userAttempts.length > 0 && (
-              <Button
-                variant="outlined"
-                startIcon={<Refresh />}
-                onClick={handleStartExam}
-              >
-                Làm lại
-              </Button>
-            )}
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<PlayArrow />}
+              onClick={handleStartExam}
+            >
+              Bắt đầu làm bài
+            </Button>
           </Box>
         </CardContent>
       </Card>
@@ -225,14 +204,27 @@ export default function ExamDetailPage() {
             Kỹ năng đánh giá
           </Typography>
           <Box display="flex" gap={1} flexWrap="wrap">
-            {exam.sections?.map((section) => (
-              <Chip 
-                key={section.id}
-                label={section.skillType?.skill_type_name || 'N/A'}
-                size="small"
-                variant="outlined"
-              />
-            )) || <Typography color="textSecondary">Không có kỹ năng đánh giá</Typography>}
+            {(() => {
+              if (!exam.sections || exam.sections.length === 0) {
+                return <Typography color="textSecondary">Không có kỹ năng đánh giá</Typography>;
+              }
+              // Lấy danh sách skill_type_name duy nhất
+              const uniqueSkills = Array.from(
+                new Set(
+                  exam.sections
+                    .map(section => section.skillType?.skill_type_name)
+                    .filter(Boolean)
+                )
+              );
+              return uniqueSkills.map((skill, idx) => (
+                <Chip
+                  key={skill || idx}
+                  label={skill || 'N/A'}
+                  size="small"
+                  variant="outlined"
+                />
+              ));
+            })()}
           </Box>
         </TabPanel>
 
@@ -241,67 +233,133 @@ export default function ExamDetailPage() {
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
               Cấu trúc bài thi
             </Typography>
-            {exam.sections?.map((section, index) => {
-              const totalQuestions = section.questions?.length || 0;
-              const totalScore = section.questions?.reduce((sum, q) => sum + (parseInt(q.max_score) || 0), 0) || 0;
-              return (
-                <Card 
-                  key={section.id} 
-                  variant="outlined" 
-                  sx={{ 
-                    mb: 2, 
-                    borderColor: 'divider',
-                    '&:hover': {
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                      borderColor: 'primary.light',
-                    },
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <CardContent>
-                    <Grid container spacing={2} alignItems="flex-start">
-                      <Grid item xs={12} sm={8}>
-                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-                          Phần {index + 1}: {section.skillType?.skill_type_name || 'N/A'}
+            {(() => {
+              if (!exam.sections || exam.sections.length === 0) {
+                return <Typography color="textSecondary">Không có thông tin chi tiết về cấu trúc bài thi.</Typography>;
+              }
+              
+              // Gộp sections theo skill
+              const groupedBySkill = exam.sections.reduce((acc, section, idx) => {
+                const skillName = section.skillType?.skill_type_name || 'N/A';
+                if (!acc[skillName]) {
+                  acc[skillName] = [];
+                }
+                acc[skillName].push({ ...section, sectionIndex: idx + 1 });
+                return acc;
+              }, {});
+
+              return Object.entries(groupedBySkill).map(([skillName, sections]) => {
+                const totalQuestions = sections.reduce((sum, s) => sum + (s.questions?.length || 0), 0);
+                const totalScore = sections.reduce((sum, s) => sum + (s.questions?.reduce((sq, q) => sq + (parseInt(q.max_score) || 0), 0) || 0), 0);
+                const totalDuration = sections.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+
+                return (
+                  <Card 
+                    key={skillName} 
+                    variant="outlined" 
+                    sx={{ 
+                      mb: 3, 
+                      borderColor: 'divider',
+                      '&:hover': {
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        borderColor: 'primary.light',
+                      },
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <CardContent>
+                      {/* Skill Header */}
+                      <Box sx={{ mb: 2, pb: 2, borderBottom: '2px solid #e0e0e0' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main', mb: 1 }}>
+                          {skillName}
                         </Typography>
-                        {section.instruction && (
-                          <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                            {section.instruction}
-                          </Typography>
-                        )}
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-start' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <AccessTime sx={{ fontSize: 20, color: 'text.secondary' }} />
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {section.duration_minutes} phút
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Quiz sx={{ fontSize: 20, color: 'text.secondary' }} />
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {totalQuestions} câu
-                            </Typography>
-                          </Box>
-                          <Chip
-                            label={`${totalScore} điểm`}
-                            color="primary"
-                            variant="outlined"
-                            size="small"
-                            sx={{ mt: 0.5 }}
-                          />
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              );
-            }) || (
-              <Typography color="textSecondary">
-                Không có thông tin chi tiết về cấu trúc bài thi.
-              </Typography>
-            )}
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6} md={3}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <AccessTime sx={{ fontSize: 20, color: 'text.secondary' }} />
+                              <Box>
+                                <Typography variant="caption" color="text.secondary">Thời gian</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  {totalDuration} phút
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={3}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Quiz sx={{ fontSize: 20, color: 'text.secondary' }} />
+                              <Box>
+                                <Typography variant="caption" color="text.secondary">Tổng câu</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  {totalQuestions} câu
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={3}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Star sx={{ fontSize: 20, color: 'text.secondary' }} />
+                              <Box>
+                                <Typography variant="caption" color="text.secondary">Tổng điểm</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  {totalScore} điểm
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                      </Box>
+
+                      {/* Parts/Sections */}
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, color: 'text.secondary' }}>
+                          Các phần:
+                        </Typography>
+                        <Grid container spacing={1.5}>
+                          {sections.map((section) => {
+                            const sectionQuestions = section.questions?.length || 0;
+                            const sectionScore = section.questions?.reduce((sum, q) => sum + (parseInt(q.max_score) || 0), 0) || 0;
+                            return (
+                              <Grid item xs={12} key={section.id}>
+                                <Box sx={{ 
+                                  p: 1.5, 
+                                  bgcolor: '#fafafa', 
+                                  borderRadius: 1, 
+                                  borderLeft: '3px solid #1976d2',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center'
+                                }}>
+                                  <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {section.instruction || 'Part'}
+                                    </Typography>
+                                  </Box>
+                                  <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                                      {section.duration_minutes}p
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                                      {sectionQuestions} câu
+                                    </Typography>
+                                    <Chip 
+                                      label={`${sectionScore}đ`} 
+                                      size="small" 
+                                      variant="outlined"
+                                      sx={{ height: 24 }}
+                                    />
+                                  </Box>
+                                </Box>
+                              </Grid>
+                            );
+                          })}
+                        </Grid>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                );
+              });
+            })()}
           </Box>
         </TabPanel>
 

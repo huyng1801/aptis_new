@@ -307,8 +307,9 @@ const attemptSlice = createSlice({
         state.currentAttempt = action.payload;
         if (action.payload.answers && action.payload.answers.length > 0) {
           state.answers = action.payload.answers;
-          // Extract questions from answers
-          state.questions = action.payload.answers.map(answer => answer.question).filter(Boolean);
+          // CRITICAL: Store full answer objects to preserve questionType relationship
+          // questions array should contain answer objects with nested question data
+          state.questions = action.payload.answers.filter(answer => answer.question);
         } else {
           state.questions = [];
           state.answers = [];
@@ -391,24 +392,27 @@ const attemptSlice = createSlice({
           newAnswers.forEach(answer => {
             if (answer.question) {
               // Convert media_url to full URL if present
-              const questionData = { ...answer.question };
-              if (questionData.media_url) {
-                questionData.media_url = getAssetUrl(questionData.media_url);
-                console.log('[loadQuestions] Q' + questionData.id + ' converted media_url to:', questionData.media_url);
+              if (answer.question.media_url) {
+                answer.question.media_url = getAssetUrl(answer.question.media_url);
+                console.log('[loadQuestions] Q' + answer.question.id + ' converted media_url to:', answer.question.media_url);
               }
               
-              // CRITICAL: Merge answer_data into question for component consumption
-              const questionWithAnswerData = {
-                ...questionData,
-                answer_data: answer.answer_data
+              // CRITICAL: Store full answer object with nested question (preserving questionType relationship)
+              // This maintains the skill_type_id path: answer.question.questionType.skill_type_id
+              const answerWithQuestion = {
+                ...answer,
+                question: {
+                  ...answer.question,
+                  answer_data: answer.answer_data // Also merge answer_data for backward compatibility
+                }
               };
               
-              // Add/update question with answer_data
-              const existingQuestionIndex = state.questions.findIndex(q => q.id === answer.question.id);
+              // Add/update in questions array (questions are actually answer objects)
+              const existingQuestionIndex = state.questions.findIndex(q => q.question_id === answer.question_id);
               if (existingQuestionIndex >= 0) {
-                state.questions[existingQuestionIndex] = questionWithAnswerData;
+                state.questions[existingQuestionIndex] = answerWithQuestion;
               } else {
-                state.questions.push(questionWithAnswerData);
+                state.questions.push(answerWithQuestion);
               }
               
               // Add/update answer with full data

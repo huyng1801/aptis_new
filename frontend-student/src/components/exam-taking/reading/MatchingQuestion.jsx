@@ -13,8 +13,13 @@ import {
 
 export default function ReadingMatchingQuestion({ question, onAnswerChange }) {
   const [matches, setMatches] = useState({});
+  const [matchingType, setMatchingType] = useState('person'); // 'person' or 'text'
 
   useEffect(() => {
+    // Detect matching type based on content
+    const isTextMatching = question.content && question.content.includes('Short Texts:');
+    setMatchingType(isTextMatching ? 'text' : 'person');
+
     if (question.answer_data?.answer_json) {
       try {
         const parsed = JSON.parse(question.answer_data.answer_json);
@@ -34,7 +39,7 @@ export default function ReadingMatchingQuestion({ question, onAnswerChange }) {
       });
       setMatches(initialMatches);
     }
-  }, [question.id, question.answer_data?.answer_json, question.items]);
+  }, [question.id, question.answer_data?.answer_json, question.items, question.content]);
 
   const handleMatchChange = (itemId, optionText) => {
     const newMatches = { ...matches, [itemId]: optionText };
@@ -54,7 +59,82 @@ export default function ReadingMatchingQuestion({ question, onAnswerChange }) {
     );
   }
 
-  // Parse content to extract person descriptions and instructions
+  // ========== SHORT TEXT MATCHING ==========
+  if (matchingType === 'text') {
+    console.log('[ReadingMatchingQuestion] Rendering SHORT TEXT MATCHING');
+    
+    const contentLines = question.content.split('\n').filter(line => line.trim() !== '');
+    
+    // Extract instruction
+    let instruction = '';
+    let shortTextsStart = -1;
+    
+    for (let i = 0; i < contentLines.length; i++) {
+      if (contentLines[i].includes('Short Texts:')) {
+        shortTextsStart = i;
+        instruction = contentLines.slice(0, i).join(' ').trim();
+        break;
+      }
+    }
+
+    if (!instruction.trim()) {
+      instruction = 'Match each short text with the correct description.';
+    }
+
+    // Sort items by item_order
+    const sortedItems = [...question.items].sort((a, b) => a.item_order - b.item_order);
+
+    return (
+      <Box>
+        {/* Instructions */}
+        <Typography variant="body1" sx={{ mb: 3, fontWeight: 500 }}>
+          {instruction}
+        </Typography>
+
+
+        {sortedItems.map((item, index) => (
+          <Box key={`text-item-${item.id}`} sx={{ mb: 2, display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+            <Typography variant="body1" sx={{ flex: 1, minWidth: 300, pt: 1 }}>
+              <strong>Text {index + 1}:</strong> {item.item_text}
+            </Typography>
+            
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <Select
+                value={matches[item.id] || ''}
+                onChange={(e) => handleMatchChange(item.id, e.target.value)}
+                displayEmpty
+                sx={{
+                  backgroundColor: matches[item.id] ? '#e3f2fd' : 'white',
+                  '& .MuiSelect-select': {
+                    fontWeight: matches[item.id] ? 600 : 400
+                  }
+                }}
+              >
+                <MenuItem value="">
+                  <em>-- Chọn --</em>
+                </MenuItem>
+                {question.options.map((option) => (
+                  <MenuItem key={option.id} value={option.option_text}>
+                    {option.option_text}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        ))}
+
+        {/* Summary */}
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="body2" color="text.secondary">
+          Hoàn thành {Object.values(matches).filter(Boolean).length}/{sortedItems.length} câu hỏi
+        </Typography>
+      </Box>
+    );
+  }
+
+  // ========== PERSON MATCHING (Original) ==========
+  console.log('[ReadingMatchingQuestion] Rendering PERSON MATCHING');
+  
   const contentLines = question.content.split('\n').filter(line => line.trim() !== '');
   
   // Extract person descriptions (Person A, Person B, etc.)

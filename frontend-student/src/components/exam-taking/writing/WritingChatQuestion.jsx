@@ -5,11 +5,7 @@ import {
   Box,
   Typography,
   TextField,
-  Paper,
-  Chip,
   Grid,
-  LinearProgress,
-  Divider,
 } from '@mui/material';
 
 export default function WritingChatQuestion({ question, onAnswerChange }) {
@@ -18,49 +14,121 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
     personB: ''
   });
 
-  // Parse question content
+  // Parse question content - separates context messages from reply prompts
   const questionData = React.useMemo(() => {
     try {
+      // If content is text format, parse it
+      if (typeof question.content === 'string' && !question.content.startsWith('{')) {
+        // Parse the text content to extract chat context and reply prompts
+        const lines = question.content.split('\n');
+        const title = lines[0]?.trim() || "Chat Messages";
+        
+        // Separate context messages from reply prompts
+        const contextMessages = [];
+        const peopleInChat = new Set(); // Track unique people names
+        const instructionKeywords = ['reply', 'your', 'response', 'chat', 'word', 'messages'];
+        
+        // First pass: Extract actual chat messages and identify people
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          
+          // Skip empty lines, title, and instruction lines
+          if (!line || line === title) continue;
+          
+          // Skip lines that contain instruction keywords
+          const isInstruction = instructionKeywords.some(keyword => 
+            line.toLowerCase().includes(keyword) && 
+            (line.includes('(') || line.includes(')') || line.length > 100)
+          );
+          if (isInstruction) continue;
+          
+          // Check if this is a message (contains colon and a name)
+          if (line.includes(':')) {
+            const colonIndex = line.indexOf(':');
+            const potentialName = line.substring(0, colonIndex).trim();
+            const message = line.substring(colonIndex + 1).trim();
+            
+            // Valid name: alphanumeric, no numbers at start, reasonable length
+            const isValidName = /^[A-Za-z][A-Za-z\s]*$/.test(potentialName) && 
+                               potentialName.length < 30 && 
+                               message.length > 0;
+            
+            if (isValidName) {
+              contextMessages.push({
+                user: potentialName,
+                message
+              });
+              peopleInChat.add(potentialName);
+            }
+          }
+        }
+        
+        // Create reply prompts only for people who appeared in context
+        const replyPrompts = Array.from(peopleInChat).map(person => ({ user: person }));
+        
+        // If no people found, use defaults
+        if (replyPrompts.length === 0) {
+          replyPrompts.push({ user: 'Alex' }, { user: 'Sam' });
+        }
+        
+        return {
+          title,
+          contextMessages,
+          replyPrompts
+        };
+      }
+      
+      // Legacy JSON format support
       return typeof question.content === 'string' ? JSON.parse(question.content) : question.content;
     } catch (error) {
       console.error('Failed to parse question content:', error);
-      return {
-        title: "Book Club Chat Room",
-        description: "You are talking to other members of the club in the chat room. Talk to them using sentences. Use 30-40 words per answer.",
-        messages: [
-          {
-            person: "Person A",
-            message: "Tell me about your favourite time and place to read a book?"
-          },
-          {
-            person: "Person B", 
-            message: "I bought a book as a gift for my friend but I don't know what kind of book he likes. Can you give me some advice?"
-          }
-        ]
-      };
+      return null;
     }
   }, [question.content]);
 
   // Initialize answers from question.answer_data
   useEffect(() => {
+    console.log('[WritingChatQuestion] Initializing for question:', question.id);
+    
     if (question.answer_data && typeof question.answer_data === 'object') {
-      if (question.answer_data.answer_json) {
-        try {
-          const parsedAnswers = JSON.parse(question.answer_data.answer_json);
-          setAnswers(parsedAnswers || { personA: '', personB: '' });
-        } catch (error) {
-          console.error('[WritingChatQuestion] Failed to parse answer_json:', error);
-          setAnswers({ personA: '', personB: '' });
+      if (question.answer_data.text_answer) {
+        console.log('[WritingChatQuestion] Found existing answer:', question.answer_data.text_answer);
+        
+        // Parse structured text format: Reply 1:\n<content>\n\nReply 2:\n<content>
+        const textAnswer = question.answer_data.text_answer;
+        
+        // More robust parsing to handle different formats
+        let personA = '';
+        let personB = '';
+        
+        if (textAnswer.includes('Reply 1:') && textAnswer.includes('Reply 2:')) {
+          // Standard format
+          const reply1Match = textAnswer.match(/Reply 1:\n([\s\S]*?)(?:\n\nReply 2:|$)/);
+          const reply2Match = textAnswer.match(/Reply 2:\n([\s\S]*?)$/);
+          
+          personA = reply1Match ? reply1Match[1].trim() : '';
+          personB = reply2Match ? reply2Match[1].trim() : '';
+        } else {
+          // Fallback - treat as single reply for personA
+          personA = textAnswer.trim();
+          personB = '';
         }
+        
+        console.log('[WritingChatQuestion] Parsed replies:', { personA, personB });
+        setAnswers({ personA, personB });
       } else {
+        console.log('[WritingChatQuestion] No existing answer, resetting');
         setAnswers({ personA: '', personB: '' });
       }
     } else {
+      console.log('[WritingChatQuestion] No answer_data, resetting');
       setAnswers({ personA: '', personB: '' });
     }
   }, [question.id, question.answer_data]);
 
   const handleAnswerChange = (personKey, value) => {
+    console.log(`[WritingChatQuestion] Updating ${personKey}:`, value);
+    
     const newAnswers = {
       ...answers,
       [personKey]: value
@@ -68,10 +136,15 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
     
     setAnswers(newAnswers);
     
+    // Convert to formatted text for consistent storage
+    const formattedText = `Reply 1:\n${newAnswers.personA}\n\nReply 2:\n${newAnswers.personB}`;
+    
+    console.log(`[WritingChatQuestion] Sending formatted answer:`, formattedText);
+    
     // Send update to parent
     onAnswerChange({
-      answer_type: 'json',
-      answer_json: JSON.stringify(newAnswers)
+      answer_type: 'text',
+      text_answer: formattedText
     });
   };
 
@@ -79,176 +152,80 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   };
 
-  const minWords = 30;
-  const maxWords = 40;
-
-  const getWordCountColor = (wordCount) => {
-    if (wordCount < minWords) return 'error';
-    if (wordCount > maxWords) return 'warning'; 
-    return 'success';
-  };
-
-  const getProgress = (wordCount) => {
-    return Math.min((wordCount / maxWords) * 100, 100);
-  };
+  if (!questionData) {
+    return <Box sx={{ p: 2 }}><Typography color="error">Không thể tải câu hỏi</Typography></Box>;
+  }
 
   const personAWordCount = countWords(answers.personA);
   const personBWordCount = countWords(answers.personB);
 
   return (
-    <Box>
-      {/* Header */}
-      <Paper sx={{ p: 3, mb: 3, backgroundColor: 'success.light', color: 'success.contrastText' }}>
-        <Typography variant="h6" gutterBottom>
-          Writing Part 3: Chat Room
-        </Typography>
-        <Typography variant="body2">
-          {questionData.description}
-        </Typography>
-        <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
-          Recommended time: 10 minutes.
-        </Typography>
-      </Paper>
+    <Box sx={{ maxHeight: '100vh', overflow: 'auto', p: 2 }}>
+      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+        {questionData.title}
+      </Typography>
 
-      {/* Requirements */}
-      <Paper sx={{ p: 2, mb: 3, backgroundColor: 'info.light' }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Requirements:
-        </Typography>
-        <Box display="flex" gap={1} flexWrap="wrap">
-          <Chip size="small" label={`${minWords}-${maxWords} words per response`} color="primary" variant="outlined" />
-          <Chip size="small" label="Complete sentences" color="info" variant="outlined" />
-          <Chip size="small" label="Conversational tone" color="secondary" variant="outlined" />
-          <Chip size="small" label="10 minutes" color="warning" variant="outlined" />
+      {/* Chat Context - Read Only */}
+      {questionData.contextMessages && questionData.contextMessages.length > 0 && (
+        <Box sx={{ mb: 4, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.50' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2, color: 'text.secondary' }}>
+            Chat Context:
+          </Typography>
+          {questionData.contextMessages.map((msg, index) => (
+            <Box key={`context-${index}`} sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                {msg.user}:
+              </Typography>
+              <Typography variant="body2" sx={{ ml: 2, color: 'text.primary' }}>
+                {msg.message}
+              </Typography>
+            </Box>
+          ))}
         </Box>
-      </Paper>
+      )}
 
-      {/* Chat Interface */}
-      <Paper sx={{ p: 3, backgroundColor: 'grey.50', border: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="h6" gutterBottom color="primary">
-          📚 {questionData.title}
+      {/* Reply Prompts - Input Fields */}
+      <Box>
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2, color: 'text.secondary' }}>
+          Your Replies:
         </Typography>
         
         <Grid container spacing={3}>
-          {/* Person A */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2, backgroundColor: 'white', border: '1px solid #e0e0e0' }}>
-              <Typography variant="subtitle1" gutterBottom fontWeight="bold" color="primary.dark">
-                {questionData.messages[0]?.person}: {questionData.messages[0]?.message}
-              </Typography>
-              
-              <Box sx={{ mt: 2, mb: 2 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Typography variant="body2" color={getWordCountColor(personAWordCount)}>
-                    Words: {personAWordCount} / {minWords}-{maxWords}
+          {questionData.replyPrompts.map((prompt, index) => {
+            const answerKey = index === 0 ? 'personA' : 'personB';
+            const answerText = answers[answerKey] || '';
+            const wordCount = countWords(answerText);
+            
+            return (
+              <Grid item xs={12} key={`reply-${index}-${answerKey}`}>
+                <Box sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper' }}>
+                  <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}>
+                    Reply to {prompt.user}:
                   </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Response to Person A
-                  </Typography>
+                  
+                  <TextField
+                    multiline
+                    fullWidth
+                    rows={4}
+                    value={answerText}
+                    onChange={(e) => handleAnswerChange(answerKey, e.target.value)}
+                    variant="outlined"
+                    placeholder={`Type your reply here (30-40 words recommended)...`}
+                    helperText={`${wordCount} words ${wordCount >= 30 && wordCount <= 40 ? '✓' : wordCount < 30 ? '(need more)' : '(too many)'}`}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '0.95rem',
+                        lineHeight: 1.5,
+                        backgroundColor: 'white'
+                      }
+                    }}
+                  />
                 </Box>
-                
-                <LinearProgress
-                  variant="determinate"
-                  value={getProgress(personAWordCount)}
-                  color={getWordCountColor(personAWordCount)}
-                  sx={{ height: 4, borderRadius: 2, mb: 1 }}
-                />
-              </Box>
-
-              <TextField
-                multiline
-                fullWidth
-                rows={3}
-                value={answers.personA}
-                onChange={(e) => handleAnswerChange('personA', e.target.value)}
-                placeholder="Example: My favourite time to read is in the evening after work. I love sitting in my garden with a good book and a cup of coffee. The quiet atmosphere helps me focus and relax completely."
-                variant="outlined"
-                error={personAWordCount < minWords || personAWordCount > maxWords}
-                helperText={
-                  personAWordCount < minWords ? `Need ${minWords - personAWordCount} more words` :
-                  personAWordCount > maxWords ? `${personAWordCount - maxWords} words over limit` :
-                  'Perfect! Within word limit'
-                }
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: '0.95rem',
-                    lineHeight: 1.5,
-                  }
-                }}
-              />
-            </Paper>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Divider>
-              <Chip label="Next Message" size="small" />
-            </Divider>
-          </Grid>
-
-          {/* Person B */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2, backgroundColor: 'white', border: '1px solid #e0e0e0' }}>
-              <Typography variant="subtitle1" gutterBottom fontWeight="bold" color="secondary.dark">
-                {questionData.messages[1]?.person}: {questionData.messages[1]?.message}
-              </Typography>
-              
-              <Box sx={{ mt: 2, mb: 2 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Typography variant="body2" color={getWordCountColor(personBWordCount)}>
-                    Words: {personBWordCount} / {minWords}-{maxWords}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Response to Person B
-                  </Typography>
-                </Box>
-                
-                <LinearProgress
-                  variant="determinate"
-                  value={getProgress(personBWordCount)}
-                  color={getWordCountColor(personBWordCount)}
-                  sx={{ height: 4, borderRadius: 2, mb: 1 }}
-                />
-              </Box>
-
-              <TextField
-                multiline
-                fullWidth
-                rows={3}
-                value={answers.personB}
-                onChange={(e) => handleAnswerChange('personB', e.target.value)}
-                placeholder="Example: I suggest asking your friend about their hobbies and interests first. Maybe choose a popular thriller or mystery novel as most people enjoy them. You could also check what books are currently bestsellers."
-                variant="outlined"
-                error={personBWordCount < minWords || personBWordCount > maxWords}
-                helperText={
-                  personBWordCount < minWords ? `Need ${minWords - personBWordCount} more words` :
-                  personBWordCount > maxWords ? `${personBWordCount - maxWords} words over limit` :
-                  'Perfect! Within word limit'
-                }
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: '0.95rem',
-                    lineHeight: 1.5,
-                  }
-                }}
-              />
-            </Paper>
-          </Grid>
+              </Grid>
+            );
+          })}
         </Grid>
-      </Paper>
-
-      {/* Tips */}
-      <Paper sx={{ p: 2, mt: 3, backgroundColor: 'grey.50' }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Tips for Part 3:
-        </Typography>
-        <Typography variant="body2" component="ul" sx={{ pl: 2, m: 0 }}>
-          <li>Write like you're having a friendly conversation</li>
-          <li>Use 30-40 words for each response</li>
-          <li>Be helpful and give relevant advice or information</li>
-          <li>Use connecting words (but, because, so, however)</li>
-          <li>Stay on topic and answer the questions directly</li>
-        </Typography>
-      </Paper>
+      </Box>
     </Box>
   );
 }

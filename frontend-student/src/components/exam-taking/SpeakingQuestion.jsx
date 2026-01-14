@@ -40,12 +40,30 @@ export default function SpeakingQuestion({
       </Box>
     );
   }
+  
+  // Debug logging
+  console.log('[SpeakingQuestion] Component render:', { 
+    questionId: question.id, 
+    hasOnMoveToNext: !!onMoveToNextQuestion,
+    attemptId 
+  });
   // Modal states
   const [step, setStep] = useState('recording'); // recording only
   
+  // Parse question requirements first (before using in useState)
+  const requirements = question.question_content?.requirements || {};
+  
+  // Extract question number from content (e.g., "Câu 1/4" -> 1)
+  const questionNumberMatch = question.content?.match(/Câu\s+(\d+)\/\d+/);
+  const questionNumber = questionNumberMatch ? parseInt(questionNumberMatch[1]) : 1;
+  
+  // Calculate max recording time based on question number
+  // Q1: 30s, Q2: 60s, Q3: 90s, Q4: 120s
+  const maxRecordingTime = (questionNumber === 1) ? 30 : (questionNumber === 2) ? 60 : (questionNumber === 3) ? 90 : 120;
+  
   // Recording states
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(30); // Start at 30 seconds
+  const [recordingTime, setRecordingTime] = useState(maxRecordingTime); // Start at max recording time
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioUrl, setAudioUrl] = useState('');
   
@@ -64,27 +82,64 @@ export default function SpeakingQuestion({
   const mediaRecorderRef = useRef(null);
   const audioRef = useRef(null);
   const recordingTimerRef = useRef(null);
-  const preparationTimerRef = useRef(null);
   const timeCounterRef = useRef(0);
   const MAX_UPLOAD_RETRIES = 3;
 
-  // Parse question requirements
-  const requirements = question.question_content?.requirements || {};
-  const maxRecordingTime = 30; // Fixed at 30 seconds
-  const preparationTimeLimit = parseInt(requirements.preparation_time) || 5; // seconds (default 5)
-  const hasPreparationTime = preparationTimeLimit > 0;
+  // Fixed preparation time: 10 seconds
+  const preparationTimeLimit = 10;
+  const hasPreparationTime = true;
   
   // Confirmation dialog state
   const [showStopConfirmation, setShowStopConfirmation] = useState(false);
-  
-  // Track if we should auto-start recording
-  const shouldAutoStartRecordingRef = useRef(false);
   
   // Track when recording actually completes (to trigger upload)
   const recordingCompletedRef = useRef(false);
 
   // Check if question already has audio answer
   const hasExistingAudio = question.answer_data?.audio_url;
+
+  // Define startRecording EARLY - before any effect that uses it
+  const startRecording = useCallback(async () => {
+    console.log('[SpeakingQuestion] startRecording called for question', question.id);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks = [];
+      
+      console.log('[SpeakingQuestion] MediaRecorder created, starting recording');
+      
+      mediaRecorder.ondataavailable = (event) => {
+        chunks.push(event.data);
+      };
+      
+      mediaRecorder.onstop = async () => {
+        console.log('[SpeakingQuestion] Recording stopped, processing audio');
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+          ? 'audio/webm;codecs=opus' 
+          : 'audio/webm';
+        const blob = new Blob(chunks, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        
+        recordingCompletedRef.current = true;
+        setAudioBlob(blob);
+        setAudioUrl(url);
+        
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(maxRecordingTime);
+      timeCounterRef.current = maxRecordingTime;
+      
+      console.log('[SpeakingQuestion] Recording started successfully');
+      
+    } catch (error) {
+      console.error('[SpeakingQuestion] Microphone error:', error.message);
+      alert('Không thể truy cập microphone. Vui lòng kiểm tra quyền truy cập.');
+    }
+  }, [maxRecordingTime, question.id]);
 
   // Initialize component - start with preparation or recording
   useEffect(() => {
@@ -95,33 +150,53 @@ export default function SpeakingQuestion({
       return;
     }
     
-    // Reset step and start fresh
-    setStep('recording');
+    console.log('[SpeakingQuestion] Starting fresh for question', question.id);
     
-    // Start preparation or recording based on question requirements
-    if (hasPreparationTime) {
-      setAudioBlob(null);
-      setAudioUrl('');
-      setIsRecording(false);
-      setIsPreparing(true);
-      setPreparationTime(preparationTimeLimit);
-      shouldAutoStartRecordingRef.current = false;
-      // Keep header visible: onHideHeader?.(true);
-    } else {
-      setAudioBlob(null);
-      setAudioUrl('');
-      setIsRecording(false);
-      setIsPreparing(false);
-      shouldAutoStartRecordingRef.current = true;
-      // Keep header visible: onHideHeader?.(false);
-    }
-  }, [question.id, hasPreparationTime, preparationTimeLimit]);
+    // Reset step and start fresh - always start with preparation
+    setStep('recording');
+    setAudioBlob(null);
+    setAudioUrl('');
+    setIsRecording(false);
+    setIsPreparing(true);
+    setPreparationTime(preparationTimeLimit);
+    
+    // Auto start preparation countdown
+    let countdown = preparationTimeLimit;
+    const prepTimer = setInterval(() => {
+      countdown--;
+      setPreparationTime(countdown);
+      
+      if (countdown <= 0) {
+        clearInterval(prepTimer);
+        console.log('[SpeakingQuestion] Preparation ended, auto-starting recording');
+        setIsPreparing(false);
+        
+        // Auto start recording after preparation
+        setTimeout(() => {
+          startRecording();
+        }, 300);
+      }
+    }, 1000);
+    
+    return () => {
+      clearInterval(prepTimer);
+    };
+  }, [question.id, preparationTimeLimit, hasExistingAudio, startRecording]);
 
-  // Reset states when question changes
+  // Reset states when question changes (but skip first initialization)
+  const isFirstRenderRef = useRef(true);
   useEffect(() => {
+    // Skip first render to avoid interfering with initialization
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
+    
+    console.log('[SpeakingQuestion] Resetting states for new question:', question.id);
+    
     // Reset all states without triggering any timers or recordings
     setIsRecording(false);
-    setRecordingTime(30);
+    setRecordingTime(maxRecordingTime);
     setAudioBlob(null);
     setAudioUrl('');
     setIsPreparing(false);
@@ -131,7 +206,7 @@ export default function SpeakingQuestion({
     setUploadError(null);
     recordingCompletedRef.current = false;
     setUploadRetries(0);
-    timeCounterRef.current = 30;
+    timeCounterRef.current = maxRecordingTime;
     setShowStopConfirmation(false);
     
     // Cleanup function for unmount
@@ -141,14 +216,10 @@ export default function SpeakingQuestion({
         mediaRecorderRef.current.stop();
       }
       
-      // Clear all timers
+      // Clear recording timer
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
         recordingTimerRef.current = null;
-      }
-      if (preparationTimerRef.current) {
-        clearInterval(preparationTimerRef.current);
-        preparationTimerRef.current = null;
       }
       
       // Cleanup old audio URLs to prevent memory leaks
@@ -156,41 +227,11 @@ export default function SpeakingQuestion({
         URL.revokeObjectURL(audioUrl);
       }
     };
-  }, [question.id]); // Only depend on question.id
+  }, [question.id, maxRecordingTime]); // Include maxRecordingTime dependency
 
-  // Preparation timer
-  useEffect(() => {
-    if (!isPreparing) {
-      return;
-    }
+  // Removed complex preparation timer - now handled in initialization effect
 
-    // Don't hide header - keep timer and question info visible
-    // onHideHeader?.(true);
-    
-    preparationTimerRef.current = setInterval(() => {
-      setPreparationTime((prev) => {
-        if (prev <= 1) {
-          clearInterval(preparationTimerRef.current);
-          preparationTimerRef.current = null;
-          setIsPreparing(false);
-          // onHideHeader?.(false);
-          // Mark that we need to start recording
-          shouldAutoStartRecordingRef.current = true;
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (preparationTimerRef.current) {
-        clearInterval(preparationTimerRef.current);
-        preparationTimerRef.current = null;
-      }
-    };
-  }, [isPreparing]); // Remove unnecessary deps
-
-  // Recording timer (30 seconds)
+  // Recording timer (dynamic max time based on question number)
   useEffect(() => {
     if (!isRecording) {
       if (recordingTimerRef.current) {
@@ -228,45 +269,7 @@ export default function SpeakingQuestion({
         recordingTimerRef.current = null;
       }
     };
-  }, [isRecording, question.id]);
-
-  // Removed microphone test functions - no longer needed
-
-  const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      const chunks = [];
-      
-      mediaRecorder.ondataavailable = (event) => {
-        chunks.push(event.data);
-      };
-      
-      mediaRecorder.onstop = async () => {
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-          ? 'audio/webm;codecs=opus' 
-          : 'audio/webm';
-        const blob = new Blob(chunks, { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        
-        recordingCompletedRef.current = true;
-        setAudioBlob(blob);
-        setAudioUrl(url);
-        
-        stream.getTracks().forEach(track => track.stop());
-      };
-      
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(30);
-      timeCounterRef.current = 30;
-      
-    } catch (error) {
-      console.error('[SpeakingQuestion] Microphone error:', error.message);
-      alert('Không thể truy cập microphone. Vui lòng kiểm tra quyền truy cập.');
-    }
-  }, []);
+  }, [isRecording, question.id, maxRecordingTime]);
 
   // Define uploadAudioToBackend BEFORE effects that use it
   const uploadAudioToBackend = useCallback(async (audioBlob, duration) => {
@@ -297,12 +300,34 @@ export default function SpeakingQuestion({
         throw new Error('Tệp âm thanh quá lớn (tối đa 50MB). Vui lòng ghi âm lại.');
       }
 
+      // Ensure duration is properly set
+      const actualDuration = duration || 30;
+
+      // Create a proper file object with duration property
+      const audioFile = new File([audioBlob], `speaking_q${question.id}_${Date.now()}.webm`, {
+        type: audioBlob.type || 'audio/webm'
+      });
+      
+      // Add duration property to the file object
+      Object.defineProperty(audioFile, 'duration', {
+        value: actualDuration,
+        writable: false,
+        enumerable: true,
+        configurable: false
+      });
+
       console.log('[SpeakingQuestion] Uploading audio for question:', question.id, 'to attempt:', attemptId);
+      console.log('[SpeakingQuestion] Audio file details:', {
+        name: audioFile.name,
+        size: audioFile.size,
+        type: audioFile.type,
+        duration: audioFile.duration
+      });
       
       const response = await attemptService.uploadAudioAnswer(
         attemptId,
         question.id,
-        audioBlob,
+        audioFile,
         (progressEvent) => {
           const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
           setUploadProgress(progress);
@@ -325,13 +350,13 @@ export default function SpeakingQuestion({
           console.log('[SpeakingQuestion] Called onAnswerChange with:', { answer_type: 'audio', audio_url: response.data.data.audio_url });
         }
         
-        // Auto-move to next question after 1.5 seconds
+        // Auto-move to next question after upload success
         setTimeout(() => {
+          console.log('[SpeakingQuestion] Upload successful, moving to next question');
           if (onMoveToNextQuestion) {
-            console.log('[SpeakingQuestion] Moving to next question');
             onMoveToNextQuestion();
           }
-        }, 1500);
+        }, 1000); // Reduced from 1500ms
       } else {
         throw new Error(response.data?.message || 'Lỗi tải lên audio');
       }
@@ -366,34 +391,27 @@ export default function SpeakingQuestion({
       setUploadError(errorMsg);
       alert(`❌ ${errorMsg}`);
     }
-  }, [question.id, attemptId, uploadRetries, onMoveToNextQuestion]);
+  }, [question.id, attemptId, uploadRetries, onMoveToNextQuestion, onAnswerChange]);
 
   // Auto-upload when audioBlob is set (after recording stops)
   useEffect(() => {
+    console.log('[SpeakingQuestion] Auto-upload effect triggered:', {
+      hasAudioBlob: !!audioBlob,
+      isUploading,
+      uploadError: !!uploadError,
+      recordingCompleted: recordingCompletedRef.current
+    });
+    
     if (audioBlob && !isUploading && !uploadError && recordingCompletedRef.current) {
       console.log('[SpeakingQuestion] Auto-uploading audio blob for question:', question.id);
       recordingCompletedRef.current = false; // Reset so it only triggers once per recording
-      const duration = 30 - timeCounterRef.current;
+      const duration = maxRecordingTime - timeCounterRef.current;
+      console.log('[SpeakingQuestion] Upload duration calculated:', duration, 'seconds');
       uploadAudioToBackend(audioBlob, duration);
     }
-  }, [audioBlob, isUploading, uploadError, uploadAudioToBackend, question.id]); // Add proper deps
+  }, [audioBlob, isUploading, uploadError, uploadAudioToBackend, question.id, maxRecordingTime]); // Add proper deps
 
-  // Auto-start recording when conditions are met
-  useEffect(() => {
-    if (shouldAutoStartRecordingRef.current && 
-        step === 'recording' && 
-        !isRecording && 
-        !isPreparing && 
-        !isUploading && 
-        !audioBlob) {
-      
-      shouldAutoStartRecordingRef.current = false;
-      
-      setTimeout(() => {
-        startRecording();
-      }, 300);
-    }
-  }, [step, isRecording, isPreparing, isUploading, audioBlob, question.id, startRecording]);
+  // Removed auto-start recording effect - now handled directly in preparation timer
   
   const confirmStopRecording = () => {
     setShowStopConfirmation(false);
@@ -414,19 +432,21 @@ export default function SpeakingQuestion({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const canStopRecording = recordingTime <= 20; // Can stop after 10 seconds have elapsed (30-10=20)
+  // Can stop recording if at least 10 seconds have been recorded
+  const recordedDuration = maxRecordingTime - recordingTime;
+  const canStopRecording = recordedDuration >= 10;
 
   return (
     <Box>
       {/* Completed State - Show when audio already uploaded */}
       {step === 'completed' && hasExistingAudio && (
         <Box>
-          <Paper sx={{ p: 3, mb: 2, textAlign: 'center', backgroundColor: 'success.light' }}>
-            <Typography variant="h5" gutterBottom color="success.dark" sx={{ fontWeight: 'bold' }}>
-              ✓ Đã hoàn thành ghi âm
+          <Paper sx={{ p: 3, mb: 2, textAlign: 'center', backgroundColor: '#e8f5e9', borderLeft: '4px solid #4caf50' }}>
+            <Typography variant="h6" gutterBottom color="success.dark" sx={{ fontWeight: 'bold' }}>
+              ✓ Đã ghi âm thành công
             </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Bạn đã ghi âm và nộp câu trả lời cho câu hỏi này.
+            <Typography variant="body2" color="text.secondary">
+              Câu trả lời của bạn đã được lưu
             </Typography>
             
             {/* Audio Player */}
@@ -434,7 +454,7 @@ export default function SpeakingQuestion({
               <Box sx={{ mt: 2, mb: 2 }}>
                 <audio 
                   controls 
-                  style={{ width: '100%', maxWidth: '500px' }}
+                  style={{ width: '100%', maxWidth: '400px' }}
                   src={getAssetUrl(question.answer_data.audio_url)}
                 >
                   Trình duyệt không hỗ trợ phát audio.
@@ -443,27 +463,21 @@ export default function SpeakingQuestion({
             )}
             
             {question.answer_data?.transcribed_text && (
-              <Paper sx={{ p: 2, mt: 2, backgroundColor: 'white' }}>
-                <Typography variant="subtitle2" gutterBottom>
+              <Paper sx={{ p: 2, mt: 2, backgroundColor: 'white', textAlign: 'left' }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   Nội dung phiên âm:
                 </Typography>
-                <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                  "{question.answer_data.transcribed_text}"
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  {question.answer_data.transcribed_text}
                 </Typography>
               </Paper>
             )}
-            
-            <Typography variant="caption" display="block" sx={{ mt: 2, color: 'text.secondary' }}>
-              Bạn có thể chuyển sang câu tiếp theo
-            </Typography>
           </Paper>
           
-          {/* Show original question content */}
-          <Typography variant="h6" gutterBottom>
-            Câu hỏi:
-          </Typography>
-          <Paper sx={{ p: 2, backgroundColor: 'grey.50' }}>
-            <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
+          {/* Original Question */}
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Câu hỏi:</Typography>
+          <Paper sx={{ p: 2, backgroundColor: '#f9f9f9' }}>
+            <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
               {question.content}
             </Typography>
           </Paper>
@@ -473,226 +487,171 @@ export default function SpeakingQuestion({
       {/* Recording Step */}
       {step === 'recording' && (
         <Box>
-          {/* Question Content - Always visible in recording step */}
-          <Typography variant="h6" gutterBottom>
-            {question.questionType?.code === 'SPEAKING_INTRO' && 'Giới thiệu bản thân:'}
-            {question.questionType?.code === 'SPEAKING_DESCRIPTION' && 'Mô tả hình ảnh:'}
-            {question.questionType?.code === 'SPEAKING_COMPARISON' && 'So sánh và phân tích:'}
-            {question.questionType?.code === 'SPEAKING_DISCUSSION' && 'Thảo luận chủ đề:'}
-            {!['SPEAKING_INTRO', 'SPEAKING_DESCRIPTION', 'SPEAKING_COMPARISON', 'SPEAKING_DISCUSSION'].includes(question.questionType?.code) && 'Ghi âm câu trả lời:'}
+          {/* Question Title */}
+          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+            {question.questionType?.code === 'SPEAKING_INTRO' && 'Giới thiệu bản thân'}
+            {question.questionType?.code === 'SPEAKING_DESCRIPTION' && 'Mô tả hình ảnh'}
+            {question.questionType?.code === 'SPEAKING_COMPARISON' && 'So sánh và phân tích'}
+            {question.questionType?.code === 'SPEAKING_DISCUSSION' && 'Thảo luận chủ đề'}
+            {!['SPEAKING_INTRO', 'SPEAKING_DESCRIPTION', 'SPEAKING_COMPARISON', 'SPEAKING_DISCUSSION'].includes(question.questionType?.code) && 'Ghi âm câu trả lời'}
           </Typography>
           
           {/* Question Content */}
           {question.content && (
-            <Paper sx={{ p: 2, mb: 2, backgroundColor: 'grey.50' }}>
-              <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
+            <Paper sx={{ p: 2.5, mb: 3, backgroundColor: '#f9f9f9', borderLeft: '3px solid #2196f3' }}>
+              <Typography variant="body2" sx={{ lineHeight: 1.7, color: '#333' }}>
                 {question.content}
               </Typography>
             </Paper>
           )}
           
-          <Paper sx={{ p: 2, mb: 2, backgroundColor: 'info.light' }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Yêu cầu:
+          {/* Requirements */}
+          <Box sx={{ mb: 3, p: 2, backgroundColor: '#e3f2fd', borderRadius: 1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#1976d2', display: 'block', mb: 1 }}>
+              📋 Yêu cầu
             </Typography>
-            <Box display="flex" gap={1} flexWrap="wrap">
-              {hasPreparationTime && (
-                <Chip size="small" label={`Chuẩn bị: ${preparationTimeLimit}s`} variant="outlined" />
-              )}
-              <Chip size="small" label={`Ghi âm tối đa: 30s`} variant="outlined" />
-              <Chip size="small" label={`Có thể dừng sau: 10s`} variant="outlined" color="success" />
-            </Box>
-            {requirements.prompt && (
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                <strong>Yêu cầu:</strong> {requirements.prompt}
-              </Typography>
-            )}
-          </Paper>
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+              • Thời gian chuẩn bị: {preparationTimeLimit} giây
+            </Typography>
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+              • Thời gian ghi âm: Tối đa {maxRecordingTime} giây ({Math.floor(maxRecordingTime / 60)}:{(maxRecordingTime % 60).toString().padStart(2, '0')})
+            </Typography>
+            <Typography variant="caption" sx={{ display: 'block' }}>
+              • Có thể dừng sau: 10 giây
+            </Typography>
+          </Box>
 
           {/* Preparation Timer */}
           {isPreparing && (
-            <Paper sx={{ p: 3, mb: 2, textAlign: 'center', backgroundColor: 'warning.light' }}>
-              <Typography variant="h3" gutterBottom color="warning.dark">
-                {formatTime(preparationTime)}
+            <Paper sx={{ p: 3, mb: 3, textAlign: 'center', backgroundColor: '#fff3e0', borderTop: '4px solid #ff9800' }}>
+              <Typography variant="caption" sx={{ color: '#e65100', fontWeight: 'bold', display: 'block', mb: 3 }}>
+                Chuẩn bị...
               </Typography>
-              <Typography variant="body1">
-                Thời gian chuẩn bị còn lại
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={((preparationTimeLimit - preparationTime) / preparationTimeLimit) * 100}
-                sx={{ mt: 2, height: 10, borderRadius: 4 }}
-              />
+              
+              {/* Circular Progress Timer */}
+              <Box sx={{
+                position: 'relative',
+                width: 200,
+                height: 200,
+                margin: '0 auto 2rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {/* Circular Progress */}
+                <CircularProgress
+                  variant="determinate"
+                  value={((preparationTimeLimit - preparationTime) / preparationTimeLimit) * 100}
+                  size={200}
+                  thickness={3}
+                  sx={{ position: 'absolute', color: '#ff9800' }}
+                />
+                
+                {/* Center Timer */}
+                <Box sx={{ textAlign: 'center', zIndex: 1 }}>
+                  <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#ff9800', fontSize: '44px', lineHeight: 1 }}>
+                    {formatTime(preparationTime)}
+                  </Typography>
+                </Box>
+              </Box>
             </Paper>
           )}
 
           {/* Recording UI */}
           {!isPreparing && (
-            <Paper sx={{ p: 3, mb: 2, textAlign: 'center' }}>
+            <Paper sx={{ p: 3, mb: 3, textAlign: 'center' }}>
+              {/* Uploading State */}
               {isUploading && (
                 <Box>
-                  <Typography variant="h6" gutterBottom color="info.main">
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 2, color: '#1976d2' }}>
                     📤 Đang tải lên...
                   </Typography>
                   <LinearProgress
                     variant="determinate"
                     value={uploadProgress}
-                    sx={{ mb: 2, height: 10, borderRadius: 4 }}
+                    sx={{ mb: 2, height: 8, borderRadius: 4 }}
                   />
-                  <Typography variant="body2" color="text.secondary">
-                    {uploadProgress}% - Vui lòng chờ
+                  <Typography variant="caption" color="text.secondary">
+                    {uploadProgress}%
                   </Typography>
                 </Box>
               )}
 
+              {/* Recording State */}
               {!isUploading && isRecording && (
                 <Box>
-                  <Typography variant="h6" gutterBottom>
-                    Đang ghi âm...
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 3, color: '#d32f2f' }}>
+                    ● Đang ghi âm
                   </Typography>
-                  
-                  {/* Circular Progress around Microphone */}
-                  <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center',
-                my: 4,
-                position: 'relative',
-                width: 320,
-                height: 320,
-                margin: '30px auto'
-              }}>
-                {/* Circular Progress Background */}
-                <CircularProgress
-                  variant="determinate"
-                  value={((30 - recordingTime) / 30) * 100}
-                  size={280}
-                  thickness={4}
-                  sx={{
-                    color: '#f44336',
-                    position: 'absolute'
-                  }}
-                />
-                
-                {/* Center content - Microphone and Timer */}
-                <Box sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 1
-                }}>
-                  {/* Microphone Icon */}
-                  <Mic sx={{ 
-                    fontSize: 80, 
-                    color: '#f44336',
-                    mb: 1,
-                    animation: 'pulse 1.5s ease-in-out infinite',
-                    '@keyframes pulse': {
-                      '0%, 100%': { opacity: 1 },
-                      '50%': { opacity: 0.5 }
-                    }
-                  }} />
                   
                   {/* Recording Timer */}
-                  <Typography variant="h2" sx={{ 
-                    fontWeight: 'bold',
-                    color: '#f44336',
-                    lineHeight: 1,
-                    mt: 1,
-                    fontSize: '48px'
-                  }}>
-                    {formatTime(recordingTime)}
-                  </Typography>
-                  
-                  {/* Recording indicator */}
-                  <Typography variant="caption" sx={{ 
-                    mt: 2,
-                    color: '#666',
-                    textAlign: 'center'
-                  }}>
-                    Đang ghi âm
-                  </Typography>
-                </Box>
-              </Box>
+                  <Box sx={{ my: 4 }}>
+                    <Box sx={{
+                      position: 'relative',
+                      width: 200,
+                      height: 200,
+                      margin: '0 auto',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {/* Circular Progress */}
+                      <CircularProgress
+                        variant="determinate"
+                        value={((maxRecordingTime - recordingTime) / maxRecordingTime) * 100}
+                        size={200}
+                        thickness={3}
+                        sx={{ position: 'absolute', color: '#d32f2f' }}
+                      />
+                      
+                      {/* Center Timer */}
+                      <Box sx={{ textAlign: 'center', zIndex: 1 }}>
+                        <Mic sx={{ fontSize: 48, color: '#d32f2f', mb: 1 }} />
+                        <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#d32f2f', fontSize: '44px', lineHeight: 1 }}>
+                          {formatTime(recordingTime)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
 
-                  {/* Stop Recording Status */}
-                  <Box sx={{ textAlign: 'center', mb: 3 }}>
+                  {/* Stop Recording Info */}
+                  <Box sx={{ mt: 3 }}>
                     {canStopRecording ? (
                       <Box>
-                        <Typography variant="body2" color="success.main" sx={{ mb: 2, fontWeight: 'bold' }}>
-                          ✓ Bạn có thể dừng bây giờ (đã ghi ≥10 giây)
+                        <Typography variant="caption" sx={{ color: '#4caf50', fontWeight: 'bold', display: 'block', mb: 1.5 }}>
+                          ✓ Đã ghi ≥10 giây - có thể dừng
                         </Typography>
                         <Button 
                           variant="contained" 
                           color="error"
                           onClick={() => setShowStopConfirmation(true)}
                           startIcon={<Stop />}
-                          size="large"
-                          sx={{ 
-                            fontSize: '16px',
-                            py: 2,
-                            px: 4
-                          }}
+                          sx={{ fontSize: '14px', py: 1.5, px: 3 }}
                         >
                           DỪNG THU ÂM
                         </Button>
                       </Box>
                     ) : (
-                      <Box>
-                        <Typography variant="caption" color="error.main" sx={{ fontWeight: 'bold' }}>
-                          ⏳ Vui lòng ghi âm ít nhất 10 giây trước khi dừng
-                        </Typography>
-                        <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-                          Còn lại: {Math.ceil((30 - recordingTime) / 1)} giây
-                        </Typography>
-                      </Box>
+                      <Typography variant="caption" sx={{ color: '#d32f2f', fontWeight: 'bold' }}>
+                        ⏳ Ghi ít nhất 10 giây trước khi dừng
+                      </Typography>
                     )}
                   </Box>
-
-                  {/* Auto-stop info */}
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center' }}>
-                    Hệ thống sẽ tự động dừng khi hết thời gian
-                  </Typography>
                 </Box>
               )}
 
+              {/* Auto-Recording State (Waiting to start) */}
               {!isRecording && !isUploading && !audioBlob && (
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="body1" gutterBottom>
-                    Sẵn sàng để ghi âm?
+                <Box sx={{ py: 2 }}>
+                  <Mic sx={{ fontSize: 56, color: '#2196f3', mb: 2 }} />
+                  <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+                    Sẽ tự động bắt đầu ghi âm sau khi chuẩn bị...
                   </Typography>
-                  <Button 
-                    variant="contained" 
-                    color="primary"
-                    onClick={startRecording}
-                    startIcon={<Mic />}
-                    size="large"
-                    sx={{ 
-                      fontSize: '16px',
-                      py: 2,
-                      px: 4
-                    }}
-                  >
-                    BẮT ĐẦU GHI ÂM
-                  </Button>
+                  <CircularProgress size={24} sx={{ color: '#2196f3' }} />
                 </Box>
               )}
             </Paper>
           )}
-
-          {/* Tips */}
-          <Paper sx={{ p: 2, backgroundColor: 'grey.50' }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Gợi ý nói:
-            </Typography>
-            <Typography variant="body2" component="ul" sx={{ pl: 2, m: 0 }}>
-              <li>Nói rõ ràng và với tốc độ vừa phải</li>
-              <li>Sử dụng thời gian chuẩn bị để lên dàn ý</li>
-              <li>Trả lời đúng trọng tâm câu hỏi</li>
-              <li>Sử dụng từ vựng và cấu trúc đa dạng</li>
-            </Typography>
-          </Paper>
         </Box>
       )}
 
@@ -700,35 +659,32 @@ export default function SpeakingQuestion({
       <Dialog
         open={showStopConfirmation}
         onClose={() => setShowStopConfirmation(false)}
-        maxWidth="sm"
+        maxWidth="xs"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: 'bold', textAlign: 'center' }}>
+        <DialogTitle sx={{ fontWeight: 'bold' }}>
           Xác nhận dừng ghi âm?
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body1" paragraph sx={{ mt: 2, textAlign: 'center' }}>
-            Bạn có chắc muốn dừng ghi âm lúc này không?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-            Tổng thời gian ghi âm: {formatTime(30 - recordingTime)}
+          <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
+            Thời gian ghi âm: <strong>{formatTime(maxRecordingTime - recordingTime)}</strong>
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', gap: 2, pb: 2 }}>
+        <DialogActions sx={{ justifyContent: 'center', gap: 1, pb: 2 }}>
           <Button 
             variant="outlined"
             onClick={() => setShowStopConfirmation(false)}
-            sx={{ px: 4 }}
+            sx={{ px: 3 }}
           >
-            Tiếp tục ghi âm
+            Tiếp tục
           </Button>
           <Button 
             variant="contained"
             color="error"
             onClick={confirmStopRecording}
-            sx={{ px: 4 }}
+            sx={{ px: 3 }}
           >
-            Dừng lại
+            Dừng
           </Button>
         </DialogActions>
       </Dialog>

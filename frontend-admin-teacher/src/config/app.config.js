@@ -269,16 +269,7 @@ export const QUESTION_TYPES = {
     supportedMedia: ['audio'],
   },
 
-  // Writing Questions (2 types)
-  WRITING_ESSAY: {
-    id: 'writing_essay',
-    name: 'Writing Essay',
-    category: 'Writing',
-    description: 'Essay writing tasks',
-    hasOptions: false,
-    hasItems: false,
-    maxOptions: 0,
-    allowMultipleAnswers: false,
+  // Writing Questions - 3 tasks per APTIS Technical Report
     scoringMethod: 'manual',
     timeLimit: 1800, // 30 minutes
     difficulty: ['medium', 'hard'],
