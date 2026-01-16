@@ -113,7 +113,7 @@ exports.getResults = async (req, res, next) => {
         {
           model: Question,
           as: 'question',
-          attributes: ['id', 'content'],
+          attributes: ['id', 'content', 'media_url'],
           include: [
             {
               model: QuestionType,
@@ -127,17 +127,6 @@ exports.getResults = async (req, res, next) => {
                 },
               ],
             },
-            // Include question items and options for complex questions
-            {
-              model: QuestionItem,
-              as: 'items',
-              attributes: ['id', 'item_text', 'correct_answer', 'correct_position', 'correct_option_text'],
-            },
-            {
-              model: QuestionOption,
-              as: 'options',
-              attributes: ['id', 'option_text', 'is_correct'],
-            },
           ],
         },
         {
@@ -147,6 +136,8 @@ exports.getResults = async (req, res, next) => {
         },
       ],
     });
+
+    console.log('[Results API] Got answers:', answersWithFeedback.length);
 
     // Count answers by type for accurate question counting
     let totalQuestionsCount = 0;
@@ -197,8 +188,8 @@ exports.getResults = async (req, res, next) => {
         answers: answersWithFeedback,
         totalScore: attempt.total_score,
         status: attempt.status,
-        questions_count: totalQuestionsCount, // Updated to reflect actual questions
-        answered_questions: answeredQuestionsCount, // Updated to reflect actual answered questions
+        questions_count: totalQuestionsCount,
+        answered_questions: answeredQuestionsCount,
       },
     });
   } catch (error) {
