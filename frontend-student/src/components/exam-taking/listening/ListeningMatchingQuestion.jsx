@@ -144,7 +144,7 @@ export default function ListeningMatchingQuestion({
   return (
     <Box>
       {/* Instruction */}
-      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+      <Typography variant="body1" gutterBottom sx={{ mb: 3, fontWeight: 400 }}>
         {instruction}
       </Typography>
 
@@ -194,75 +194,34 @@ export default function ListeningMatchingQuestion({
           return (
             <Grid item xs={12} key={item.id || index}>
               <Paper
-                elevation={3}
+                elevation={1}
                 sx={{
                   p: 3,
                   mb: 2,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  backgroundColor: '#f5f5f5',
                   borderRadius: 2,
-                  color: 'white',
+                  border: '1px solid #e0e0e0',
                   position: 'relative',
                   overflow: 'hidden',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    width: 200,
-                    height: 200,
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '50%',
-                    transform: 'translate(50%, -50%)',
-                  },
                 }}
               >
-                <Box display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
-                  {/* Speaker Number Badge */}
-                  <Box
-                    sx={{
-                      minWidth: 48,
-                      height: 48,
-                      borderRadius: '50%',
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                      border: '2px solid rgba(255, 255, 255, 0.5)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '18px',
-                    }}
-                  >
-                    {index + 1}
-                  </Box>
+                <Box display="flex" alignItems="center" gap={2}>
 
-                  {/* Speaker Label */}
-                  <Typography
-                    variant="subtitle1"
-                    sx={{
-                      flex: 1,
-                      color: 'white',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {speakerLabel}
-                  </Typography>
 
                   {/* Play Count Chip */}
                   <Chip
                     label={`${currentPlayCount}/2 Số lần phát đã dùng`}
                     size="small"
                     sx={{
-                      backgroundColor: currentPlayCount < 2 ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 100, 100, 0.4)',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      border: '1px solid rgba(255, 255, 255, 0.5)'
+                      backgroundColor: currentPlayCount < 2 ? '#e3f2fd' : '#ffebee',
+                      color: currentPlayCount < 2 ? '#1976d2' : '#c62828',
+                      border: '1px solid #ccc'
                     }}
                   />
                 </Box>
 
                 {/* Audio Controls */}
-                <Box display="flex" alignItems="center" gap={2} position="relative" zIndex={1} mt={2}>
+                <Box display="flex" alignItems="center" gap={2} mt={2}>
                   {/* Play/Stop Button */}
                   <IconButton
                     onClick={() => {
@@ -277,14 +236,15 @@ export default function ListeningMatchingQuestion({
                     }}
                     disabled={currentPlayCount >= 2 && playingIndex !== index}
                     sx={{
-                      backgroundColor: (currentPlayCount < 2 || playingIndex === index) ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+                      backgroundColor: (currentPlayCount < 2 || playingIndex === index) ? '#667eea' : '#ccc',
                       color: 'white',
-                      border: '2px solid rgba(255, 255, 255, 0.5)',
+                      border: 'none',
                       '&:hover': {
-                        backgroundColor: (currentPlayCount < 2 || playingIndex === index) ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.1)',
+                        backgroundColor: (currentPlayCount < 2 || playingIndex === index) ? '#5568d3' : '#bbb',
                       },
                       '&:disabled': {
-                        color: 'rgba(255, 255, 255, 0.5)',
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        backgroundColor: '#ccc'
                       },
                       width: 56,
                       height: 56,
@@ -304,29 +264,28 @@ export default function ListeningMatchingQuestion({
                       sx={{
                         width: '100%',
                         height: 6,
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        backgroundColor: '#ddd',
                         borderRadius: 3,
                         cursor: 'not-allowed',
                         position: 'relative',
                         mb: 1,
                         overflow: 'hidden',
-                        opacity: 0.6
                       }}
                     >
                       <Box
                         sx={{
                           height: '100%',
-                          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                          backgroundColor: '#667eea',
                           width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%',
                           transition: playingIndex === index ? 'none' : 'width 0.1s'
                         }}
                       />
                     </Box>
                     <Box display="flex" justifyContent="space-between" alignItems="center">
-                      <Typography variant="caption" fontWeight="bold" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                      <Typography variant="caption" fontWeight="bold" sx={{ color: '#666' }}>
                         {formatTime(currentTime)}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                      <Typography variant="caption" sx={{ color: '#666' }}>
                         {formatTime(duration)}
                       </Typography>
                     </Box>
@@ -347,8 +306,8 @@ export default function ListeningMatchingQuestion({
 
                 {/* Play Limit Warning */}
                 {currentPlayCount >= 2 && (
-                  <Box mt={2} display="flex" alignItems="center" gap={2} position="relative" zIndex={1}>
-                    <Typography variant="caption" sx={{ color: '#ffcccc', fontWeight: 'bold' }}>
+                  <Box mt={2} display="flex" alignItems="center" gap={2}>
+                    <Typography variant="caption" sx={{ color: '#d32f2f', fontWeight: 'bold' }}>
                       ⚠ Đã đạt số lượt phát tối đa
                     </Typography>
                   </Box>

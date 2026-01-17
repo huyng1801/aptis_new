@@ -60,12 +60,12 @@ const SkillIntroduction = ({ open, skill, onClose, onStartSkill, questionsLoaded
           'Part 4: Extended MCQ - 2 câu'
         ],
         instructions: [
-          'Đọc câu hỏi kỹ lưỡng TRƯỚC khi nghe',
+          'Đọc câu hỏi kỹ lưỡng trước khi nghe',
           'Tập trung cao độ - audio chỉ phát một lần',
           'Ghi chú những từ khóa và thông tin quan trọng',
           'Đừng lo nếu bỏ lỡ một phần - hãy tập trung vào câu tiếp theo'
         ],
-        tips: '🎵 Audio phát một lần duy nhất. Hãy chuẩn bị tinh thần và tập trung hoàn toàn trước khi bắt đầu.',
+        tips: '🎵 Audio chỉ phát được 2 lần. Hãy chuẩn bị tinh thần và tập trung hoàn toàn trước khi bắt đầu.',
         warnings: [
           '⚠️ Kiểm tra loa hoặc tai nghe của bạn trước khi bắt đầu',
           '⚠️ Tìm môi trường yên tĩnh để nghe rõ nhất'

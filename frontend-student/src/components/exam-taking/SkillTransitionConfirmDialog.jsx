@@ -30,8 +30,10 @@ const SkillTransitionConfirmDialog = ({
 }) => {
   if (!currentSkill || !nextSkill) return null;
 
+  // Use answered count for progress if available
+  const answeredCount = skillAnswersSummary?.answered ?? (currentQuestionIndex + 1);
   const completionPercentage = totalQuestionsInSkill > 0 
-    ? Math.round(((currentQuestionIndex + 1) / totalQuestionsInSkill) * 100)
+    ? Math.round((answeredCount / totalQuestionsInSkill) * 100)
     : 0;
 
   return (
@@ -78,7 +80,7 @@ const SkillTransitionConfirmDialog = ({
                   Tiến độ:
                 </Typography>
                 <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                  {currentQuestionIndex + 1}/{totalQuestionsInSkill} câu ({completionPercentage}%)
+                  {answeredCount}/{totalQuestionsInSkill} câu ({completionPercentage}%)
                 </Typography>
               </Box>
               <LinearProgress
@@ -115,24 +117,9 @@ const SkillTransitionConfirmDialog = ({
             )}
           </Box>
 
-          {/* Next Skill Info */}
-          <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 2 }}>
-            Sẽ chuyển sang:
-          </Typography>
 
-          <Box sx={{
-            p: 2,
-            borderRadius: 1,
-            bgcolor: '#e3f2fd',
-            border: '1px solid #90caf9',
-          }}>
-            <Typography variant="body1" sx={{ fontWeight: 600 }}>
-              {nextSkill.skill?.skill_name || nextSkill.skill?.name}
-            </Typography>
-            <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-              {nextSkill.questions?.length || 0} câu hỏi
-            </Typography>
-          </Box>
+
+
         </Box>
 
         {/* Warning Message */}

@@ -147,7 +147,7 @@ export default function ReadingMatchingQuestion({ question, onAnswerChange }) {
       <Divider sx={{ my: 3 }} />
 
       {/* Questions with Dropdowns */}
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+      <Typography variant="h6" sx={{ mb: 2 }}>
         Match each question with the correct person:
       </Typography>
 

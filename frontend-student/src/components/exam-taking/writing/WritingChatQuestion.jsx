@@ -147,69 +147,39 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
   }
 
   return (
-    <Box sx={{ maxHeight: '100vh', overflow: 'auto', p: 2 }}>
-      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-        {questionData.title}
-      </Typography>
-
-      {/* Chat Conversation - Continuous Format with Inline Input Fields */}
-      <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.50' }}>
-        {questionData.chatExchanges && questionData.chatExchanges.length > 0 ? (
-          <Box>
-            {questionData.chatExchanges.map((exchange, index) => {
-              // Determine which answer key to use (alternating between personA and personB)
-              const answerKey = exchange.hasReply ? (index % 2 === 0 ? 'personA' : 'personB') : null;
-              
-              return (
-                <Box key={`exchange-${index}`} sx={{ mb: 3 }}>
-                  {/* Speaker's message */}
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                      {exchange.speaker}:
-                    </Typography>
-                    <Typography variant="body2" sx={{ ml: 2, color: 'text.primary' }}>
-                      {exchange.message}
-                    </Typography>
-                  </Box>
-
-                  {/* User's reply input if needed */}
-                  {exchange.hasReply && answerKey && (
-                    <Box sx={{ ml: 2, mb: 2 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'secondary.main', mb: 1 }}>
-                        Your reply:
-                      </Typography>
-                      <TextField
-                        multiline
-                        fullWidth
-                        rows={2}
-                        value={answers[answerKey] || ''}
-                        onChange={(e) => handleAnswerChange(answerKey, e.target.value)}
-                        variant="outlined"
-                        placeholder="Nhập câu trả lời..."
-                        helperText={`${countWords(answers[answerKey] || '')} từ`}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            fontSize: '0.95rem',
-                            lineHeight: 1.5,
-                            backgroundColor: 'white'
-                          }
-                        }}
-                      />
-                    </Box>
-                  )}
-
-                  {/* Divider between exchanges */}
-                  {index < questionData.chatExchanges.length - 1 && (
-                    <Box sx={{ my: 2, borderBottom: '1px solid', borderColor: 'divider' }} />
-                  )}
-                </Box>
-              );
-            })}
-          </Box>
-        ) : (
-          <Typography color="textSecondary">Không có nội dung hội thoại</Typography>
-        )}
-      </Box>
+    <Box sx={{ p: 2 }}>
+      {questionData.chatExchanges && questionData.chatExchanges.length > 0 ? (
+        questionData.chatExchanges.map((exchange, index) => (
+          <div key={`exchange-${index}`} style={{ marginBottom: 24 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+              {exchange.speaker}:
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+              {exchange.message}
+            </Typography>
+            <TextField
+              multiline
+              fullWidth
+              rows={2}
+              value={answers[exchange.replyKey] || ''}
+              onChange={(e) => handleAnswerChange(exchange.replyKey, e.target.value)}
+              variant="outlined"
+              placeholder="Nhập câu trả lời..."
+              helperText={`${countWords(answers[exchange.replyKey] || '')} từ`}
+              size="small"
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'white',
+                  fontSize: '0.9rem'
+                }
+              }}
+            />
+          </div>
+        ))
+      ) : (
+        <Typography color="textSecondary">Không có nội dung hội thoại</Typography>
+      )}
     </Box>
   );
 }

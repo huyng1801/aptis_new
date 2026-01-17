@@ -209,11 +209,11 @@ export default function ReadingMatchingQuestion({ question, onAnswerChange }) {
       {/* Person Descriptions */}
       {personDescriptions.length > 0 ? (
         personDescriptions.map((person) => (
-          <Paper key={`person-${person.letter}`} elevation={1} sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" sx={{ mb: 1, fontWeight: 600, color: '#1976d2' }}>
+          <Paper key={`person-${person.letter}`} elevation={1} sx={{ p: 1.2, mb: 1.2 }}>
+            <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 600, color: '#1976d2' }}>
               Person {person.letter}
             </Typography>
-            <Typography variant="body1" sx={{ lineHeight: 1.7, textAlign: 'justify' }}>
+            <Typography variant="body1" sx={{ lineHeight: 1.5, textAlign: 'justify' }}>
               {person.description}
             </Typography>
           </Paper>
@@ -227,7 +227,7 @@ export default function ReadingMatchingQuestion({ question, onAnswerChange }) {
       <Divider sx={{ my: 3 }} />
 
       {/* Questions with Dropdowns */}
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+      <Typography variant="h6" sx={{ mb: 2}}>
         Match each question with the correct person:
       </Typography>
 

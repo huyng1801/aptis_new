@@ -158,52 +158,30 @@ export default function ExamNavigation({
                                 p: 1.5,
                                 borderRadius: 1,
                                 border: '1px solid',
-                                borderColor: isActive ? 'primary.main' : 
-                                           status === 'answered' ? 'success.main' : 
-                                           status === 'flagged' ? 'warning.main' : 'divider',
-                                bgcolor: isActive ? 'primary.main' : 
-                                        status === 'answered' ? 'success.light' : 
-                                        status === 'flagged' ? 'warning.light' : 'background.paper',
-                                color: isActive ? 'primary.contrastText' : 
-                                      status === 'answered' ? 'success.contrastText' : 
-                                      'text.primary',
+                                borderColor: isActive ? 'primary.main' : 'divider',
+                                bgcolor: isActive ? 'primary.main' : 'background.paper',
+                                color: isActive ? 'primary.contrastText' : 'text.primary',
                                 transition: 'all 0.2s',
                                 cursor: canClick ? 'pointer' : 'not-allowed',
                                 opacity: !canClick && !isActive ? 0.8 : 1,
                                 '&:hover': canClick ? {
                                   boxShadow: 2,
                                   transform: 'translateX(4px)',
-                                } : {},
-                                '&.Mui-disabled': {
-                                  color: isActive ? 'primary.contrastText' : 'text.primary',
                                   bgcolor: isActive ? 'primary.main' : 'background.paper',
-                                }
+                                } : {},
+                          
                               }}
                             >
                               <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1.5 }}>
-                                <Box sx={{ 
-                                  minWidth: 32, 
-                                  height: 32,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  borderRadius: '50%',
-                                  bgcolor: isActive ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
-                                  fontWeight: 600
-                                }}>
-                                  {question.displayIndex}
-                                </Box>
                                 <ListItemText
                                   primary={`Câu ${question.displayIndex}`}
-                                  secondary={status === 'answered' ? '✓ Đã làm' : status === 'flagged' ? '⚠ Cần xem lại' : 'Chưa làm'}
                                   sx={{
-                                    '& .MuiListItemText-primary': { fontWeight: 500 },
-                                    '& .MuiListItemText-secondary': { fontSize: '0.75rem', opacity: 0.8 }
+                                    '& .MuiListItemText-primary': { fontWeight: 500 }
                                   }}
                                 />
-                                {(status === 'answered' || isActive) && (
+                                {status === 'answered' && (
                                   <Box sx={{ ml: 'auto' }}>
-                                    {status === 'answered' && <CheckCircle sx={{ fontSize: 18, opacity: 0.8 }} />}
+                                    <CheckCircle sx={{ fontSize: 18, color: 'success.main' }} />
                                   </Box>
                                 )}
                               </Box>

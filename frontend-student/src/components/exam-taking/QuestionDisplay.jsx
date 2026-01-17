@@ -274,12 +274,7 @@ export default function QuestionDisplay({
             variant="outlined"
             color="primary"
           />
-          <Chip 
-            label={`${question.max_score || 1} điểm`} 
-            size="small" 
-            color="success"
-            variant="filled"
-          />
+
         </Box>
       </Box>
 

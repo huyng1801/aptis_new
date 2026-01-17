@@ -72,10 +72,6 @@ export default function WritingFormFillingQuestion({ question, onAnswerChange })
 
   return (
     <Box sx={{ maxHeight: '100vh', overflow: 'auto', p: 2 }}>
-      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-        {questionData.title}
-      </Typography>
-
       {/* Question Content */}
       <Box sx={{ mb: 3 }}>
         {questionData.question.split('\n').map((line, index) => {

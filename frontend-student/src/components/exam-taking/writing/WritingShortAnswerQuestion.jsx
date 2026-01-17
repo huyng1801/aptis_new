@@ -66,51 +66,17 @@ export default function WritingShortAnswerQuestion({ question, onAnswerChange })
   // Parse question content
   const questionData = React.useMemo(() => {
     try {
-      // If content is text format, parse it
-      if (typeof question.content === 'string' && !question.content.startsWith('{')) {
-        // Parse the text content to extract title and input fields
+      if (typeof question.content === 'string') {
+        // Split content by newlines and filter for questions (end with ?)
         const lines = question.content.split('\n').filter(line => line.trim());
-        const title = lines[0] || "Short Answer Questions";
-        
-        // For form-like content, extract fields marked with _______
-        let messages = [];
-        
-        // Check if this is a form completion task
-        if (question.content.includes('_______') || question.content.includes('Complete the registration')) {
-          // Extract form fields from content
-          const content = question.content;
-          
-          // Parse form fields like "First name: _______"
-          const fieldMatches = content.match(/([^:]+):\s*_+/g);
-          if (fieldMatches) {
-            messages = fieldMatches.map(match => {
-              const field = match.replace(/:\s*_+/, '').trim();
-              return `What is your ${field.toLowerCase()}?`;
-            });
-          }
-          
-          // If no fields found, create generic questions
-          if (messages.length === 0) {
-            messages = [
-              "What is your first name?",
-              "What is your last name?", 
-              "What is your phone number?",
-              "What is your address?",
-              "What is your country?"
-            ];
-          }
-        } else {
-          // Extract questions that end with '?'
-          messages = lines.filter(line => line.trim().endsWith('?'));
-        }
+        const messages = lines.filter(line => line.trim().endsWith('?'));
         
         return {
-          title,
+          title: "Short Answer Questions",
           messages: messages.length > 0 ? messages : ["Please provide your answer:"]
         };
       }
       
-      // Legacy JSON format support
       return typeof question.content === 'string' ? JSON.parse(question.content) : question.content;
     } catch (error) {
       console.error('Failed to parse question content:', error);
@@ -130,22 +96,16 @@ export default function WritingShortAnswerQuestion({ question, onAnswerChange })
 
   return (
     <Box sx={{ maxHeight: '100vh', overflow: 'auto', p: 2 }}>
-      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-        {questionData.title}
-      </Typography>
-
       <Grid container spacing={2}>
         {messages.map((message, index) => {
-          const answerText = answers[index + 1] || '';  // Use 1-based key to get answer
+          const answerText = answers[index + 1] || '';
           const wordCount = countWords(answerText);
-          
           return (
             <Grid item xs={12} key={index}>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body1" gutterBottom sx={{ mb: 1 }}>
-                  {index + 1}. {message}
+                  {message}
                 </Typography>
-                
                 <TextField
                   fullWidth
                   size="small"
@@ -153,7 +113,7 @@ export default function WritingShortAnswerQuestion({ question, onAnswerChange })
                   onChange={(e) => handleAnswerChange(index, e.target.value)}
                   variant="outlined"
                   helperText={`${wordCount} words`}
-                  sx={{ 
+                  sx={{
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: 'white'
                     }

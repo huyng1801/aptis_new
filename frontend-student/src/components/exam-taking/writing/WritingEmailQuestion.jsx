@@ -15,59 +15,63 @@ export default function WritingEmailQuestion({ question, onAnswerChange }) {
     formalEmail: ''
   });
 
-  // Parse question content
+  // Parse question content from backend
   const questionData = React.useMemo(() => {
     try {
-      // If content is text format, parse it
-      if (typeof question.content === 'string' && !question.content.startsWith('{')) {
-        // Parse the text content to extract email information
-        const lines = question.content.split('\n').filter(line => line.trim());
-        const title = lines[0] || "Email Writing Task";
+      if (typeof question.content !== 'string') {
+        return null;
+      }
+
+      const content = question.content;
+      
+      // Extract title (first line)
+      const firstNewlineIndex = content.indexOf('\n');
+      const title = firstNewlineIndex > 0 ? content.substring(0, firstNewlineIndex).trim() : 'Email Writing Task';
+      
+      // Extract reference email (between "From:" and "---")
+      const fromIndex = content.indexOf('From:');
+      const endEmailIndex = content.indexOf('---');
+      let managerEmail = { subject: "Email", body: "Please respond to this email." };
+      
+      if (fromIndex !== -1 && endEmailIndex !== -1) {
+        const emailSection = content.substring(fromIndex, endEmailIndex).trim();
+        const subjectMatch = emailSection.match(/Subject:\s*(.+?)(?:\n|$)/);
+        const bodyMatch = emailSection.match(/(?:Dear|Hi)[\s\S]*$/);
         
-        // Extract email content between "From:" and "---"
-        let inEmailSection = false;
-        let emailLines = [];
-        
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
-          
-          if (line.startsWith('From:')) {
-            inEmailSection = true;
-            continue;
-          }
-          
-          if (line.startsWith('---')) {
-            inEmailSection = false;
-            break;
-          }
-          
-          if (inEmailSection) {
-            emailLines.push(line);
-          }
-        }
-        
-        let managerEmail = { subject: "Email", body: "Please respond to this email." };
-        if (emailLines.length > 0) {
-          const subject = emailLines.find(line => line.startsWith('Subject:'))?.replace('Subject:', '').trim() || "Email";
-          const bodyStartIndex = emailLines.findIndex(line => line.startsWith('Dear') || line.includes('student') || line.includes('applicant'));
-          const body = bodyStartIndex >= 0 ? emailLines.slice(bodyStartIndex).join('\n\n') : emailLines.join('\n\n');
-          
-          managerEmail = { subject, body };
-        }
-        
-        return {
-          title,
-          managerEmail,
-          tasks: [
-            { type: "friend", description: "Email to a friend", wordCount: "50 words", difficulty: "EASY", maxPoints: 5, icon: "📝" },
-            { type: "manager", description: "Email to school manager", wordCount: "80-100 words", difficulty: "MEDIUM", maxPoints: 10, icon: "📧" },
-            { type: "formal", description: "Formal discussion email", wordCount: "120-150 words", difficulty: "HARD", maxPoints: 15, icon: "📬" }
-          ]
+        managerEmail = {
+          subject: subjectMatch ? subjectMatch[1].trim() : "Email",
+          body: bodyMatch ? bodyMatch[0].trim() : emailSection
         };
       }
+
+      // Extract email tasks after "---"
+      const tasksStartIndex = content.indexOf('---') + 3;
+      const tasksContent = content.substring(tasksStartIndex).trim();
       
-      // Legacy JSON format support
-      return typeof question.content === 'string' ? JSON.parse(question.content) : question.content;
+      // Parse tasks: "1. Email to a friend (50 words)" format
+      const taskMatches = tasksContent.match(/(\d+)\.\s*(.+?)\s*\((.+?)\)/g);
+      const tasks = [];
+      
+      if (taskMatches) {
+        taskMatches.forEach((match, idx) => {
+          const parts = match.match(/(\d+)\.\s*(.+?)\s*\((.+?)\)/);
+          if (parts) {
+            const taskType = ['friendEmail', 'managerEmail', 'formalEmail'][idx];
+            tasks.push({
+              type: taskType,
+              description: parts[2].trim(),
+              wordCount: parts[3].trim(),
+              maxPoints: [5, 10, 15][idx]
+            });
+          }
+        });
+      }
+
+      return {
+        title,
+        managerEmail,
+        tasks: tasks.length > 0 ? tasks : null
+      };
     } catch (error) {
       console.error('Failed to parse question content:', error);
       return null;
@@ -138,7 +142,7 @@ export default function WritingEmailQuestion({ question, onAnswerChange }) {
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   };
 
-  if (!questionData) {
+  if (!questionData || !questionData.tasks) {
     return <Box sx={{ p: 2 }}><Typography color="error">Không thể tải câu hỏi</Typography></Box>;
   }
 
@@ -146,25 +150,28 @@ export default function WritingEmailQuestion({ question, onAnswerChange }) {
   const managerWordCount = countWords(answers.managerEmail);
   const formalWordCount = countWords(answers.formalEmail);
 
-  return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom sx={{ mb: 4, fontWeight: 'bold' }}>
-        {questionData.title}
-      </Typography>
+  // Function to extract word count range as numbers
+  const getWordCountRange = (text) => {
+    const match = text.match(/(\d+)(?:-(\d+))?/);
+    if (match) {
+      const min = parseInt(match[1]);
+      const max = match[2] ? parseInt(match[2]) : min;
+      return { min, max };
+    }
+    return { min: 50, max: 50 };
+  };
 
-      {/* Manager Email - Reference Context */}
-      <Box sx={{ mb: 4, p: 2.5, border: '1px solid #ddd', borderRadius: 1, bgcolor: '#f5f5f5' }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Email from Manager</Typography>
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          From: manager@company.com
-        </Typography>
+  return (
+    <Box sx={{ p: 2 }}>
+      {/* Reference Email from Backend */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Email Reference</Typography>
         <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
           Subject: {questionData.managerEmail.subject}
         </Typography>
-        
-        <Box sx={{ 
-          bgcolor: 'white', 
-          p: 2, 
+        <Box sx={{
+          bgcolor: 'white',
+          p: 2,
           borderRadius: 0.5,
           border: '1px solid #e0e0e0',
           whiteSpace: 'pre-wrap',
@@ -176,147 +183,46 @@ export default function WritingEmailQuestion({ question, onAnswerChange }) {
         </Box>
       </Box>
 
-      {/* Email 1: Friend Email */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-            {questionData.tasks[0].icon} {questionData.tasks[0].description}
-          </Typography>
-          <Chip 
-            label={questionData.tasks[0].difficulty} 
-            size="small" 
-            color="success" 
-            variant="outlined"
-            sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}
-          />
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-            {questionData.tasks[0].maxPoints}pts
-          </Typography>
-        </Box>
-        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
-          Write a casual email ({questionData.tasks[0].wordCount})
-        </Typography>
+      {/* Render tasks dynamically from backend */}
+      {questionData.tasks.map((task, idx) => {
+        const wordCountRange = getWordCountRange(task.wordCount);
+        const currentCount = task.type === 'friendEmail' ? friendWordCount : 
+                           task.type === 'managerEmail' ? managerWordCount : 
+                           formalWordCount;
         
-        <TextField
-          multiline
-          fullWidth
-          rows={4}
-          value={answers.friendEmail}
-          onChange={(e) => handleAnswerChange('friendEmail', e.target.value)}
-          variant="outlined"
-          placeholder="Dear Friend,
+        const isInRange = currentCount >= wordCountRange.min && currentCount <= wordCountRange.max;
+        const feedbackText = isInRange 
+          ? ' ✓'
+          : currentCount < wordCountRange.min 
+            ? ` (need ${wordCountRange.min - currentCount} more)`
+            : ` (${currentCount - wordCountRange.max} too many)`;
 
-I wanted to tell you about..."
-          sx={{
-            mb: 1,
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: 'white',
-              fontSize: '0.95rem'
-            }
-          }}
-        />
-        
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {friendWordCount} words 
-          {friendWordCount >= 45 && friendWordCount <= 55 ? ' ✓' : friendWordCount < 45 ? ` (need ${45 - friendWordCount} more)` : ` (${friendWordCount - 55} too many)`}
-        </Typography>
-      </Box>
-
-      <Box sx={{ my: 3, borderTop: '1px solid #ddd' }} />
-
-      {/* Email 2: Manager Email */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-            {questionData.tasks[1].icon} {questionData.tasks[1].description}
-          </Typography>
-          <Chip 
-            label={questionData.tasks[1].difficulty} 
-            size="small" 
-            color="warning" 
-            variant="outlined"
-            sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}
-          />
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-            {questionData.tasks[1].maxPoints}pts
-          </Typography>
-        </Box>
-        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
-          Write a semi-formal email ({questionData.tasks[1].wordCount})
-        </Typography>
-        
-        <TextField
-          multiline
-          fullWidth
-          rows={5}
-          value={answers.managerEmail}
-          onChange={(e) => handleAnswerChange('managerEmail', e.target.value)}
-          variant="outlined"
-          placeholder="Dear Manager,
-
-Thank you for your email..."
-          sx={{
-            mb: 1,
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: 'white',
-              fontSize: '0.95rem'
-            }
-          }}
-        />
-        
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {managerWordCount} words 
-          {managerWordCount >= 80 && managerWordCount <= 100 ? ' ✓' : managerWordCount < 80 ? ` (need ${80 - managerWordCount} more)` : ` (${managerWordCount - 100} too many)`}
-        </Typography>
-      </Box>
-
-      <Box sx={{ my: 3, borderTop: '1px solid #ddd' }} />
-
-      {/* Email 3: Formal Discussion Email */}
-      <Box>
-        <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-            {questionData.tasks[2].icon} {questionData.tasks[2].description}
-          </Typography>
-          <Chip 
-            label={questionData.tasks[2].difficulty} 
-            size="small" 
-            color="error" 
-            variant="outlined"
-            sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}
-          />
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-            {questionData.tasks[2].maxPoints}pts
-          </Typography>
-        </Box>
-        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
-          Write a formal professional email with detailed discussion ({questionData.tasks[2].wordCount})
-        </Typography>
-        
-        <TextField
-          multiline
-          fullWidth
-          rows={6}
-          value={answers.formalEmail}
-          onChange={(e) => handleAnswerChange('formalEmail', e.target.value)}
-          variant="outlined"
-          placeholder="Dear Sir/Madam,
-
-I am writing to discuss..."
-          sx={{
-            mb: 1,
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: 'white',
-              fontSize: '0.95rem'
-            }
-          }}
-        />
-        
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {formalWordCount} words 
-          {formalWordCount >= 120 && formalWordCount <= 150 ? ' ✓' : formalWordCount < 120 ? ` (need ${120 - formalWordCount} more)` : ` (${formalWordCount - 150} too many)`}
-        </Typography>
-      </Box>
+        return (
+          <Box key={idx} sx={{ mb: idx === questionData.tasks.length - 1 ? 0 : 3 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+              {task.description} ({task.wordCount})
+            </Typography>
+            <TextField
+              multiline
+              fullWidth
+              rows={idx === 0 ? 4 : idx === 1 ? 5 : 6}
+              value={answers[task.type]}
+              onChange={(e) => handleAnswerChange(task.type, e.target.value)}
+              variant="outlined"
+              sx={{
+                mb: 1,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'white',
+                  fontSize: '0.95rem'
+                }
+              }}
+            />
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {currentCount} words{feedbackText}
+            </Typography>
+          </Box>
+        );
+      })}
     </Box>
   );
 }

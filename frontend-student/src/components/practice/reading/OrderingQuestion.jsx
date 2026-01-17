@@ -111,7 +111,7 @@ export default function ReadingOrderingQuestion({ question, onAnswerChange }) {
           {/* Source Items */}
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" gutterBottom fontWeight="bold">
-              Các câu (kéo vào bên phải để sắp xếp):
+              Sentences (drag to the right to order):
             </Typography>
             <Droppable droppableId="source">
               {(provided, snapshot) => (
@@ -159,7 +159,7 @@ export default function ReadingOrderingQuestion({ question, onAnswerChange }) {
                   {provided.placeholder}
                   {sourceItems.length === 0 && (
                     <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
-                      Tất cả câu đã được sắp xếp
+                      All sentences have been ordered
                     </Typography>
                   )}
                 </Box>
@@ -170,7 +170,7 @@ export default function ReadingOrderingQuestion({ question, onAnswerChange }) {
           {/* Ordered Items */}
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" gutterBottom fontWeight="bold">
-              Thứ tự đã sắp xếp:
+              Ordered sequence:
             </Typography>
             <Droppable droppableId="ordered">
               {(provided, snapshot) => (
@@ -218,7 +218,7 @@ export default function ReadingOrderingQuestion({ question, onAnswerChange }) {
                   {provided.placeholder}
                   {orderedItems.length === 0 && (
                     <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
-                      Kéo các câu vào đây để sắp xếp
+                      Drag sentences here to order
                     </Typography>
                   )}
                 </Box>

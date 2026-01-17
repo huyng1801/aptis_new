@@ -145,6 +145,26 @@ export default function TakeExamPage() {
     }
   }, [timeRemaining, currentAttempt, timerInitialized]);
 
+  // Prevent page reload/navigation while exam is in progress
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (currentAttempt && !submitDialogOpen) {
+        // Show confirmation dialog
+        e.preventDefault();
+        e.returnValue = 'Bạn có chắc chắn muốn rời khỏi bài thi? Tiến độ của bạn sẽ bị mất.';
+        return 'Bạn có chắc chắn muốn rời khỏi bài thi? Tiến độ của bạn sẽ bị mất.';
+      }
+    };
+
+    // Add beforeunload listener
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [currentAttempt, submitDialogOpen]);
+
   // Load available skills on mount
   useEffect(() => {
     const loadSkills = async () => {
@@ -747,8 +767,14 @@ export default function TakeExamPage() {
         totalQuestionsInSkill={displayQuestions.length}
         skillAnswersSummary={
           currentSkillData.skill ? {
-            answered: answers.filter(a => a.question?.skill_id === currentSkillData.skill.id && (a.selected_option_id || a.text_answer || a.audio_url)).length,
-            unanswered: displayQuestions.length - answers.filter(a => a.question?.skill_id === currentSkillData.skill.id && (a.selected_option_id || a.text_answer || a.audio_url)).length
+            answered: displayQuestions.filter(q => {
+              const answer = answers.find(a => a.question_id === q.question_id);
+              return answer && (answer.selected_option_id || answer.text_answer || answer.audio_url || answer.answer_json);
+            }).length,
+            unanswered: displayQuestions.filter(q => {
+              const answer = answers.find(a => a.question_id === q.question_id);
+              return !answer || (!answer.selected_option_id && !answer.text_answer && !answer.audio_url && !answer.answer_json);
+            }).length
           } : null
         }
         onConfirm={handleSkillTransitionConfirm}

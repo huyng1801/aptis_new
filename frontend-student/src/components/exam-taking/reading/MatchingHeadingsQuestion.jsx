@@ -103,20 +103,6 @@ export default function ReadingMatchingHeadingsQuestion({ question, onAnswerChan
         {instructionText}
       </Typography>
 
-      {/* Available Headings List */}
-      <Paper elevation={1} sx={{ p: 2, mb: 3, bgcolor: '#f8f9fa' }}>
-        <Typography variant="h6" sx={{ mb: 1, fontSize: '1rem', fontWeight: 600 }}>
-          Available Headings:
-        </Typography>
-        <Box component="ul" sx={{ m: 0, pl: 2 }}>
-          {availableHeadings.map((heading, index) => (
-            <Typography key={index} component="li" variant="body2" sx={{ mb: 0.5 }}>
-              {heading}
-            </Typography>
-          ))}
-        </Box>
-      </Paper>
-
       {/* Paragraphs with Dropdown Selections */}
       {paragraphSections.map((paragraph, index) => {
         const correspondingItem = sortedItems[index];
@@ -126,7 +112,7 @@ export default function ReadingMatchingHeadingsQuestion({ question, onAnswerChan
           <Paper key={`paragraph-${paragraph.number}`} elevation={1} sx={{ p: 2, mb: 2 }}>
             {/* Paragraph Header with Dropdown */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" sx={{ mr: 2, fontWeight: 600, minWidth: 100 }}>
+              <Typography variant="h6" sx={{ mr: 2,minWidth: 100 }}>
                 Paragraph {paragraph.number}:
               </Typography>
               <FormControl size="small" sx={{ minWidth: 300 }}>
@@ -160,6 +146,20 @@ export default function ReadingMatchingHeadingsQuestion({ question, onAnswerChan
           </Paper>
         );
       })}
+
+      {/* Available Headings List (moved below paragraphs) */}
+      <Paper elevation={1} sx={{ p: 2, mb: 3, bgcolor: '#f8f9fa' }}>
+        <Typography variant="h6" sx={{ mb: 1, fontSize: '1rem', fontWeight: 600 }}>
+          Available Headings:
+        </Typography>
+        <Box component="ul" sx={{ m: 0, pl: 2 }}>
+          {availableHeadings.map((heading, index) => (
+            <Typography key={index} component="li" variant="body2" sx={{ mb: 0.5 }}>
+              {heading}
+            </Typography>
+          ))}
+        </Box>
+      </Paper>
 
       {/* Summary */}
       <Divider sx={{ my: 2 }} />
