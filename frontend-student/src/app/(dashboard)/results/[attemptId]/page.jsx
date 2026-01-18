@@ -345,13 +345,7 @@ export default function ResultDetailPage() {
               </Button>
             </Box>
             
-            {/* Debug info */}
-            <Box sx={{ mb: 2, p: 1, bgcolor: 'grey.100', borderRadius: 1, fontSize: '12px' }}>
-              <Typography variant="caption">
-                Debug: Total questions: {questionResults.length}, Selected skill: {selectedSkill}
-              </Typography>
-            </Box>
-            
+
             <QuestionFeedback 
               questionResults={questionResults.filter(answer => {
                 console.log('[Question Filter] Checking answer:', {

@@ -100,14 +100,22 @@ export default function HomePage() {
       color: '#2e7d32',
       action: () => router.push('/practice')
     },
-    {
-      title: 'Xem kết quả',
-      description: 'Phân tích chi tiết điểm số và tiến độ',
-      icon: <TrendingUp sx={{ fontSize: 24 }} />,
-      color: '#ed6c02',
-      action: () => router.push('/results')
-    }
   ];
+
+  // Calculate weekly goal progress
+  const getWeeklyGoal = () => {
+    const weeklyTarget = 5; // Mục tiêu 5 bài/tuần
+    const completedThisWeek = stats?.totalAttempts || 0;
+    const remaining = Math.max(0, weeklyTarget - completedThisWeek);
+    const progress = Math.min(100, (completedThisWeek / weeklyTarget) * 100);
+    
+    return {
+      completed: completedThisWeek,
+      target: weeklyTarget,
+      remaining,
+      progress,
+    };
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#fafafa' }}>
@@ -265,7 +273,7 @@ export default function HomePage() {
                     Điểm trung bình
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                    {stats?.totalAttempts ?? 0} bài đã làm
+                    {stats?.completedExams ?? 0} bài đã làm
                   </Typography>
                 </Paper>
               </Grid>
@@ -418,23 +426,25 @@ export default function HomePage() {
                 <Box sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="body2">Hoàn thành bài thi</Typography>
-                    <Typography variant="body2">2/5</Typography>
+                    <Typography variant="body2">{getWeeklyGoal().completed}/{getWeeklyGoal().target}</Typography>
                   </Box>
                   <LinearProgress 
                     variant="determinate" 
-                    value={40} 
+                    value={getWeeklyGoal().progress} 
                     sx={{ 
                       height: 8, 
                       borderRadius: 4,
                       backgroundColor: '#f5f5f5',
                       '& .MuiLinearProgress-bar': {
-                        backgroundColor: '#4caf50'
+                        backgroundColor: getWeeklyGoal().remaining === 0 ? '#4caf50' : '#ff9800'
                       }
                     }} 
                   />
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  Còn 3 bài thi nữa để đạt mục tiêu tuần này
+                  {getWeeklyGoal().remaining > 0 
+                    ? `Còn ${getWeeklyGoal().remaining} bài thi nữa để đạt mục tiêu tuần này`
+                    : '🎉 Bạn đã đạt mục tiêu tuần này!'}
                 </Typography>
               </CardContent>
             </Card>

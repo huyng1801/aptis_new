@@ -1,0 +1,16 @@
+{
+  "dashboard": {
+    "stats": {
+      "totalExams": 5,
+      "completedExams": 2,
+      "totalAttempts": 3,
+      "averageScore": 75.5,
+      "streak": 2,
+      "totalTime": "4h",
+      "weakestSkills": [
+        { "skill": "Speaking", "percentage": 65.0 },
+        { "skill": "Writing", "percentage": 72.5 }
+      ]
+    }
+  }
+}

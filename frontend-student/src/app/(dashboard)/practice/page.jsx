@@ -1,437 +1,419 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
-  Box,
+  Container,
   Grid,
   Card,
   CardContent,
   Typography,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Box,
   Chip,
-  Avatar,
-  LinearProgress,
   Alert,
-  Container
+  CircularProgress,
+  Avatar,
+  Paper,
+  Divider,
+  Badge,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Skeleton,
 } from '@mui/material';
 import {
-  Psychology,
-  Hearing,
-  MenuBook,
-  RecordVoiceOver,
-  Edit,
   PlayArrow,
-  AutoAwesome,
-  TrendingUp
+  Schedule,
+  Assessment,
+  School,
+  TrendingUp,
+  Quiz,
+  Star,
+  Person,
+  CheckCircle,
+  FitnessCenter,
+  BarChart,
+  Timeline,
+  Refresh,
 } from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
-import { practiceService } from '@/services/practiceService';
-
-const skillTypes = [
-  {
-    code: 'LISTENING',
-    name: 'Listening',
-    nameVi: 'Nghe',
-    description: 'Luyện tập kỹ năng nghe hiểu tiếng Anh',
-    icon: <Hearing />,
-    color: '#2196F3',
-    questionTypes: [
-      { code: 'LISTENING_MCQ', name: 'Multiple Choice', nameVi: 'Trắc nghiệm' },
-      { code: 'LISTENING_GAP_FILL', name: 'Gap Filling', nameVi: 'Điền từ' },
-      { code: 'LISTENING_MATCHING', name: 'Speaker Matching', nameVi: 'Ghép người nói' },
-      { code: 'LISTENING_STATEMENT_MATCHING', name: 'Statement Matching', nameVi: 'Ghép câu' }
-    ]
-  },
-  {
-    code: 'READING',
-    name: 'Reading', 
-    nameVi: 'Đọc',
-    description: 'Luyện tập kỹ năng đọc hiểu tiếng Anh',
-    icon: <MenuBook />,
-    color: '#4CAF50',
-    questionTypes: [
-      { code: 'READING_GAP_FILL', name: 'Gap Filling', nameVi: 'Điền từ' },
-      { code: 'READING_ORDERING', name: 'Ordering', nameVi: 'Sắp xếp' },
-      { code: 'READING_MATCHING', name: 'Matching', nameVi: 'Ghép cặp' },
-      { code: 'READING_MATCHING_HEADINGS', name: 'Matching Headings', nameVi: 'Ghép tiêu đề' }
-    ]
-  },
-  {
-    code: 'WRITING',
-    name: 'Writing',
-    nameVi: 'Viết', 
-    description: 'Luyện tập kỹ năng viết tiếng Anh',
-    icon: <Edit />,
-    color: '#FF9800',
-    questionTypes: [
-      { code: 'WRITING_SHORT', name: 'Short Answers', nameVi: 'Câu trả lời ngắn' },
-      { code: 'WRITING_FORM', name: 'Form Filling', nameVi: 'Điền form' },
-      { code: 'WRITING_LONG', name: 'Chat Responses', nameVi: 'Trả lời chat' },
-      { code: 'WRITING_EMAIL', name: 'Email Writing', nameVi: 'Viết email' }
-    ]
-  },
-  {
-    code: 'SPEAKING',
-    name: 'Speaking',
-    nameVi: 'Nói',
-    description: 'Luyện tập kỹ năng nói tiếng Anh', 
-    icon: <RecordVoiceOver />,
-    color: '#E91E63',
-    questionTypes: [
-      { code: 'SPEAKING_INTRO', name: 'Personal Introduction', nameVi: 'Tự giới thiệu' },
-      { code: 'SPEAKING_DESCRIPTION', name: 'Picture Description', nameVi: 'Miêu tả hình' },
-      { code: 'SPEAKING_COMPARISON', name: 'Comparison', nameVi: 'So sánh' },
-      { code: 'SPEAKING_DISCUSSION', name: 'Topic Discussion', nameVi: 'Thảo luận' }
-    ]
-  }
-];
-
-const difficultyLevels = [
-  { code: 'BEGINNER', name: 'Beginner', nameVi: 'Cơ bản', color: '#4CAF50' },
-  { code: 'INTERMEDIATE', name: 'Intermediate', nameVi: 'Trung cấp', color: '#FF9800' },
-  { code: 'ADVANCED', name: 'Advanced', nameVi: 'Nâng cao', color: '#F44336' }
-];
+import { api } from '@/services/api';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchMyAttempts } from '@/store/slices/examSlice';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Breadcrumb from '@/components/common/Breadcrumb';
+import StatsCard from '@/components/practice/StatsCard';
+import SkillSelector from '@/components/practice/SkillSelector';
+import ExamsList from '@/components/practice/ExamsList';
+import PracticeHistory from '@/components/practice/PracticeHistory';
 
 export default function PracticePage() {
   const router = useRouter();
-  const [selectedSkill, setSelectedSkill] = useState('');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('');
-  const [selectedQuestionType, setSelectedQuestionType] = useState('');
-  const [practiceStats, setPracticeStats] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+  
+  // State for skills
+  const [skills, setSkills] = useState([]);
+  const [selectedSkill, setSelectedSkill] = useState(null);
+  const [overallStats, setOverallStats] = useState({
+    totalExams: 0,
+    completedAttempts: 0,
+    averageScore: 0,
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  
+  // State for exams
+  const [exams, setExams] = useState([]);
+  const [isLoadingSkills, setIsLoadingSkills] = useState(true);
+  const [isLoadingExams, setIsLoadingExams] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Get attempts from Redux
+  const { myAttempts } = useSelector(state => state.exams);
+  
+  // Format skill name
+  const formatSkillName = (name) => {
+    const skillMap = {
+      'READING': 'Reading',
+      'LISTENING': 'Listening',
+      'WRITING': 'Writing',
+      'SPEAKING': 'Speaking',
+    };
+    return skillMap[name] || name;
+  };
 
-  useEffect(() => {
-    loadPracticeStats();
-  }, []);
-
-  const loadPracticeStats = async () => {
+  // Fetch stats from API
+  const fetchStats = useCallback(async () => {
     try {
-      setLoading(true);
+      setIsLoadingStats(true);
+      const response = await api.get('/student/dashboard/stats');
+      const data = response.data?.data || response.data;
       
-      // Try to load real stats from API
-      try {
-        const response = await fetch('/api/student/practice/stats', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
+      if (data) {
+        setOverallStats({
+          totalExams: data.totalExams || 0,
+          completedAttempts: data.totalAttempts || 0,
+          averageScore: data.averageScore || 0,
         });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            const apiStats = result.data;
-            setPracticeStats({
-              totalPracticed: apiStats.total_questions || 45,
-              skillProgress: {
-                LISTENING: apiStats.skills_progress?.LISTENING?.average_score || 75,
-                READING: apiStats.skills_progress?.READING?.average_score || 60,
-                WRITING: apiStats.skills_progress?.WRITING?.average_score || 40,
-                SPEAKING: apiStats.skills_progress?.SPEAKING?.average_score || 55
-              },
-              recentActivity: apiStats.recent_activity || []
-            });
-            return;
-          }
-        }
-      } catch (apiError) {
-        console.log('API not available, using mock data:', apiError);
       }
-      
-      // Mock data for now
-      setPracticeStats({
-        totalPracticed: 45,
-        skillProgress: {
-          LISTENING: 75,
-          READING: 60,
-          WRITING: 40,
-          SPEAKING: 55
-        },
-        recentActivity: [
-          { skill: 'LISTENING', type: 'MCQ', score: 85, date: '2024-01-08' },
-          { skill: 'READING', type: 'GAP_FILL', score: 78, date: '2024-01-07' }
-        ]
-      });
-    } catch (error) {
-      console.error('Error loading practice stats:', error);
-      // Set default stats on error
-      setPracticeStats({
-        totalPracticed: 0,
-        skillProgress: { LISTENING: 0, READING: 0, WRITING: 0, SPEAKING: 0 },
-        recentActivity: []
+    } catch (err) {
+      console.error('Failed to fetch stats:', err);
+      setOverallStats({
+        totalExams: 0,
+        completedAttempts: 0,
+        averageScore: 0,
       });
     } finally {
-      setLoading(false);
+      setIsLoadingStats(false);
     }
+  }, []);
+
+  // Calculate skill-specific stats from myAttempts
+  const getSkillStatsFromAttempts = (skillId) => {
+    if (!myAttempts || !Array.isArray(myAttempts)) {
+      return {
+        examCount: 5, // Fallback estimate
+        completedCount: 0
+      };
+    }
+
+    const skillAttempts = myAttempts.filter(attempt => 
+      attempt.attempt_type === 'single_skill' &&
+      (attempt.skillType === skillId || 
+       attempt.skill_id === skillId ||
+       attempt.skill_type_id === skillId)
+    );
+
+    return {
+      examCount: Math.max(5, skillAttempts.length + 3), // At least 5, plus some available
+      completedCount: skillAttempts.filter(attempt => 
+        attempt.status === 'submitted' || attempt.status === 'completed'
+      ).length
+    };
   };
 
-  const handleSkillSelect = (skillCode) => {
-    setSelectedSkill(skillCode);
-    setSelectedQuestionType(''); // Reset question type when skill changes
-  };
+  // Fetch skills và stats
+  useEffect(() => {
+    const fetchSkillsAndStats = async () => {
+      try {
+        setIsLoadingSkills(true);
+        setError(null);
 
-  const handleStartPractice = () => {
-    if (!selectedSkill || !selectedDifficulty) {
+        // Fetch skill types
+        const skillsRes = await api.get('/public/skill-types');
+        const skillsData = skillsRes.data?.data || skillsRes.data || [];
+        setSkills(Array.isArray(skillsData) ? skillsData : []);
+
+        // Stats will be calculated from myAttempts in SkillSelector and overall stats useEffect
+
+        // Set first skill as selected by default and auto-fetch its exams
+        if (skillsData.length > 0) {
+          const firstSkill = skillsData[0];
+          setSelectedSkill(firstSkill);
+          // Auto-fetch exams for first skill
+          fetchExamsBySkill(firstSkill.id);
+        }
+
+      } catch (err) {
+        console.error('Failed to fetch skills:', err);
+        setError(err.response?.data?.message || 'Không thể tải danh sách kỹ năng');
+        setSkills([]);
+      } finally {
+        setIsLoadingSkills(false);
+      }
+    };
+
+    fetchSkillsAndStats();
+    fetchStats();
+    dispatch(fetchMyAttempts());
+  }, [dispatch, fetchStats]);
+
+  // Fetch exams theo skill được chọn
+  const fetchExamsBySkill = useCallback(async (skillId) => {
+    if (!skillId) {
+      setExams([]);
       return;
     }
 
-    const params = new URLSearchParams({
-      skill: selectedSkill,
-      difficulty: selectedDifficulty
-    });
+    try {
+      setIsLoadingExams(true);
+      setError(null);
 
-    if (selectedQuestionType) {
-      params.append('type', selectedQuestionType);
+      // Use skill filter for better API call
+      const response = await api.get(`/student/exams?skill_type=${skillId}&limit=50`);
+      const examsData = response.data?.data || response.data?.exams || [];
+      setExams(Array.isArray(examsData) ? examsData : []);
+
+    } catch (err) {
+      console.error('Failed to fetch exams for skill:', err);
+      setError(err.response?.data?.message || 'Không thể tải bài thi cho kỹ năng này');
+      setExams([]);
+    } finally {
+      setIsLoadingExams(false);
     }
+  }, []);
 
-    router.push(`/practice/session?${params.toString()}`);
+  // Handle skill selection
+  const handleSkillSelect = useCallback((skill) => {
+    setSelectedSkill(skill);
+    fetchExamsBySkill(skill.id);
+  }, [fetchExamsBySkill]);
+
+  // Handle start practice
+  const handleStartPractice = useCallback((examId) => {
+    if (!selectedSkill) return;
+    
+    // Get the correct skill name for the query
+    const skillName = formatSkillName(selectedSkill.skill_type_name);
+    router.push(`/exams/${examId}/take?type=single_skill&skill=${selectedSkill.id}`);
+  }, [router, selectedSkill]);
+
+  const getSkillColor = useCallback((skillName) => {
+    const colors = {
+      'Reading': '#1976d2',    // Blue
+      'Listening': '#388e3c',  // Green  
+      'Writing': '#f57c00',    // Orange
+      'Speaking': '#d32f2f',   // Red
+      'READING': '#1976d2',
+      'LISTENING': '#388e3c',
+      'WRITING': '#f57c00',
+      'SPEAKING': '#d32f2f',
+    };
+    return colors[skillName] || '#757575';
+  }, []);
+
+  const getSkillIcon = useCallback((skillName) => {
+    const icons = {
+      'Reading': '📖',
+      'Listening': '🎧',
+      'Writing': '✍️',
+      'Speaking': '🗣️',
+      'READING': '📖',
+      'LISTENING': '🎧',
+      'WRITING': '✍️',
+      'SPEAKING': '🗣️',
+    };
+    return icons[skillName] || '📚';
+  }, []);
+
+  const formatDuration = useCallback((minutes) => {
+    if (!minutes) return 'Không xác định';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  }, []);
+
+  // Filter attempts for practice (single_skill attempts)
+  const practiceAttempts = Array.isArray(myAttempts)
+    ? myAttempts
+        .filter(attempt => attempt.attempt_type === 'single_skill')
+        .sort((a, b) => new Date(b.start_time) - new Date(a.start_time))
+        .slice(0, 10)
+    : [];
+
+  // Calculate overall stats from myAttempts if available
+  const calculateStatsFromAttempts = () => {
+    if (myAttempts && Array.isArray(myAttempts)) {
+      const singleSkillAttempts = myAttempts.filter(attempt => attempt.attempt_type === 'single_skill');
+      const completed = singleSkillAttempts.filter(attempt => attempt.status === 'submitted').length;
+      const totalScore = singleSkillAttempts
+        .filter(attempt => attempt.total_score !== null && attempt.total_score !== undefined)
+        .reduce((sum, attempt) => sum + (attempt.total_score || 0), 0);
+      const avgScore = completed > 0 ? (totalScore / completed).toFixed(1) : 0;
+      
+      return {
+        completedAttempts: completed,
+        averageScore: avgScore
+      };
+    }
+    return { completedAttempts: 0, averageScore: 0 };
   };
 
-  const getSkillIcon = (skillCode) => {
-    const skill = skillTypes.find(s => s.code === skillCode);
-    return skill?.icon || <Psychology />;
+  // Refresh stats when attempts change
+  useEffect(() => {
+    if (myAttempts && Array.isArray(myAttempts)) {
+      fetchStats();
+    }
+  }, [myAttempts, fetchStats]);
+
+  // Format date
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
-  const getSelectedSkill = () => {
-    return skillTypes.find(s => s.code === selectedSkill);
-  };
+  if (isLoadingSkills) {
+    return <LoadingSpinner message="Đang tải danh sách kỹ năng..." />;
+  }
 
   return (
-    <Container maxWidth="lg" sx={{ px: { xs: 2, md: 4 } }}>
-      <Box>
-        {/* Header */}
-        <Box mb={4}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
-          Ôn tập kỹ năng
+    <Container maxWidth="lg" sx={{ mt: 3, mb: 4, minHeight: 'calc(100vh - 300px)' }}>
+      {/* Breadcrumb */}
+      <Box sx={{ mb: 3 }}>
+        <Breadcrumb />
+      </Box>
+
+      {/* Page Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
+          Luyện tập theo kỹ năng
         </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Chọn kỹ năng và độ khó để luyện tập các câu hỏi APTIS
+        <Typography variant="subtitle1" color="text.secondary">
+          Luyện tập từng kỹ năng riêng biệt để cải thiện điểm số
         </Typography>
       </Box>
 
-      {/* Practice Stats */}
-      {practiceStats && (
-        <Grid container spacing={3} mb={4}>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent textAlign="center">
-                <Typography variant="h4" color="primary" fontWeight="bold">
-                  {practiceStats.totalPracticed}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Bài luyện tập
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          {skillTypes.map((skill) => (
-            <Grid item xs={12} md={2.25} key={skill.code}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" gap={1} mb={1}>
-                    <Avatar sx={{ bgcolor: skill.color, width: 24, height: 24 }}>
-                      {skill.icon}
-                    </Avatar>
-                    <Typography variant="body2" fontWeight="bold">
-                      {skill.nameVi}
-                    </Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={practiceStats.skillProgress[skill.code] || 0}
-                    sx={{ 
-                      height: 8, 
-                      borderRadius: 4,
-                      '& .MuiLinearProgress-bar': {
-                        backgroundColor: skill.color
-                      }
-                    }}
-                  />
-                  <Typography variant="caption" color="text.secondary" mt={1}>
-                    {practiceStats.skillProgress[skill.code] || 0}% hoàn thành
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
       )}
 
-      <Grid container spacing={3}>
-        {/* Skill Selection */}
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Chọn kỹ năng luyện tập
-              </Typography>
-              
-              <Grid container spacing={2} mb={3}>
-                {skillTypes.map((skill) => (
-                  <Grid item xs={12} sm={6} md={3} key={skill.code}>
-                    <Card 
-                      variant="outlined"
-                      onClick={() => handleSkillSelect(skill.code)}
-                      sx={{
-                        cursor: 'pointer',
-                        border: selectedSkill === skill.code ? `2px solid ${skill.color}` : '1px solid #e0e0e0',
-                        '&:hover': {
-                          borderColor: skill.color,
-                          boxShadow: 1
-                        }
-                      }}
-                    >
-                      <CardContent textAlign="center">
-                        <Avatar 
-                          sx={{ 
-                            bgcolor: skill.color, 
-                            mx: 'auto', 
-                            mb: 2,
-                            width: 56,
-                            height: 56
-                          }}
-                        >
-                          {skill.icon}
-                        </Avatar>
-                        <Typography variant="h6" fontWeight="bold" gutterBottom>
-                          {skill.nameVi}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" fontSize={12}>
-                          {skill.description}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-
-              {/* Question Type Selection */}
-              {selectedSkill && (
-                <Box mb={3}>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                    Loại câu hỏi (tùy chọn)
-                  </Typography>
-                  <Box display="flex" gap={1} flexWrap="wrap">
-                    <Chip
-                      label="Tất cả"
-                      onClick={() => setSelectedQuestionType('')}
-                      color={!selectedQuestionType ? 'primary' : 'default'}
-                      variant={!selectedQuestionType ? 'filled' : 'outlined'}
-                    />
-                    {getSelectedSkill()?.questionTypes.map((type) => (
-                      <Chip
-                        key={type.code}
-                        label={type.nameVi}
-                        onClick={() => setSelectedQuestionType(type.code)}
-                        color={selectedQuestionType === type.code ? 'primary' : 'default'}
-                        variant={selectedQuestionType === type.code ? 'filled' : 'outlined'}
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              )}
-
-              {/* Difficulty Selection */}
-              <Box mb={3}>
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                  Độ khó
-                </Typography>
-                <Box display="flex" gap={1}>
-                  {difficultyLevels.map((level) => (
-                    <Chip
-                      key={level.code}
-                      label={level.nameVi}
-                      onClick={() => setSelectedDifficulty(level.code)}
-                      color={selectedDifficulty === level.code ? 'primary' : 'default'}
-                      variant={selectedDifficulty === level.code ? 'filled' : 'outlined'}
-                      sx={{
-                        borderColor: level.color,
-                        '&.MuiChip-filled': {
-                          backgroundColor: level.color,
-                          color: 'white'
-                        }
-                      }}
-                    />
-                  ))}
-                </Box>
-              </Box>
-
-              {/* Start Practice Button */}
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<PlayArrow />}
-                onClick={handleStartPractice}
-                disabled={!selectedSkill || !selectedDifficulty}
-                fullWidth
-                sx={{ mt: 2 }}
-              >
-                Bắt đầu luyện tập
-              </Button>
-
-              {(!selectedSkill || !selectedDifficulty) && (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  Vui lòng chọn kỹ năng và độ khó để bắt đầu luyện tập
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
+      {/* Overall Stats Cards */}
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatsCard
+            title="Tổng bài thi"
+            value={overallStats.totalExams}
+            subtitle="bài thi có sẵn"
+            icon={Assessment}
+            color="#1976d2"
+          />
         </Grid>
 
-        {/* Recent Activity */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                <TrendingUp sx={{ mr: 1 }} />
-                Hoạt động gần đây
-              </Typography>
-              
-              {practiceStats?.recentActivity?.length > 0 ? (
-                <Box>
-                  {practiceStats.recentActivity.map((activity, index) => (
-                    <Box key={index} mb={2} p={2} bgcolor="grey.50" borderRadius={1}>
-                      <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        {getSkillIcon(activity.skill)}
-                        <Typography variant="body2" fontWeight="bold">
-                          {skillTypes.find(s => s.code === activity.skill)?.nameVi}
-                        </Typography>
-                        <Chip 
-                          label={`${activity.score}%`}
-                          size="small"
-                          color={activity.score >= 80 ? 'success' : activity.score >= 60 ? 'warning' : 'error'}
-                        />
-                      </Box>
-                      <Typography variant="caption" color="text.secondary">
-                        {activity.type} • {new Date(activity.date).toLocaleDateString('vi-VN')}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary" textAlign="center" py={3}>
-                  Chưa có hoạt động luyện tập nào
-                </Typography>
-              )}
+        <Grid item xs={12} sm={6} md={3}>
+          <StatsCard
+            title="Đã hoàn thành"
+            value={overallStats.completedAttempts}
+            subtitle="lần làm bài"
+            icon={CheckCircle}
+            color="#388e3c"
+          />
+        </Grid>
 
-              <Button
-                variant="outlined"
-                fullWidth
-                sx={{ mt: 2 }}
-                onClick={() => router.push('/progress')}
-              >
-                Xem báo cáo tiến độ
-              </Button>
-            </CardContent>
-          </Card>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatsCard
+            title="Điểm trung bình"
+            value={overallStats.averageScore}
+            subtitle="trên 50 điểm"
+            icon={Star}
+            color="#f57c00"
+          />
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <StatsCard
+            title="Kỹ năng"
+            value={skills.length}
+            subtitle="kỹ năng có thể luyện"
+            icon={FitnessCenter}
+            color="#d32f2f"
+          />
         </Grid>
       </Grid>
-      </Box>
+
+      {/* Main Content - Two Columns */}
+      <Grid container spacing={3}>
+        {/* Left Column - Skills and Exams */}
+        <Grid item xs={12} md={8}>
+          {/* Skills Selection */}
+          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FitnessCenter fontSize="small" />
+              Chọn kỹ năng luyện tập
+            </Typography>
+
+            <SkillSelector 
+              skills={skills}
+              selectedSkill={selectedSkill}
+              onSelectSkill={handleSkillSelect}
+              getSkillColor={getSkillColor}
+              getSkillIcon={getSkillIcon}
+              formatSkillName={formatSkillName}
+            />
+          </Paper>
+
+          {/* Exams for Selected Skill */}
+          {selectedSkill && (
+            <Paper elevation={2} sx={{ p: 3 }}>
+              <ExamsList
+                selectedSkill={selectedSkill}
+                exams={exams}
+                isLoadingExams={isLoadingExams}
+                onStartPractice={handleStartPractice}
+                getSkillColor={getSkillColor}
+                getSkillIcon={getSkillIcon}
+                formatSkillName={formatSkillName}
+                formatDuration={formatDuration}
+              />
+            </Paper>
+          )}
+        </Grid>
+
+        {/* Right Column - Practice History */}
+        <Grid item xs={12} md={4}>
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Divider sx={{ mb: 2 }} />
+            <PracticeHistory
+              attempts={practiceAttempts}
+              formatDate={formatDate}
+              formatSkillName={formatSkillName}
+            />
+          </Paper>
+        </Grid>
+      </Grid>
     </Container>
   );
 }

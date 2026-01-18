@@ -67,8 +67,8 @@ export default function ExamDetailPage() {
   };
 
   const handleStartExam = () => {
-    // Redirect to take exam with full_exam mode
-    router.push(`/exams/${examId}/take?type=full_exam`);
+    // Open dialog to choose exam mode
+    setStartDialogOpen(true);
   };
 
   const handleContinueExam = (attemptId) => {

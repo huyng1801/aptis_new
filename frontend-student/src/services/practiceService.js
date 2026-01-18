@@ -47,5 +47,16 @@ export const practiceService = {
       console.error('Error fetching practice stats:', error);
       throw error;
     }
+  },
+
+  // Get stats for specific skill
+  async getSkillStats(skillId) {
+    try {
+      const response = await api.get(`/student/practice/skills/${skillId}/stats`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching skill stats:', error);
+      throw error;
+    }
   }
 };

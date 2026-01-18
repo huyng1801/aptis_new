@@ -17,13 +17,23 @@ import {
 } from '@mui/material';
 
 // CERF Level mapping based on APTIS score (0-50 scale per skill)
+// Reference: A1=4, A2=16, B1=26, B2=41, C=48
 const getCERFLevel = (score) => {
-  if (score >= 45) return { level: 'C', label: 'C', color: '#E63946' };
-  if (score >= 40) return { level: 'B2', label: 'B2', color: '#E63946' };
-  if (score >= 35) return { level: 'B1', label: 'B1', color: '#FF6600' };
-  if (score >= 30) return { level: 'A2', label: 'A2', color: '#FF9900' };
-  if (score >= 25) return { level: 'A1', label: 'A1', color: '#FFCC00' };
+  if (score >= 48) return { level: 'C', label: 'C', color: '#C41E3A' };
+  if (score >= 41) return { level: 'B2', label: 'B2', color: '#C41E3A' };
+  if (score >= 26) return { level: 'B1', label: 'B1', color: '#C41E3A' };
+  if (score >= 16) return { level: 'A2', label: 'A2', color: '#C41E3A' };
+  if (score >= 4) return { level: 'A1', label: 'A1', color: '#C41E3A' };
   return { level: 'A0', label: 'A0', color: '#CCCCCC' };
+};
+
+// Check if a CERF level should be filled based on achieved level
+const isLevelReached = (currentLevel, achievedLevel) => {
+  const levels = ['A0', 'A1', 'A2', 'B1', 'B2', 'C'];
+  const currentIndex = levels.indexOf(currentLevel);
+  const achievedIndex = levels.indexOf(achievedLevel);
+  // Fill from A0 up to and including the achieved level (reversed order in display)
+  return currentIndex <= achievedIndex;
 };
 
 export default function ResultsSummary({ attempt, exam, skillScores, overallStats }) {
@@ -184,7 +194,7 @@ export default function ResultsSummary({ attempt, exam, skillScores, overallStat
             </Typography>
 
             <Box sx={{ p: 2, backgroundColor: 'white', border: '1px solid #ddd', borderRadius: 1, overflowX: 'auto' }}>
-              <Box display="flex" gap={0.5} minWidth="500px">
+              <Box display="flex" gap={0}>
                 {/* Y-axis labels */}
                 <Box sx={{ minWidth: 50 }}>
                   <Box sx={{ height: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold', color: '#666' }}>
@@ -201,41 +211,37 @@ export default function ResultsSummary({ attempt, exam, skillScores, overallStat
                         fontWeight: 'bold',
                         color: '#333',
                         fontSize: '0.8rem',
-                        borderBottom: '1px solid #ddd'
+                        borderBottom: '1px solid #999'
                       }}
                     >
                       {level}
                     </Box>
                   ))}
+                  <Box sx={{ height: 40 }} />
                 </Box>
 
                 {/* Skill columns */}
                 {skillsWithCERF.map((skill, idx) => (
-                  <Box key={idx} sx={{ minWidth: 65 }}>
-                    {/* Skill name at top */}
-                    <Box sx={{ height: 25, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Typography variant="caption" sx={{ fontWeight: 'bold', textAlign: 'center', color: '#333', fontSize: '0.75rem' }}>
-                        {skill.name.split(' ')[0]}
-                      </Typography>
-                    </Box>
-
+                  <Box key={idx} sx={{ flex: 1, minWidth: 70 }}>
                     {/* Bar chart - 6 rows for CERF levels */}
                     {['C', 'B2', 'B1', 'A2', 'A1', 'A0'].map((level) => {
-                      const isReached = skill.cerf.label === level;
+                      const isReached = isLevelReached(level, skill.cerf.label);
+                      const isTopLevel = level === skill.cerf.label;
+                      
                       return (
                         <Box
                           key={level}
                           sx={{
                             height: 28,
                             backgroundColor: isReached ? skill.cerf.color : '#ffffff',
-                            border: '1px solid #999',
+                            borderBottom: '1px solid #999',
                             transition: 'all 0.3s ease',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center'
                           }}
                         >
-                          {isReached && (
+                          {isTopLevel && (
                             <Typography sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem' }}>
                               {skill.normalizedScore}
                             </Typography>
@@ -243,33 +249,37 @@ export default function ResultsSummary({ attempt, exam, skillScores, overallStat
                         </Box>
                       );
                     })}
+                    
+                    {/* Skill name and score at bottom */}
+                    <Box sx={{ height: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pt: 1 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 'bold', textAlign: 'center', color: '#333', fontSize: '0.75rem' }}>
+                        {skill.name.split(' ')[0]}
+                      </Typography>
+           
+                    </Box>
                   </Box>
                 ))}
 
                 {/* Overall CERF column */}
-                <Box sx={{ minWidth: 100 }}>
-                  <Box sx={{ height: 25, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Typography variant="caption" sx={{ fontWeight: 'bold', textAlign: 'center', color: '#333', fontSize: '0.75rem' }}>
-                      Overall<br/>CERF grade
-                    </Typography>
-                  </Box>
-
+                <Box sx={{ flex: 1, minWidth: 70 }}>
                   {['C', 'B2', 'B1', 'A2', 'A1', 'A0'].map((level) => {
-                    const isReached = overallCERF.label === level;
+                    const isReached = isLevelReached(level, overallCERF.label);
+                    const isTopLevel = level === overallCERF.label;
+                    
                     return (
                       <Box
                         key={level}
                         sx={{
                           height: 28,
                           backgroundColor: isReached ? overallCERF.color : '#ffffff',
-                          border: '1px solid #999',
+                          borderBottom: '1px solid #999',
                           transition: 'all 0.3s ease',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center'
                         }}
                       >
-                        {isReached && (
+                        {isTopLevel && (
                           <Typography sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem' }}>
                             {Math.round(averageNormalizedScore)}
                           </Typography>
@@ -277,6 +287,13 @@ export default function ResultsSummary({ attempt, exam, skillScores, overallStat
                       </Box>
                     );
                   })}
+                  
+                  {/* Overall label at bottom */}
+                  <Box sx={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', pt: 1 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 'bold', textAlign: 'center', color: '#333', fontSize: '0.75rem' }}>
+                      Overall
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
             </Box>

@@ -138,6 +138,11 @@ export default function SpeakingSection({
 
   // Handle answer change
   const handleAnswerChange = (questionId, answer) => {
+    console.log('[SpeakingSection] Answer changed for question:', {
+      questionId,
+      answerData: answer,
+      timestamp: new Date().toISOString()
+    });
     onAnswerChange?.(questionId, answer);
   };
 

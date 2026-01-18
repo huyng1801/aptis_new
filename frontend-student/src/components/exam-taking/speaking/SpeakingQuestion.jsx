@@ -40,14 +40,6 @@ export default function SpeakingQuestion({
     );
   }
   
-  // Debug logging
-  console.log('[SpeakingQuestion] Render:', { 
-    questionId: question.id, 
-    questionNumber,
-    sectionInfo,
-    hasAnswer: !!question.answer_data?.audio_url
-  });
-
   // Recording states
   const [step, setStep] = useState('recording');
   const [isRecording, setIsRecording] = useState(false);
@@ -71,6 +63,17 @@ export default function SpeakingQuestion({
   const recordingTimerRef = useRef(null);
   const timeCounterRef = useRef(0);
   const recordingCompletedRef = useRef(false);
+  const autoAdvanceTimerRef = useRef(null); // Track auto-advance timer
+  
+  // Debug logging - after state initialization
+  console.log('[SpeakingQuestion] Render:', { 
+    questionId: question.id, 
+    questionNumber,
+    sectionInfo,
+    hasAnswer: !!question.answer_data?.audio_url,
+    step,
+    answerData: question.answer_data
+  });
   
   const MAX_UPLOAD_RETRIES = 3;
 
@@ -95,6 +98,20 @@ export default function SpeakingQuestion({
 
   // Check if question already has audio answer
   const hasExistingAudio = question.answer_data?.audio_url;
+
+  // Effect to update step when answer_data changes from parent
+  useEffect(() => {
+    console.log('[SpeakingQuestion] answer_data updated:', {
+      questionId: question.id,
+      hasAudio: !!hasExistingAudio,
+      audioUrl: hasExistingAudio ? 'present' : 'missing'
+    });
+    
+    if (hasExistingAudio) {
+      console.log('[SpeakingQuestion] Audio found from parent update, transitioning to completed');
+      setStep('completed');
+    }
+  }, [hasExistingAudio, question.id]);
 
   const startRecording = useCallback(async () => {
     console.log('[SpeakingQuestion] Starting recording for question', question.id);
@@ -182,8 +199,12 @@ export default function SpeakingQuestion({
     
     return () => {
       clearInterval(prepTimer);
+      // Clear auto-advance timer if component unmounts
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+      }
     };
-  }, [question.id]); // ONLY depend on question.id
+  }, [question.id, hasExistingAudio, maxPreparationTime, startRecording]); // Include hasExistingAudio to reset when audio arrives
 
   // Recording timer
   useEffect(() => {
@@ -249,21 +270,46 @@ export default function SpeakingQuestion({
 
       console.log('[SpeakingQuestion] Upload successful:', response);
       
-      // Update answer in state
+      // Extract audio_url from response data
+      // Backend returns { success: true, data: { answerId, audio_url, duration, fileSize } }
+      const audioUrl = response.data?.data?.audio_url || response.data?.audio_url;
+      
+      if (!audioUrl) {
+        throw new Error('No audio_url in response: ' + JSON.stringify(response.data));
+      }
+      
+      console.log('[SpeakingQuestion] Audio URL from response:', audioUrl);
+      
+      // Update answer in state with complete data
       onAnswerChange?.(question.id, {
         answer_type: 'audio',
-        audio_url: response.data.audio_url,
-        transcribed_text: response.data.transcribed_text || null,
-        duration: duration
+        audio_url: audioUrl,
+        transcribed_text: null,
+        duration: response.data?.data?.duration || response.data?.duration || duration
       });
       
+      // Transition to completed immediately after successful upload
+      // Don't wait for parent state update since that might be delayed
       setStep('completed');
+      setAudioBlob(null);
+      setAudioUrl('');
+      setIsRecording(false);
       setIsUploading(false);
       setUploadError(null);
       setUploadRetries(0);
+      recordingCompletedRef.current = false;
       
-      // DO NOT AUTO-ADVANCE - let user control navigation
-      console.log('[SpeakingQuestion] Upload completed, waiting for manual navigation');
+      console.log('[SpeakingQuestion] Upload completed successfully, transitioned to completed state');
+      
+      // Auto-advance after 2 seconds to allow parent state to update
+      autoAdvanceTimerRef.current = setTimeout(() => {
+        console.log('[SpeakingQuestion] Auto-advancing to next question after delay');
+        if (onMoveToNextQuestionRef.current) {
+          onMoveToNextQuestionRef.current();
+        } else {
+          console.warn('[SpeakingQuestion] onMoveToNextQuestion callback not available!');
+        }
+      }, 2000);
       
     } catch (error) {
       console.error('[SpeakingQuestion] Upload error:', error);
@@ -317,7 +363,7 @@ export default function SpeakingQuestion({
   return (
     <Box>
       {/* Completed State */}
-      {step === 'completed' && hasExistingAudio && (
+      {step === 'completed' && (
         <Box>
           <Paper sx={{ p: 3, mb: 2, textAlign: 'center', backgroundColor: '#e8f5e9', borderLeft: '4px solid #4caf50' }}>
             <Typography variant="h6" gutterBottom color="success.dark" sx={{ fontWeight: 'bold' }}>
@@ -326,8 +372,11 @@ export default function SpeakingQuestion({
             <Typography variant="body2" color="text.secondary">
               Your answer has been saved
             </Typography>
+            <Typography variant="body2" color="primary" sx={{ mt: 1, fontWeight: 'bold' }}>
+              → Moving to next question...
+            </Typography>
             
-            {question.answer_data?.audio_url && (
+            {hasExistingAudio && question.answer_data?.audio_url && (
               <Box sx={{ mt: 2, mb: 2 }}>
                 <audio 
                   controls 
@@ -339,7 +388,7 @@ export default function SpeakingQuestion({
               </Box>
             )}
             
-            {question.answer_data?.transcribed_text && (
+            {hasExistingAudio && question.answer_data?.transcribed_text && (
               <Paper sx={{ p: 2, mt: 2, backgroundColor: 'white', textAlign: 'left' }}>
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   Transcription:

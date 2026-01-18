@@ -156,6 +156,14 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
   };
 
   const saveAnswers = (answersToSave) => {
+    // Check if there's any actual content to save
+    const hasContent = Object.values(answersToSave).some(answer => answer && answer.trim().length > 0);
+    
+    if (!hasContent) {
+      console.log(`[WritingChatQuestion] No content to save, skipping`);
+      return;
+    }
+    
     // Build reply text with proper numbering based on reply keys in order
     const replyKeys = Object.keys(answersToSave).sort();
     let formattedText = '';
@@ -203,9 +211,12 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
         if (timer) clearTimeout(timer);
       });
       
-      // Save final answer on unmount
-      if (isInitialized.current && Object.keys(answers).length > 0) {
-        saveAnswers(answers);
+      // Save final answer on unmount (only if there's actual content)
+      if (isInitialized.current) {
+        const hasContent = Object.values(answers).some(answer => answer && answer.trim().length > 0);
+        if (hasContent) {
+          saveAnswers(answers);
+        }
       }
     };
   }, [answers]); // Depend on answers to capture the latest state

@@ -139,12 +139,7 @@ export default function StudentLayout({ children }) {
         </ListItemIcon>
         <Typography variant="body2">Trang cá nhân</Typography>
       </MenuItem>
-      <MenuItem onClick={() => handleNavigation('/profile')} sx={{ py: 1 }}>
-        <ListItemIcon>
-          <Settings fontSize="small" sx={{ color: '#6B7280' }} />
-        </ListItemIcon>
-        <Typography variant="body2">Cài đặt</Typography>
-      </MenuItem>
+
       <MenuItem onClick={handleLogout} sx={{ py: 1 }}>
         <ListItemIcon>
           <Logout fontSize="small" sx={{ color: '#6B7280' }} />

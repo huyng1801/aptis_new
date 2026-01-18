@@ -118,58 +118,7 @@ export default function QuestionFeedback({ questionResults, attemptId, showDetai
   return (
     <Box>
       {/* Overall Statistics */}
-      {showDetailedScoring && Object.keys(sectionStats).length > 0 && (
-        <Card sx={{ mb: 3, bgcolor: 'primary.50' }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-              <Assessment color="primary" />
-              <Typography variant="h6" color="primary" sx={{ fontWeight: 700 }}>
-                📊 Detailed Scoring Analysis
-              </Typography>
-            </Box>
-            
-            <Grid container spacing={2}>
-              {Object.entries(sectionStats).map(([skill, stats]) => {
-                const totalScore = Math.round(stats.totalScore * 100) / 100;
-                const totalMaxScore = Math.round(stats.totalMaxScore * 100) / 100;
-                const percentage = totalMaxScore > 0 
-                  ? Math.round((totalScore / totalMaxScore) * 100) 
-                  : 0;
-                
-                return (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={skill}>
-                    <Paper sx={{ p: 2.5, textAlign: 'center', border: '1px solid', borderColor: 'primary.200' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: 'primary.dark' }}>
-                        {skill}
-                      </Typography>
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="h4" color="primary" sx={{ fontWeight: 700 }}>
-                          {percentage}%
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                          {totalScore}/{totalMaxScore} điểm
-                        </Typography>
-                      </Box>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={Math.min(percentage, 100)} 
-                        color={percentage >= 70 ? 'success' : percentage >= 50 ? 'warning' : 'error'}
-                        sx={{ height: 8, borderRadius: 4, mb: 1.5 }}
-                      />
-                      <Chip 
-                        label={`${stats.correctAnswers}/${stats.totalQuestions} câu`}
-                        size="small"
-                        variant="outlined"
-                        color={percentage >= 70 ? 'success' : percentage >= 50 ? 'warning' : 'error'}
-                      />
-                    </Paper>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Questions by Section */}
       {Object.entries(groupedQuestions).map(([section, answers]) => {
@@ -178,38 +127,16 @@ export default function QuestionFeedback({ questionResults, attemptId, showDetai
           ? Math.round((sectionInfo.totalScore / sectionInfo.totalMaxScore) * 100) 
           : 0;
         
+        // Skip sections with no questions
+        if (sectionInfo.totalQuestions === 0 || sectionInfo.totalMaxScore === 0) {
+          return null;
+        }
+        
         return (
-          <Accordion
-            key={section}
-            expanded={expandedPanel === section}
-            onChange={handlePanelChange(section)}
-            sx={{ mb: 1 }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMore />}
-              aria-controls={`${section}-content`}
-              id={`${section}-header`}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  {section}
-                </Typography>
-                <Chip 
-                  label={`${sectionInfo.totalScore}/${sectionInfo.totalMaxScore} điểm`}
-                  size="small"
-                  color={sectionPercentage >= 70 ? 'success' : sectionPercentage >= 50 ? 'warning' : 'error'}
-                />
-                <Chip 
-                  label={`${sectionPercentage}%`}
-                  size="small"
-                  variant="filled"
-                  color={sectionPercentage >= 70 ? 'success' : sectionPercentage >= 50 ? 'warning' : 'error'}
-                />
-              </Box>
-            </AccordionSummary>
+          <Box key={section} sx={{ mb: 3 }}>
+    
             
-            <AccordionDetails>
-              <Grid container spacing={2}>
+            <Grid container spacing={2}>
                 {answers.map((item, index) => {
                   const answer = item.answer;
                   const calculatedScore = item.calculatedScore;
@@ -350,8 +277,7 @@ export default function QuestionFeedback({ questionResults, attemptId, showDetai
                   );
                 })}
               </Grid>
-            </AccordionDetails>
-          </Accordion>
+            </Box>
         );
       })}
     </Box>

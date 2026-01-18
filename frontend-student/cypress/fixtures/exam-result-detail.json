@@ -1,0 +1,61 @@
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "examTitle": "Đề 1 - APTIS General",
+    "totalScore": 165,
+    "maxScore": 200,
+    "percentage": 82.5,
+    "cefrLevel": "B2",
+    "submittedAt": "2026-01-18T10:30:00Z",
+    "skillScores": [
+      {
+        "skillName": "Reading",
+        "score": 42,
+        "maxScore": 50,
+        "percentage": 84.0,
+        "cefrLevel": "B2"
+      },
+      {
+        "skillName": "Listening", 
+        "score": 45,
+        "maxScore": 50,
+        "percentage": 90.0,
+        "cefrLevel": "C1"
+      },
+      {
+        "skillName": "Writing",
+        "score": 38,
+        "maxScore": 50,
+        "percentage": 76.0,
+        "cefrLevel": "B1"
+      },
+      {
+        "skillName": "Speaking",
+        "score": 40,
+        "maxScore": 50,
+        "percentage": 80.0,
+        "cefrLevel": "B2"
+      }
+    ],
+    "aiFeedback": {
+      "writing": {
+        "grammar": 7.5,
+        "vocabulary": 8.0,
+        "coherence": 7.0,
+        "comment": "Good use of linking words. Work on complex sentence structures."
+      },
+      "speaking": {
+        "pronunciation": 8.0,
+        "fluency": 7.5,
+        "content": 8.5,
+        "comment": "Clear pronunciation and good content development."
+      }
+    },
+    "improvements": [
+      "Practice complex grammatical structures",
+      "Expand academic vocabulary",
+      "Work on coherence in longer texts"
+    ]
+  }
+}

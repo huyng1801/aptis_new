@@ -13,6 +13,7 @@ const pathLabels = {
   progress: 'Tiến độ học',
   profile: 'Hồ sơ',
   settings: 'Cài đặt',
+  practice: 'Luyện tập',
 };
 
 export default function Breadcrumb() {
