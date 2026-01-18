@@ -503,11 +503,12 @@ export default function TakeExamPage() {
   const displayQuestions = attemptType === 'full_exam' ? currentSkillData.questions : questions;
   const displayCurrentQuestion = displayQuestions[currentQuestionIndex];
   
-  // Skill-specific backward navigation rules:
-  // - Listening/Reading/Writing: Allow backward navigation
-  // - Speaking: Block backward navigation
+  // Skill-specific navigation rules:
+  // - Listening/Reading/Writing: Allow backward/forward navigation
+  // - Speaking: Block both backward and forward navigation (auto-advance only)
   const skillType = currentSkillData?.skill?.skill_type_name;
   const canNavigateBackward = currentQuestionIndex > 0 && skillType !== 'Speaking';
+  const canNavigateForward = skillType !== 'Speaking';
   
   // Get current answer - find the actual answer data from answers array
   // displayCurrentQuestion is an answer object, but we need the most up-to-date answer from Redux store
@@ -563,6 +564,8 @@ export default function TakeExamPage() {
       return;
     }
     
+    console.log('[TakeExamPage] handleSkillBasedNextQuestion called, current index:', currentQuestionIndex, 'total in skill:', displayQuestions.length);
+    
     if (attemptType === 'full_exam') {
       if (currentQuestionIndex < displayQuestions.length - 1) {
         // Move to next question in current skill
@@ -574,6 +577,7 @@ export default function TakeExamPage() {
         setSkillTransitionDialogOpen(true);
       }
     } else {
+      console.log('[TakeExamPage] Non-full-exam mode, calling handleNextQuestion');
       handleNextQuestion();
     }
   };
@@ -685,9 +689,16 @@ export default function TakeExamPage() {
                 Câu trước
               </Button>
               
-              <Typography variant="body2" color="textSecondary">
-                Câu {currentQuestionIndex + 1}/{displayQuestions.length}
-              </Typography>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="body2" color="textSecondary">
+                  Câu {currentQuestionIndex + 1}/{displayQuestions.length}
+                </Typography>
+                {skillType === 'Speaking' && (
+                  <Typography variant="caption" color="primary" sx={{ fontSize: '11px', fontWeight: 'bold' }}>
+                    🎤 Auto-advance after recording
+                  </Typography>
+                )}
+              </Box>
               
               {/* Dynamic next button based on position */}
               {attemptType === 'full_exam' && currentQuestionIndex === displayQuestions.length - 1 ? (
@@ -719,7 +730,7 @@ export default function TakeExamPage() {
                   endIcon={<NavigateNext />}
                   variant="contained"
                   onClick={handleSkillBasedNextQuestion}
-                  disabled={currentQuestionIndex === displayQuestions.length - 1 || isNavigationDisabled}
+                  disabled={currentQuestionIndex === displayQuestions.length - 1 || isNavigationDisabled || !canNavigateForward}
                   size="large"
                 >
                   Câu sau

@@ -286,34 +286,11 @@ export default function QuestionFeedback({ questionResults, attemptId, showDetai
                                       </Box>
                                     )}
 
-                                    {/* Strengths */}
-                                    {feedback.strengths && !feedback.strengths.includes('Unable to extract') && (
-                                      <Box sx={{ mb: 2 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.dark', mb: 1 }}>
-                                          ✅ Strengths:
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ 
-                                          whiteSpace: 'pre-wrap', 
-                                          wordBreak: 'break-word', 
-                                          ml: 1,
-                                          p: 1.5,
-                                          bgcolor: 'success.50',
-                                          borderRadius: 1,
-                                          border: '1px solid',
-                                          borderColor: 'success.200',
-                                          borderLeft: '4px solid',
-                                          borderLeftColor: 'success.main'
-                                        }}>
-                                          {feedback.strengths}
-                                        </Typography>
-                                      </Box>
-                                    )}
-
-                                    {/* Weaknesses */}
-                                    {feedback.weaknesses && !feedback.weaknesses.includes('Unable to extract') && (
+                                    {/* Suggestions - Specific Text Corrections */}
+                                    {feedback.suggestions && !feedback.suggestions.includes('Unable to extract') && !feedback.suggestions.includes('Please review') && (
                                       <Box sx={{ mb: 2 }}>
                                         <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.dark', mb: 1 }}>
-                                          ⚠️ Areas for Improvement:
+                                          💡 Suggestions for Improvement:
                                         </Typography>
                                         <Typography variant="body2" sx={{ 
                                           whiteSpace: 'pre-wrap', 
@@ -325,33 +302,24 @@ export default function QuestionFeedback({ questionResults, attemptId, showDetai
                                           border: '1px solid',
                                           borderColor: 'warning.200',
                                           borderLeft: '4px solid',
-                                          borderLeftColor: 'warning.main'
+                                          borderLeftColor: 'warning.main',
+                                          fontFamily: 'monospace',
+                                          fontSize: '0.875rem'
                                         }}>
-                                          {feedback.weaknesses}
+                                          {feedback.suggestions}
                                         </Typography>
                                       </Box>
                                     )}
 
-                                    {/* Suggestions */}
-                                    {feedback.suggestions && !feedback.suggestions.includes('Please review') && (
+                                    {/* CEFR Level */}
+                                    {feedback.cefr_level && (
                                       <Box sx={{ mb: 2 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'info.dark', mb: 1 }}>
-                                          💡 Suggestions:
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ 
-                                          whiteSpace: 'pre-wrap', 
-                                          wordBreak: 'break-word', 
-                                          ml: 1,
-                                          p: 1.5,
-                                          bgcolor: 'info.50',
-                                          borderRadius: 1,
-                                          border: '1px solid',
-                                          borderColor: 'info.200',
-                                          borderLeft: '4px solid',
-                                          borderLeftColor: 'info.main'
-                                        }}>
-                                          {feedback.suggestions}
-                                        </Typography>
+                                        <Chip
+                                          label={`CEFR Level: ${feedback.cefr_level}`}
+                                          color="primary"
+                                          variant="outlined"
+                                          sx={{ fontWeight: 600 }}
+                                        />
                                       </Box>
                                     )}
 

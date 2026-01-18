@@ -119,8 +119,7 @@ async function testComprehensiveScoringFlow() {
       console.log(`   Score: ${feedback.score}`);
       console.log(`   CEFR: ${feedback.cefr_level}`);
       console.log(`   Comment: ${feedback.comment ? feedback.comment.substring(0, 100) + '...' : 'None'}`);
-      console.log(`   Strengths: ${feedback.strengths ? feedback.strengths.substring(0, 50) + '...' : 'None'}`);
-      console.log(`   Weaknesses: ${feedback.weaknesses ? feedback.weaknesses.substring(0, 50) + '...' : 'None'}`);
+      console.log(`   Comment: ${feedback.comment ? feedback.comment.substring(0, 100) + '...' : 'None'}`);
       console.log(`   Suggestions: ${feedback.suggestions ? feedback.suggestions.substring(0, 50) + '...' : 'None'}`);
     }
 
@@ -131,7 +130,7 @@ async function testComprehensiveScoringFlow() {
       include: [{
         model: AnswerAiFeedback,
         as: 'aiFeedbacks',
-        attributes: ['id', 'answer_id', 'score', 'comment', 'strengths', 'weaknesses', 'suggestions', 'cefr_level']
+        attributes: ['id', 'answer_id', 'score', 'comment', 'suggestions', 'cefr_level']
       }, {
         model: Question,
         as: 'question',
@@ -154,8 +153,8 @@ async function testComprehensiveScoringFlow() {
       console.log(`     - Score: ${apiFeedback.score}`);
       console.log(`     - CEFR: ${apiFeedback.cefr_level}`);
       console.log(`     - Has Comment: ${!!apiFeedback.comment}`);
-      console.log(`     - Has Strengths: ${!!apiFeedback.strengths}`);
-      console.log(`     - Has Weaknesses: ${!!apiFeedback.weaknesses}`);
+      console.log(`     - Has Comment: ${!!apiFeedback.comment}`);
+      console.log(`     - Has Suggestions: ${!!apiFeedback.suggestions}`);
       console.log(`     - Has Suggestions: ${!!apiFeedback.suggestions}`);
     }
 

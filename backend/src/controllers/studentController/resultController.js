@@ -132,7 +132,7 @@ exports.getResults = async (req, res, next) => {
         {
           model: AnswerAiFeedback,
           as: 'aiFeedbacks',
-          attributes: ['id', 'answer_id', 'score', 'comment', 'strengths', 'weaknesses', 'suggestions', 'cefr_level']
+          attributes: ['id', 'answer_id', 'score', 'comment', 'suggestions', 'cefr_level']
         },
       ],
     });

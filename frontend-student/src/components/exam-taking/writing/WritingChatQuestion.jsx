@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -8,10 +8,9 @@ import {
 } from '@mui/material';
 
 export default function WritingChatQuestion({ question, onAnswerChange }) {
-  const [answers, setAnswers] = useState({
-    personA: '',
-    personB: ''
-  });
+  const [answers, setAnswers] = useState({});
+  const debounceTimers = useRef({}); // Track debounce timers for each reply
+  const isInitialized = useRef(false); // Track if we've initialized once
 
   // Parse question content - separates context messages from reply prompts
   const questionData = React.useMemo(() => {
@@ -22,8 +21,9 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
         const lines = question.content.split('\n');
         const title = lines[0]?.trim() || "Chat Messages";
         
-        // Build structured chat exchanges: [{speaker, message, hasReply}, ...]
+        // Build structured chat exchanges: [{speaker, message, hasReply, replyKey}, ...]
         const chatExchanges = [];
+        let replyIndex = 0; // Counter for unique reply keys
         let i = 1; // Skip title
         
         while (i < lines.length) {
@@ -59,10 +59,17 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
                 }
               }
               
+              // Generate unique reply key for this exchange
+              const replyKey = hasReply ? `reply_${replyIndex}` : null;
+              if (hasReply) {
+                replyIndex++;
+              }
+              
               chatExchanges.push({
                 speaker: potentialName,
                 message,
-                hasReply
+                hasReply,
+                replyKey
               });
             }
           }
@@ -82,54 +89,85 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
     }
   }, [question.content]);
 
-  // Initialize answers from question.answer_data
+  // Initialize answers from question.answer_data - ONLY on mount
   useEffect(() => {
     console.log('[WritingChatQuestion] Initializing for question:', question.id);
+    
+    if (!questionData || !questionData.chatExchanges) {
+      setAnswers({});
+      return;
+    }
+    
+    // Initialize answers object with all reply keys
+    const initialAnswers = {};
+    questionData.chatExchanges.forEach(exchange => {
+      if (exchange.hasReply && exchange.replyKey) {
+        initialAnswers[exchange.replyKey] = '';
+      }
+    });
     
     if (question.answer_data && typeof question.answer_data === 'object') {
       if (question.answer_data.text_answer) {
         console.log('[WritingChatQuestion] Found existing answer:', question.answer_data.text_answer);
         
         const textAnswer = question.answer_data.text_answer;
-        let personA = '';
-        let personB = '';
         
-        if (textAnswer.includes('Reply 1:') && textAnswer.includes('Reply 2:')) {
-          const reply1Match = textAnswer.match(/Reply 1:\n([\s\S]*?)(?:\n\nReply 2:|$)/);
-          const reply2Match = textAnswer.match(/Reply 2:\n([\s\S]*?)$/);
-          personA = reply1Match ? reply1Match[1].trim() : '';
-          personB = reply2Match ? reply2Match[1].trim() : '';
-        } else {
-          personA = textAnswer.trim();
-          personB = '';
+        // Parse replies based on pattern "Reply N:"
+        const replyMatches = textAnswer.match(/Reply \d+:\n([\s\S]*?)(?=Reply \d+:|$)/g);
+        
+        if (replyMatches && replyMatches.length > 0) {
+          replyMatches.forEach((match, idx) => {
+            const replyKey = `reply_${idx}`;
+            const replyContent = match.replace(/Reply \d+:\n/, '').trim();
+            initialAnswers[replyKey] = replyContent;
+          });
+          console.log('[WritingChatQuestion] Parsed replies:', initialAnswers);
         }
-        
-        console.log('[WritingChatQuestion] Parsed replies:', { personA, personB });
-        setAnswers({ personA, personB });
       } else {
-        console.log('[WritingChatQuestion] No existing answer, resetting');
-        setAnswers({ personA: '', personB: '' });
+        console.log('[WritingChatQuestion] No existing answer, using empty');
       }
-    } else {
-      console.log('[WritingChatQuestion] No answer_data, resetting');
-      setAnswers({ personA: '', personB: '' });
     }
-  }, [question.id, question.answer_data]);
+    
+    setAnswers(initialAnswers);
+    isInitialized.current = true;
+  }, [question.id]); // ONLY depend on question.id, not answer_data
 
-  const handleAnswerChange = (personKey, value) => {
-    console.log(`[WritingChatQuestion] Updating ${personKey}:`, value);
+  const handleAnswerChange = (replyKey, value) => {
+    console.log(`[WritingChatQuestion] Updating ${replyKey}:`, value);
     
     const newAnswers = {
       ...answers,
-      [personKey]: value
+      [replyKey]: value
     };
     
+    // Update local state immediately - this is what the user sees
     setAnswers(newAnswers);
     
-    // Convert to formatted text for consistent storage
-    const formattedText = `Reply 1:\n${newAnswers.personA}\n\nReply 2:\n${newAnswers.personB}`;
+    // Clear existing debounce timer for this reply
+    if (debounceTimers.current[replyKey]) {
+      clearTimeout(debounceTimers.current[replyKey]);
+    }
     
-    console.log(`[WritingChatQuestion] Sending formatted answer:`, formattedText);
+    // Set new debounce timer - but don't save yet, just schedule
+    // We'll save on blur or unmount instead
+    debounceTimers.current[replyKey] = setTimeout(() => {
+      console.log(`[WritingChatQuestion] Debounce timer ready for ${replyKey}`);
+    }, 300); // Just a buffer, actual save happens on blur
+  };
+
+  const saveAnswers = (answersToSave) => {
+    // Build reply text with proper numbering based on reply keys in order
+    const replyKeys = Object.keys(answersToSave).sort();
+    let formattedText = '';
+    replyKeys.forEach((key, idx) => {
+      const replyNum = idx + 1;
+      formattedText += `Reply ${replyNum}:\n${answersToSave[key]}`;
+      if (idx < replyKeys.length - 1) {
+        formattedText += '\n\n';
+      }
+    });
+    
+    console.log(`[WritingChatQuestion] Saving formatted answer:`, formattedText);
     
     // Send update to parent
     onAnswerChange({
@@ -138,9 +176,39 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
     });
   };
 
+  const handleInputBlur = (replyKey) => {
+    console.log(`[WritingChatQuestion] Input blur for ${replyKey}`);
+    
+    // Clear existing debounce timer
+    if (debounceTimers.current[replyKey]) {
+      clearTimeout(debounceTimers.current[replyKey]);
+    }
+    
+    // Save current answers immediately on blur
+    console.log(`[WritingChatQuestion] Saving on blur:`, answers);
+    saveAnswers(answers);
+  };
+
   const countWords = (text) => {
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   };
+
+  // Cleanup timers on unmount and save final answer
+  useEffect(() => {
+    return () => {
+      console.log(`[WritingChatQuestion] Component unmounting, saving final answer`);
+      
+      // Clear all timers
+      Object.values(debounceTimers.current).forEach(timer => {
+        if (timer) clearTimeout(timer);
+      });
+      
+      // Save final answer on unmount
+      if (isInitialized.current && Object.keys(answers).length > 0) {
+        saveAnswers(answers);
+      }
+    };
+  }, [answers]); // Depend on answers to capture the latest state
 
   if (!questionData) {
     return <Box sx={{ p: 2 }}><Typography color="error">Không thể tải câu hỏi</Typography></Box>;
@@ -148,7 +216,7 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
 
   return (
     <Box sx={{ p: 2 }}>
-      {questionData.chatExchanges && questionData.chatExchanges.length > 0 ? (
+      {questionData && questionData.chatExchanges && questionData.chatExchanges.length > 0 ? (
         questionData.chatExchanges.map((exchange, index) => (
           <div key={`exchange-${index}`} style={{ marginBottom: 24 }}>
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
@@ -157,24 +225,27 @@ export default function WritingChatQuestion({ question, onAnswerChange }) {
             <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
               {exchange.message}
             </Typography>
-            <TextField
-              multiline
-              fullWidth
-              rows={2}
-              value={answers[exchange.replyKey] || ''}
-              onChange={(e) => handleAnswerChange(exchange.replyKey, e.target.value)}
-              variant="outlined"
-              placeholder="Nhập câu trả lời..."
-              helperText={`${countWords(answers[exchange.replyKey] || '')} từ`}
-              size="small"
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'white',
-                  fontSize: '0.9rem'
-                }
-              }}
-            />
+            {exchange.hasReply && exchange.replyKey && (
+              <TextField
+                multiline
+                fullWidth
+                rows={2}
+                value={answers[exchange.replyKey] || ''}
+                onChange={(e) => handleAnswerChange(exchange.replyKey, e.target.value)}
+                onBlur={() => handleInputBlur(exchange.replyKey)}
+                variant="outlined"
+                placeholder="Nhập câu trả lời..."
+                helperText={`${countWords(answers[exchange.replyKey] || '')} từ`}
+                size="small"
+                sx={{
+                  mb: 2,
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'white',
+                    fontSize: '0.9rem'
+                  }
+                }}
+              />
+            )}
           </div>
         ))
       ) : (

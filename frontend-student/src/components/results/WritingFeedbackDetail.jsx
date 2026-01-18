@@ -169,67 +169,25 @@ export default function WritingFeedbackDetail({ answer }) {
             )}
 
             <Grid container spacing={2}>
-              {/* Strengths */}
-              {comprehensiveFeedback.strengths && comprehensiveFeedback.strengths !== 'None identified' && comprehensiveFeedback.strengths !== 'Unable to extract specific strengths due to parsing error' && (
-                <Grid item xs={12} md={4}>
-                  <Box>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <CheckCircle color="success" fontSize="small" />
-                      <Typography variant="subtitle2" fontWeight="bold" color="success.main">
-                        Điểm mạnh
-                      </Typography>
-                    </Box>
-                    <Paper sx={{ p: 1.5, backgroundColor: 'success.50' }}>
-                      <Typography 
-                        variant="body2" 
-                        component="div"
-                        sx={{ whiteSpace: 'pre-line' }}
-                      >
-                        {comprehensiveFeedback.strengths}
-                      </Typography>
-                    </Paper>
-                  </Box>
-                </Grid>
-              )}
-
-              {/* Weaknesses */}
-              {comprehensiveFeedback.weaknesses && comprehensiveFeedback.weaknesses !== 'None identified' && comprehensiveFeedback.weaknesses !== 'Unable to extract specific weaknesses due to parsing error' && (
-                <Grid item xs={12} md={4}>
-                  <Box>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <WarningIcon color="warning" fontSize="small" />
-                      <Typography variant="subtitle2" fontWeight="bold" color="warning.main">
-                        Cần cải thiện
-                      </Typography>
-                    </Box>
-                    <Paper sx={{ p: 1.5, backgroundColor: 'warning.50' }}>
-                      <Typography 
-                        variant="body2"
-                        component="div"
-                        sx={{ whiteSpace: 'pre-line' }}
-                      >
-                        {comprehensiveFeedback.weaknesses}
-                      </Typography>
-                    </Paper>
-                  </Box>
-                </Grid>
-              )}
-
-              {/* Suggestions */}
               {comprehensiveFeedback.suggestions && comprehensiveFeedback.suggestions !== 'No suggestions' && comprehensiveFeedback.suggestions !== 'Please review the raw AI response for detailed feedback' && (
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12}>
                   <Box>
                     <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <Lightbulb color="primary" fontSize="small" />
-                      <Typography variant="subtitle2" fontWeight="bold" color="primary.main">
-                        Gợi ý cải thiện
+                      <Lightbulb color="warning" fontSize="small" />
+                      <Typography variant="subtitle2" fontWeight="bold" color="warning.main">
+                        Suggestions for Improvement
                       </Typography>
                     </Box>
-                    <Paper sx={{ p: 1.5, backgroundColor: 'primary.50' }}>
+                    <Paper sx={{ p: 2, backgroundColor: 'warning.50' }}>
                       <Typography 
                         variant="body2"
                         component="div"
-                        sx={{ whiteSpace: 'pre-line' }}
+                        sx={{ 
+                          whiteSpace: 'pre-line',
+                          fontFamily: 'monospace',
+                          fontSize: '0.875rem',
+                          lineHeight: 1.8
+                        }}
                       >
                         {comprehensiveFeedback.suggestions}
                       </Typography>
@@ -237,53 +195,19 @@ export default function WritingFeedbackDetail({ answer }) {
                   </Box>
                 </Grid>
               )}
+
+              {/* CEFR Level */}
+              {comprehensiveFeedback.cefr_level && (
+                <Grid item xs={12}>
+                  <Chip
+                    label={`CEFR Level: ${comprehensiveFeedback.cefr_level}`}
+                    color="success"
+                    variant="outlined"
+                    sx={{ fontWeight: 600 }}
+                  />
+                </Grid>
+              )}
             </Grid>
-          </CardContent>
-        </Card>
-      )}
-                              sx={{ whiteSpace: 'pre-line' }}
-                            >
-                              {feedback.strengths}
-                            </Typography>
-                          </Paper>
-                        </Box>
-                      </Grid>
-                    )}
-
-                    {/* Weaknesses */}
-                    {feedback.weaknesses && feedback.weaknesses !== 'None identified' && (
-                      <Grid item xs={12} md={4}>
-                        <Box>
-                          <Box display="flex" alignItems="center" gap={1} mb={1}>
-                            <WarningIcon color="warning" fontSize="small" />
-                            <Typography variant="subtitle2" fontWeight="bold" color="warning.main">
-                              Cần cải thiện
-                            </Typography>
-                          </Box>
-                          <Paper sx={{ p: 1.5, backgroundColor: 'warning.50' }}>
-                            <Typography 
-                              variant="body2"
-                              component="div"
-                              sx={{ whiteSpace: 'pre-line' }}
-                            >
-                              {feedback.weaknesses}
-                            </Typography>
-                          </Paper>
-                        </Box>
-                      </Grid>
-                    )}
-
-                    {/* Suggestions */}
-                    {feedback.suggestions && feedback.suggestions !== 'No suggestions' && (
-                      <Grid item xs={12} md={4}>
-                        <Box>
-                        </Box>
-                      </Grid>
-                    )}
-                  </Grid>
-                </AccordionDetails>
-              </Accordion>
-            ))}
           </CardContent>
         </Card>
       )}

@@ -78,17 +78,14 @@ export default function SpeakingQuestion({
   const getTimingByQuestionType = () => {
     const questionTypeCode = question.QuestionType?.code;
     
+    // All speaking questions: 10s prep, 30s record
     switch (questionTypeCode) {
       case 'SPEAKING_INTRO':
-        return { prep: 10, recording: 45 };      // Personal Introduction
       case 'SPEAKING_DESCRIPTION':
-        return { prep: 15, recording: 60 };      // Picture Description
       case 'SPEAKING_COMPARISON':
-        return { prep: 20, recording: 90 };      // Comparison
       case 'SPEAKING_DISCUSSION':
-        return { prep: 60, recording: 120 };     // Topic Discussion
       default:
-        return { prep: 10, recording: 45 };      // Default fallback
+        return { prep: 10, recording: 30 };      // Unified timing for all speaking questions
     }
   };
 
@@ -144,7 +141,7 @@ export default function SpeakingQuestion({
     }
   }, [maxRecordingTime, question.id]);
 
-  // Initialize component
+  // Initialize component - only depend on question.id to prevent loops
   useEffect(() => {
     // If already has audio answer, show completed state
     if (hasExistingAudio) {
@@ -155,13 +152,17 @@ export default function SpeakingQuestion({
     
     console.log('[SpeakingQuestion] Starting fresh for question', question.id);
     
-    // Reset and start preparation
+    // Reset states
     setStep('recording');
     setAudioBlob(null);
     setAudioUrl('');
     setIsRecording(false);
     setIsPreparing(true);
     setPreparationTime(maxPreparationTime);
+    setIsUploading(false);
+    setUploadError(null);
+    setUploadRetries(0);
+    recordingCompletedRef.current = false;
     
     // Start preparation countdown
     let countdown = maxPreparationTime;
@@ -182,7 +183,7 @@ export default function SpeakingQuestion({
     return () => {
       clearInterval(prepTimer);
     };
-  }, [question.id, hasExistingAudio, startRecording]);
+  }, [question.id]); // ONLY depend on question.id
 
   // Recording timer
   useEffect(() => {
@@ -216,6 +217,13 @@ export default function SpeakingQuestion({
       }
     };
   }, [isRecording]);
+
+  // Store callback refs to avoid stale closures
+  const onMoveToNextQuestionRef = useRef(onMoveToNextQuestion);
+  
+  useEffect(() => {
+    onMoveToNextQuestionRef.current = onMoveToNextQuestion;
+  }, [onMoveToNextQuestion]);
 
   const uploadAudioToBackend = useCallback(async (audioBlob, duration) => {
     if (uploadRetries === 0) {
@@ -254,10 +262,8 @@ export default function SpeakingQuestion({
       setUploadError(null);
       setUploadRetries(0);
       
-      // Auto-advance after 2 seconds
-      setTimeout(() => {
-        onMoveToNextQuestion?.();
-      }, 2000);
+      // DO NOT AUTO-ADVANCE - let user control navigation
+      console.log('[SpeakingQuestion] Upload completed, waiting for manual navigation');
       
     } catch (error) {
       console.error('[SpeakingQuestion] Upload error:', error);
@@ -275,16 +281,17 @@ export default function SpeakingQuestion({
         setIsUploading(false);
       }
     }
-  }, [question.id, attemptId, uploadRetries, onAnswerChange, onMoveToNextQuestion]);
+  }, [question.id, attemptId, uploadRetries, onAnswerChange]);
 
-  // Auto-upload when recording completes
+  // Auto-upload when recording completes - but only once
   useEffect(() => {
-    if (audioBlob && !isUploading && !uploadError && recordingCompletedRef.current) {
+    if (audioBlob && !isUploading && !uploadError && recordingCompletedRef.current && step === 'recording') {
       const duration = maxRecordingTime - recordingTime;
       console.log('[SpeakingQuestion] Auto-uploading recorded audio, duration:', duration);
+      recordingCompletedRef.current = false; // Prevent duplicate uploads
       uploadAudioToBackend(audioBlob, duration);
     }
-  }, [audioBlob, isUploading, uploadError, uploadAudioToBackend, maxRecordingTime, recordingTime]);
+  }, [audioBlob, isUploading, uploadError, uploadAudioToBackend, maxRecordingTime, recordingTime, step]);
 
   const confirmStopRecording = () => {
     setShowStopConfirmation(false);

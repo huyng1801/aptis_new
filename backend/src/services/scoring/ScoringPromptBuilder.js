@@ -111,9 +111,7 @@ Return EXACTLY this JSON format with audio-informed assessment:
 {
   "cefr_level": "B1.2",
   "comment": "Assessment comment integrating both transcription analysis and audio metrics (2-3 sentences)",
-  "strengths": "• Strength 1 (supported by audio data)\\n• Strength 2\\n• Strength 3",
-  "weaknesses": "• Weakness 1 (with reference to specific metrics)\\n• Weakness 2",
-  "suggestions": "• Suggestion 1 (based on audio analysis)\\n• Suggestion 2\\n• Suggestion 3"
+  "suggestions": "For writing tasks: Provide specific text corrections (e.g., 'Change \"I go to school yesterday\" to \"I went to school yesterday\"'). For speaking: Suggest pronunciation/fluency improvements."
 }
 
 CRITICAL REQUIREMENTS:
@@ -194,9 +192,7 @@ Return EXACTLY this JSON format. ALL text fields MUST be strings with escaped ne
 {
   "cefr_level": "B1.2",
   "comment": "Brief explanation of CEFR level assignment (1-2 sentences)",
-  "strengths": "• Strength 1\\n• Strength 2\\n• Strength 3",
-  "weaknesses": "• Weakness 1\\n• Weakness 2",
-  "suggestions": "• Suggestion 1\\n• Suggestion 2\\n• Suggestion 3"
+  "suggestions": "For writing tasks: Specific text corrections with exact replacements (e.g., 'Change \"I am study\" to \"I am studying\"'). For other tasks: Targeted improvement suggestions."
 }
 
 CRITICAL REQUIREMENTS:
@@ -211,9 +207,7 @@ Example of correct format:
 {
   "cefr_level": "B1.2",
   "comment": "Good B1 performance with sustained features throughout.",
-  "strengths": "• Clear ideas\\n• Good grammar control",
-  "weaknesses": "• Could add more complex structures",
-  "suggestions": "• Try using more cohesive devices\\n• Add specific examples"
+  "suggestions": "Change 'I am study' to 'I am studying' for correct grammar. Use 'have been studying' instead of 'study' for duration."
 }
 
 Valid CEFR levels based on rubric:

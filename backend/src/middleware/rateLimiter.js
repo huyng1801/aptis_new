@@ -11,7 +11,7 @@ const rateLimit = require('express-rate-limit'); // Thư viện express-rate-lim
  */
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 10000, // Tối đa 10.000 request
+  max: 10000000, // Tối đa 10.000 request
   message: {
     success: false,
     error: {
@@ -31,7 +31,7 @@ const apiLimiter = rateLimit({
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 10000, // Tối đa 10.000 request
+  max: 10000000, // Tối đa 10.000 request
   message: {
     success: false,
     error: {
@@ -52,7 +52,7 @@ const authLimiter = rateLimit({
  */
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 giờ
-  max: 10, // Tối đa 10 file
+  max:  10000000, // Tối đa 10 file
   message: {
     success: false,
     error: {
@@ -76,7 +76,7 @@ const uploadLimiter = rateLimit({
  */
 const submissionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 phút
-  max: 30, // Tối đa 30 lần submit
+  max:  10000000, // Tối đa 30 lần submit
   message: {
     success: false,
     error: {

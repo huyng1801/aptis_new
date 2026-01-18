@@ -126,10 +126,12 @@ export default function SpeakingSection({
 
   // Handle moving to next question
   const handleNextQuestion = () => {
+    console.log('[SpeakingSection] Manual navigation to next question');
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
       // All speaking questions completed
+      console.log('[SpeakingSection] All questions completed, calling onComplete');
       onComplete?.();
     }
   };

@@ -117,8 +117,7 @@ class AiServiceClient {
       // Enhanced fallback parsing - try to extract individual fields
       const cefrMatch = responseText.match(/["\']cefr_level["\']:\s*["\']([ABC][12](?:\.[12])?)["\']?/i);
       const commentMatch = responseText.match(/["\']comment["\']:\s*["\']([^"']*)["\']?/i);
-      const strengthsMatch = responseText.match(/["\']strengths["\']:\s*(?:["\']([^"']*)["\']?|\[([^\]]*)\])/i);
-      const weaknessesMatch = responseText.match(/["\']weaknesses["\']:\s*(?:["\']([^"']*)["\']?|\[([^\]]*)\])/i);
+
       const suggestionsMatch = responseText.match(/["\']suggestions["\']:\s*(?:["\']([^"']*)["\']?|\[([^\]]*)\])/i);
       
       let fallbackScore = maxScore * 0.5; // Default to 50%
@@ -135,8 +134,6 @@ class AiServiceClient {
         score: fallbackScore,
         cefrLevel: extractedCefr,
         comment: commentMatch?.[1] || `Automated parsing failed. Raw response: ${responseText.substring(0, 100)}...`,
-        strengths: strengthsMatch?.[1] || strengthsMatch?.[2] || 'Unable to extract specific strengths due to parsing error',
-        weaknesses: weaknessesMatch?.[1] || weaknessesMatch?.[2] || 'Unable to extract specific weaknesses due to parsing error',
         suggestions: suggestionsMatch?.[1] || suggestionsMatch?.[2] || 'Please review the raw AI response for detailed feedback',
         rawResponse: responseText,
         parseError: error.message,

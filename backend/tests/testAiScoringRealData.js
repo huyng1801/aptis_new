@@ -138,8 +138,7 @@ async function testAiScoringWithRealData() {
     console.log(`   📊 Score: ${scoringResult.score}/${answer.max_score}`);
     console.log(`   🎯 CEFR Level: ${scoringResult.cefrLevel}`);
     console.log(`   💬 Comment: ${scoringResult.comment ? scoringResult.comment.substring(0, 100) + '...' : 'N/A'}`);
-    console.log(`   ✅ Strengths: ${scoringResult.strengths ? scoringResult.strengths.substring(0, 80) + '...' : 'N/A'}`);
-    console.log(`   ⚠️  Weaknesses: ${scoringResult.weaknesses ? scoringResult.weaknesses.substring(0, 80) + '...' : 'N/A'}`);
+    console.log(`   📝 Comment: ${scoringResult.comment ? scoringResult.comment.substring(0, 80) + '...' : 'N/A'}`);
     console.log(`   💡 Suggestions: ${scoringResult.suggestions ? scoringResult.suggestions.substring(0, 80) + '...' : 'N/A'}\n`);
 
     // 8. Kiểm tra database đã được update

@@ -696,27 +696,23 @@ async function seedWritingQuestions(aptisType, teacher) {
   const writingLongType = await QuestionType.findOne({ where: { code: 'WRITING_LONG' } });
   const writingEmailType = await QuestionType.findOne({ where: { code: 'WRITING_EMAIL' } });
 
-  // Task 1 (A1): Individual Form Fields - 15 câu hỏi riêng biệt (3 form x 5 field)
-  const task1Fields = [
-    // Personal Information Form (5 fields)
-    "Personal Information Form - Name\n\nFill in your name:\n\nName: _______",
-    "Personal Information Form - Age\n\nFill in your age:\n\nAge: _______",
-    "Personal Information Form - City\n\nFill in your city:\n\nCity: _______",
-    "Personal Information Form - Job\n\nFill in your job:\n\nJob: _______", 
-    "Personal Information Form - Email\n\nFill in your email:\n\nEmail: _______",
-    
-  ];
+  // Task 1 (A1): Form Filling - 1 câu hỏi chứa 5 fields
+  const task1Content = [
+    "What is your name?",
+    "How old are you?", 
+    "What city do you live in?",
+    "What is your job?",
+    "What is your email address?"
+  ].join('\n');
 
-  for (let i = 0; i < 5; i++) {
-    await Question.create({
-      question_type_id: writingShortType.id,
-      aptis_type_id: aptisType.id,
-      difficulty: 'easy',
-      content: task1Fields[i],
-      created_by: teacher.id,
-      status: 'active',
-    });
-  }
+  await Question.create({
+    question_type_id: writingShortType.id,
+    aptis_type_id: aptisType.id,
+    difficulty: 'easy',
+    content: task1Content,
+    created_by: teacher.id,
+    status: 'active',
+  });
 
   // Task 2 (A2): Short Constructed Response - 2 câu hỏi
   const task2Questions = [
@@ -750,9 +746,9 @@ async function seedWritingQuestions(aptisType, teacher) {
     });
   }
   
-  // Task 4 (B2): Email Writing - 1 câu hỏi (3 email replies với độ khó tăng dần)
+  // Task 4 (B2): Email Writing - 1 câu hỏi (3 email replies)
   const task4Questions = [
-    "Email discussion about a class trip\n\nRead the email from your teacher:\n\nFrom: Teacher <teacher@school.com>\nSubject: School trip to the museum\n\nDear student,\n\nWe are planning a class trip to the museum. Do you want to go? What do you want to see there?\n\nPlease write back with your answer.\n\nTeacher\n\n---\n\nWrite THREE emails:\n\n1. Email to a friend (50 words) - EASY:\n_______\n\n2. Email to school manager (80-100 words) - MEDIUM:\n_______\n\n3. Formal discussion email (120-150 words) - HARD:\n_______",
+    "Email discussion about a class trip\n\nRead the email from your teacher:\n\nFrom: Teacher <teacher@school.com>\nSubject: School trip to the museum\n\nDear student,\n\nWe are planning a class trip to the museum. Do you want to go? What do you want to see there?\n\nPlease write back with your answer.\n\nTeacher\n\n---\n\n1. Email to a friend (50 words)\n\n2. Email to school manager (80-100 words)\n\n3. Formal discussion email (120-150 words)",
   ];
 
   for (let i = 0; i < 1; i++) {
@@ -766,7 +762,7 @@ async function seedWritingQuestions(aptisType, teacher) {
     });
   }
 
-  console.log('[Seed] ✓ Writing tasks created: Task 1 (15 câu riêng biệt) + Task 2 (2 câu) + Task 3 (2 câu) + Task 4 (2 câu) = 21 câu tổng');
+  console.log('[Seed] ✓ Writing tasks created: Task 1 (1 câu với 5 fields) + Task 2 (2 câu) + Task 3 (2 câu) + Task 4 (2 câu) = 7 câu tổng');
 }
 
 // ========================================

@@ -214,10 +214,13 @@ export const useExamState = (examId, attemptId, attemptType, selectedSkill) => {
   }, [dispatch, currentAttempt?.id]);
 
   const handleNextQuestion = useCallback(() => {
-    setCurrentQuestionIndex(prev => 
-      Math.min(prev + 1, questions.length - 1)
-    );
-  }, [questions.length]);
+    console.log('[useExamState] handleNextQuestion called - current:', currentQuestionIndex, 'total:', questions.length);
+    setCurrentQuestionIndex(prev => {
+      const next = Math.min(prev + 1, questions.length - 1);
+      console.log('[useExamState] Moving from question', prev, 'to', next);
+      return next;
+    });
+  }, [questions.length, currentQuestionIndex]);
 
   const handlePreviousQuestion = useCallback(() => {
     setCurrentQuestionIndex(prev => Math.max(prev - 1, 0));

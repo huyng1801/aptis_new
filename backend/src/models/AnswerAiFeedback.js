@@ -37,16 +37,6 @@ const AnswerAiFeedback = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    strengths: {
-      // Những điểm mạnh được AI nhận xét
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-    weaknesses: {
-      // Những điểm yếu được AI nhận xét
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
     cefr_level: {
       // Mức độ CEFR mà AI đánh giá cho câu trả lời (A1, A2, B1, B2, C1, C2)
       type: DataTypes.ENUM('A1', 'A2', 'B1', 'B2', 'C1', 'C2'),

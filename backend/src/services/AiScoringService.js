@@ -22,14 +22,38 @@ const AiServiceClient = require('./scoring/AiServiceClient');
 
 class AiScoringService {
   /**
-   * Convert CEFR level to numeric score based on task type and max score
-   * @param {string} cefrLevel - CEFR level like 'A2.1', 'B1.2', 'C1', etc.
-   * @param {string} questionTypeCode - Question type code to determine task
-   * @param {number} maxScore - Maximum score for the criterion
-   * @returns {number} Numeric score
+   * Validate and correct CEFR level based on actual score percentage
+   * @param {number} score - Actual score achieved
+   * @param {number} maxScore - Maximum possible score
+   * @param {string} aiCefrLevel - CEFR level suggested by AI
+   * @returns {string} Validated CEFR level
    */
-  convertCefrToScore(cefrLevel, questionTypeCode, maxScore) {
-    return CefrConverter.convertCefrToScore(cefrLevel, questionTypeCode, maxScore);
+  validateCefrLevel(score, maxScore, aiCefrLevel) {
+    const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
+    
+    // Define CEFR thresholds based on percentage
+    let validatedLevel;
+    if (percentage >= 90) {
+      validatedLevel = ['C2', 'C1'].includes(aiCefrLevel) ? aiCefrLevel : 'C1';
+    } else if (percentage >= 80) {
+      validatedLevel = ['C1', 'B2', 'C2'].includes(aiCefrLevel) ? (aiCefrLevel === 'C2' ? 'C1' : aiCefrLevel) : 'B2';
+    } else if (percentage >= 70) {
+      validatedLevel = ['B2', 'B1', 'C1'].includes(aiCefrLevel) ? (aiCefrLevel === 'C1' ? 'B2' : aiCefrLevel) : 'B2';
+    } else if (percentage >= 60) {
+      validatedLevel = ['B1', 'B2'].includes(aiCefrLevel) ? aiCefrLevel : 'B1';
+    } else if (percentage >= 50) {
+      validatedLevel = ['B1', 'A2'].includes(aiCefrLevel) ? aiCefrLevel : 'A2';
+    } else if (percentage >= 30) {
+      validatedLevel = ['A2', 'A1'].includes(aiCefrLevel) ? aiCefrLevel : 'A2';
+    } else {
+      validatedLevel = 'A1';
+    }
+    
+    if (validatedLevel !== aiCefrLevel) {
+      console.warn(`[validateCefrLevel] ⚠️  CEFR level corrected: AI suggested '${aiCefrLevel}' but score ${score}/${maxScore} (${percentage.toFixed(1)}%) indicates '${validatedLevel}'`);
+    }
+    
+    return validatedLevel;
   }
 
   async scoreWriting(answerId) {
@@ -46,6 +70,10 @@ class AiScoringService {
       }
 
       const finalScore = Math.min(result.score, answer.max_score || 10);
+      
+      // Validate CEFR level consistency 
+      const validatedCefrLevel = this.validateCefrLevel(finalScore, answer.max_score || 10, result.cefrLevel);
+      result.cefrLevel = validatedCefrLevel;
       
       if (finalScore !== result.score) {
         console.warn(`[scoreWriting] ⚠️  AI score capped: ${result.score} -> ${finalScore} (max: ${answer.max_score})`);
@@ -80,6 +108,10 @@ class AiScoringService {
       }
 
       const finalScore = Math.min(result.score, answer.max_score || 10);
+      
+      // Validate CEFR level consistency
+      const validatedCefrLevel = this.validateCefrLevel(finalScore, answer.max_score || 10, result.cefrLevel);
+      result.cefrLevel = validatedCefrLevel;
       
       if (finalScore !== result.score) {
         console.warn(`[scoreSpeakingWithAudioAnalysis] ⚠️  AI score capped: ${result.score} -> ${finalScore} (max: ${answer.max_score})`);
@@ -161,6 +193,10 @@ class AiScoringService {
       }
 
       const finalScore = Math.min(result.score, answer.max_score || 10);
+      
+      // Validate CEFR level consistency
+      const validatedCefrLevel = this.validateCefrLevel(finalScore, answer.max_score || 10, result.cefrLevel);
+      result.cefrLevel = validatedCefrLevel;
       
       if (finalScore !== result.score) {
         console.warn(`[scoreSpeaking] ⚠️  AI score capped: ${result.score} -> ${finalScore} (max: ${answer.max_score})`);
@@ -385,8 +421,6 @@ class AiScoringService {
           criteria_id: cs.criteriaId,
           score: cs.score,
           comment: cs.comment,
-          strengths: cs.strengths,
-          weaknesses: cs.weaknesses,
           suggestions: cs.suggestions,
         };
         
@@ -444,15 +478,17 @@ class AiScoringService {
       const aiResponse = await AiServiceClient.callAiWithRetry(prompt);
       console.log(`[scoreEntireAnswer] Raw AI response: ${aiResponse.substring(0, 200)}...`);
       const parsedResult = AiServiceClient.parseAiResponse(aiResponse, question.max_score || 10);
+      
+      // Validate CEFR level against score
+      const maxScore = question.max_score || 10;
+      const validatedCefrLevel = this.validateCefrLevel(parsedResult.score, maxScore, parsedResult.cefrLevel);
 
       const result = {
         score: Math.round(parsedResult.score * 100) / 100,
         overallFeedback: parsedResult.comment || 'No feedback provided',
         comment: parsedResult.comment,
-        strengths: parsedResult.strengths,
-        weaknesses: parsedResult.weaknesses,
         suggestions: parsedResult.suggestions,
-        cefrLevel: parsedResult.cefrLevel,
+        cefrLevel: validatedCefrLevel, // Use validated level
         criteriaUsed: criteria.map(c => c.criteria_name)
       };
 
@@ -500,15 +536,17 @@ class AiScoringService {
         );
         finalScore = Math.max(0, Math.min(question.max_score || 10, finalScore));
       }
+      
+      // Validate CEFR level against final score
+      const maxScore = question.max_score || 10;
+      const validatedCefrLevel = this.validateCefrLevel(finalScore, maxScore, parsedResult.cefrLevel);
 
       const result = {
         score: Math.round(finalScore * 100) / 100,
         overallFeedback: parsedResult.comment || 'No feedback provided',
         comment: parsedResult.comment,
-        strengths: parsedResult.strengths,
-        weaknesses: parsedResult.weaknesses,
         suggestions: parsedResult.suggestions,
-        cefrLevel: parsedResult.cefrLevel,
+        cefrLevel: validatedCefrLevel, // Use validated level
         criteriaUsed: criteria.map(c => c.criteria_name),
         audioAnalysisUsed: !!audioAnalysis
       };
@@ -526,21 +564,45 @@ class AiScoringService {
    */
   buildComprehensiveScoringPrompt(answerText, question, criteria, taskType) {
     const criteriaList = criteria.map(c => `- ${c.criteria_name}: ${c.description || c.rubric_prompt}`).join('\n');
+    const maxScore = question.max_score || 10;
+    
+    const isWritingTask = taskType.toLowerCase().includes('writing') || 
+                          question.questionType?.code?.includes('WRITING');
+    
+    const specialInstructions = isWritingTask ? 
+      `\nSPECIAL INSTRUCTIONS FOR WRITING ASSESSMENT:
+- In "suggestions", provide SPECIFIC text corrections using exact quotes
+- Format: 'Change "student's text" to "corrected text"'
+- Focus on grammar, vocabulary, spelling, and structure errors
+- Give concrete fixes, not general advice
+- Example: 'Change "I go to school yesterday" to "I went to school yesterday"'` : '';
     
     return `You are an expert language assessor. Score this ${taskType} response holistically using ALL the following criteria:
 
 ${criteriaList}
 
 Question: ${question.content}
-Student Response: ${answerText}
+Student Response: ${answerText}${specialInstructions}
 
-Provide a comprehensive assessment considering ALL criteria above. Return your response in this exact JSON format:
+IMPORTANT SCORING GUIDELINES:
+- Maximum possible score is ${maxScore} points
+- Be consistent between numerical score and CEFR level:
+  * 0-30% (0-${Math.round(maxScore * 0.3)}): A1 (Beginner)
+  * 30-50% (${Math.round(maxScore * 0.3)}-${Math.round(maxScore * 0.5)}): A2 (Elementary)
+  * 50-60% (${Math.round(maxScore * 0.5)}-${Math.round(maxScore * 0.6)}): B1 (Intermediate)
+  * 60-70% (${Math.round(maxScore * 0.6)}-${Math.round(maxScore * 0.7)}): B1-B2 
+  * 70-80% (${Math.round(maxScore * 0.7)}-${Math.round(maxScore * 0.8)}): B2 (Upper-Intermediate)
+  * 80-90% (${Math.round(maxScore * 0.8)}-${Math.round(maxScore * 0.9)}): B2-C1
+  * 90-100% (${Math.round(maxScore * 0.9)}-${maxScore}): C1-C2 (Advanced/Proficient)
+
+Provide a comprehensive assessment considering ALL criteria above. For WRITING tasks, focus heavily on SPECIFIC TEXT CORRECTIONS in your suggestions.
+
+Return your response in this exact JSON format:
 {
-  "cefr_level": "[CEFR level: A1, A2, B1, B2, C1, or C2]",
+  "score": [numerical score out of ${maxScore} - be accurate and consistent with CEFR level],
+  "cefr_level": "[CEFR level: A1, A2, B1, B2, C1, or C2 - must match score percentage]",
   "comment": "[overall assessment combining all criteria]",
-  "strengths": "[what the student did well across all criteria]",
-  "weaknesses": "[areas needing improvement across all criteria]",
-  "suggestions": "[specific recommendations for improvement]"
+  "suggestions": "[For writing: Provide specific text corrections using 'Change X to Y' format. For speaking: Pronunciation/fluency tips.]"
 }`;
   }
 
@@ -555,15 +617,19 @@ Provide a comprehensive assessment considering ALL criteria above. Return your r
     }
 
     const audioInfo = `
-Audio Analysis Data:
+ADDITIONAL AUDIO ANALYSIS DATA:
 - Fluency: ${audioAnalysis.fluency || 'N/A'}
 - Pace: ${audioAnalysis.averageWordsPerMinute || 'N/A'} WPM
 - Pause frequency: ${audioAnalysis.pauseFrequency || 'N/A'}
 - Total duration: ${audioAnalysis.totalDuration || 'N/A'}s
 
-Consider this objective audio data when assessing speaking fluency and delivery.`;
+Consider this objective audio data when assessing speaking fluency and delivery. However, your CEFR level and score must still be consistent with the percentage guidelines above.`;
 
-    return basePrompt + audioInfo;
+    // Insert audio info before the JSON format instruction
+    return basePrompt.replace(
+      'Return your response in this exact JSON format:',
+      audioInfo + '\n\nReturn your response in this exact JSON format:'
+    );
   }
 
   /**
@@ -680,15 +746,27 @@ Consider this objective audio data when assessing speaking fluency and delivery.
 
       console.log(`[scoreAnswerComprehensively] Got result with score: ${result.score}`);
       
+      // Validate and adjust score if needed
+      const maxScore = answer.max_score || question.max_score || 10;
+      const finalScore = Math.min(Math.max(0, result.score || 0), maxScore);
+      
+      // Validate CEFR level against score percentage
+      const validatedCefrLevel = this.validateCefrLevel(finalScore, maxScore, result.cefrLevel);
+      
+      // Update result with validated CEFR level
+      result.cefrLevel = validatedCefrLevel;
+      result.score = finalScore;
+      
+      console.log(`[scoreAnswerComprehensively] Score validation: ${result.score}/${maxScore} (${((finalScore/maxScore)*100).toFixed(1)}%) -> CEFR: ${validatedCefrLevel}`);
+      
       // Update the answer with the score and AI feedback
-      const finalScore = Math.min(result.score || 0, answer.max_score || 10);
       await answer.update({
         score: finalScore,
         ai_feedback: result.comment || result.overallFeedback,
         ai_graded_at: new Date(),
       });
       
-      console.log(`[scoreAnswerComprehensively] ✅ Updated answer score: ${finalScore}/${answer.max_score}`);
+      console.log(`[scoreAnswerComprehensively] ✅ Updated answer score: ${finalScore}/${maxScore}`);
       
       // Create comprehensive feedback record
       console.log(`[scoreAnswerComprehensively] Creating feedback record...`);
@@ -720,14 +798,29 @@ Consider this objective audio data when assessing speaking fluency and delivery.
       console.log(`[createComprehensiveFeedback] Result score: ${result.score}, type: ${typeof result.score}`);
       console.log(`[createComprehensiveFeedback] Result cefrLevel: ${result.cefrLevel}`);
       
+      // Get answer to determine max_score for validation
+      const answer = await AttemptAnswer.findByPk(answerId, {
+        include: [{
+          model: Question,
+          as: 'question'
+        }]
+      });
+      
+      if (!answer) {
+        throw new Error(`Answer ${answerId} not found for feedback creation`);
+      }
+      
+      const maxScore = answer.max_score || answer.question?.max_score || 10;
+      
+      // Validate CEFR level based on actual score
+      const validatedCefrLevel = this.validateCefrLevel(result.score, maxScore, result.cefrLevel);
+      
       const feedbackData = {
         answer_id: answerId,
         score: result.score,
         comment: result.comment || result.overallFeedback,
-        strengths: result.strengths,
-        weaknesses: result.weaknesses,
         suggestions: result.suggestions,
-        cefr_level: result.cefrLevel
+        cefr_level: validatedCefrLevel // Use validated level
       };
       
       console.log(`[createComprehensiveFeedback] Feedback data to create:`, JSON.stringify(feedbackData, null, 2));
@@ -741,7 +834,7 @@ Consider this objective audio data when assessing speaking fluency and delivery.
       }
       
       const feedback = await AnswerAiFeedback.create(feedbackData);
-      console.log(`[createComprehensiveFeedback] ✅ Created comprehensive feedback ${feedback.id} with score ${feedback.score}`);
+      console.log(`[createComprehensiveFeedback] ✅ Created comprehensive feedback ${feedback.id} with score ${feedback.score} and validated CEFR: ${feedback.cefr_level}`);
       
       return feedback;
     } catch (error) {
@@ -793,8 +886,6 @@ Consider this objective audio data when assessing speaking fluency and delivery.
         criteria_id: firstCriteria.id, // Required by model but represents entire answer now
         score: result.score,
         comment: result.comment || result.overallFeedback,
-        strengths: result.strengths,
-        weaknesses: result.weaknesses,
         suggestions: result.suggestions,
         cefr_level: result.cefrLevel,
       };

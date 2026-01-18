@@ -59,8 +59,7 @@ Respond with JSON only (no markdown):
 {
   "cefr_level": "A1|A2|B1|B2|C1|C2",
   "comment": "Brief overall assessment",
-  "strengths": "Key strengths",
-  "weaknesses": "Areas to improve",
+  "comment": "Key assessment feedback",
   "suggestions": "Specific recommendations"
 }`;
 
@@ -79,7 +78,7 @@ Respond with JSON only (no markdown):
         console.log(`\n    ✅ Successfully parsed JSON response:`);
         console.log(`       - CEFR Level: ${parsed.cefr_level}`);
         console.log(`       - Comment: ${parsed.comment.substring(0, 50)}...`);
-        console.log(`       - Strengths: ${parsed.strengths.substring(0, 50)}...`);
+        console.log(`       - Comment: ${parsed.comment ? parsed.comment.substring(0, 50) + '...' : 'None'}`);
       } else {
         console.log(`    ⚠️  Could not find JSON in response`);
       }

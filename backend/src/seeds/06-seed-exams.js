@@ -106,7 +106,7 @@ async function createFullExam(aptisType, teacher, skills) {
   await createListeningPartSection(exam.id, skills.listeningSkill, sectionOrder++, 4, 'LISTENING_MCQ', 'Part 4: Extended MCQ', 10, 2, 4.0);
 
   // Section 10-13: Viết (4 task, tổng 50 phút, 50 điểm)
-  await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_SHORT', 'Part 1: Form Filling (A1)', 10, 5, 1); // 10 phút, 5 điểm
+  await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_SHORT', 'Part 1: Form Filling (A1)', 10, 5, 5); // 10 phút, 5 điểm, 5 câu
   await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_FORM', 'Part 2: Short Response (A2)', 10, 10, 1); // 10 phút, 10 điểm
   await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_LONG', 'Part 3: Chat Responses (B1)', 10, 15, 1); // 10 phút, 15 điểm
   await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_EMAIL', 'Part 4: Email Writing (B2)', 20, 20, 1); // 20 phút, 20 điểm
@@ -119,7 +119,7 @@ async function createFullExam(aptisType, teacher, skills) {
   // Section 3: 3 questions x 4 điểm = 12 điểm
   await createSpeakingPartSection(exam.id, skills.speakingSkill, sectionOrder++, 3, 'SPEAKING_COMPARISON', 'Part 3: Comparison', 2, 3, 4);
   // Section 4: 1 question x 14 điểm = 14 điểm (nhiều thời gian và điểm hơn)
-  await createSpeakingPartSection(exam.id, skills.speakingSkill, sectionOrder++, 4, 'SPEAKING_DISCUSSION', 'Part 4: Topic Discussion', 4, 1, 14);
+  await createSpeakingPartSection(exam.id, skills.speakingSkill, sectionOrder++, 4, 'SPEAKING_DISCUSSION', 'Part 4: Topic Discussion', 6, 1, 14);
 
   console.log(`[Seed] ✓ Đã tạo đủ 16 section theo chuẩn APTIS (4 Đọc + 4 Nghe + 4 Viết + 4 Nói)`);
 }

@@ -162,8 +162,7 @@ async function testFullIntegration() {
       score: feedback.score,
       cefr_level: feedback.cefr_level,
       comment: feedback.feedback_comment,
-      strengths: JSON.stringify(feedback.strengths),
-      weaknesses: JSON.stringify(feedback.weaknesses),
+      comment: feedback.comment,
       suggestions: JSON.stringify(feedback.suggestions),
     });
 
@@ -266,8 +265,7 @@ Respond with ONLY JSON:
   "score": <number 0-${maxScore}>,
   "cefr_level": "<A1|A2|B1|B2|C1|C2>",
   "feedback_comment": "<brief comment>",
-  "strengths": ["<strength1>", "<strength2>"],
-  "weaknesses": ["<weakness1>", "<weakness2>"],
+  "comment": "<general assessment>",
   "suggestions": ["<suggestion1>", "<suggestion2>"]
 }`;
 }
