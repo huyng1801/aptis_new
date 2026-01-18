@@ -437,7 +437,7 @@ exports.getSubmissionDetail = async (req, res, next) => {
             {
               model: QuestionType,
               as: 'questionType',
-              attributes: ['id', 'name'],
+              attributes: ['id', 'question_type_name'],
             },
           ],
         },
@@ -709,18 +709,15 @@ exports.bulkUpdateStatus = async (req, res, next) => {
  */
 exports.getGradingStats = async (req, res, next) => {
   try {
-    const { exam_id, date_from, date_to } = req.query;
+    const { exam_id, skill_type, date_from, date_to } = req.query;
 
     const where = {
       answer_type: ['text', 'audio'], // Only writing and speaking
     };
 
+    const attemptWhere = {};
     if (exam_id) {
-      const attempts = await ExamAttempt.findAll({
-        where: { exam_id },
-        attributes: ['id'],
-      });
-      where.attempt_id = attempts.map(a => a.id);
+      attemptWhere.exam_id = parseInt(exam_id);
     }
 
     if (date_from || date_to) {
@@ -729,14 +726,32 @@ exports.getGradingStats = async (req, res, next) => {
       if (date_to) where.answered_at[Op.lte] = new Date(date_to);
     }
 
+    const includeOptions = [
+      {
+        model: ExamAttempt,
+        as: 'attempt',
+        where: Object.keys(attemptWhere).length > 0 ? attemptWhere : undefined,
+        attributes: [],
+        include: skill_type ? [
+          {
+            model: SkillType,
+            as: 'selectedSkill',
+            where: { code: skill_type },
+            attributes: [],
+          },
+        ] : [],
+      },
+    ];
+
     const stats = await AttemptAnswer.findAll({
       where,
+      include: includeOptions,
       attributes: [
-        [sequelize.fn('COUNT', sequelize.col('id')), 'total'],
-        [sequelize.fn('SUM', sequelize.literal('CASE WHEN score IS NULL THEN 1 ELSE 0 END')), 'ungraded'],
-        [sequelize.fn('SUM', sequelize.literal('CASE WHEN ai_graded_at IS NOT NULL AND reviewed_at IS NULL THEN 1 ELSE 0 END')), 'ai_graded'],
-        [sequelize.fn('SUM', sequelize.literal('CASE WHEN reviewed_at IS NOT NULL THEN 1 ELSE 0 END')), 'manually_graded'],
-        [sequelize.fn('SUM', sequelize.literal('CASE WHEN needs_review = 1 THEN 1 ELSE 0 END')), 'needs_review'],
+        [sequelize.fn('COUNT', sequelize.col('AttemptAnswer.id')), 'total'],
+        [sequelize.fn('SUM', sequelize.literal('CASE WHEN AttemptAnswer.score IS NULL THEN 1 ELSE 0 END')), 'ungraded'],
+        [sequelize.fn('SUM', sequelize.literal('CASE WHEN AttemptAnswer.ai_graded_at IS NOT NULL AND AttemptAnswer.reviewed_at IS NULL THEN 1 ELSE 0 END')), 'ai_graded'],
+        [sequelize.fn('SUM', sequelize.literal('CASE WHEN AttemptAnswer.reviewed_at IS NOT NULL THEN 1 ELSE 0 END')), 'manually_graded'],
+        [sequelize.fn('SUM', sequelize.literal('CASE WHEN AttemptAnswer.needs_review = 1 THEN 1 ELSE 0 END')), 'needs_review'],
       ],
       raw: true,
     });

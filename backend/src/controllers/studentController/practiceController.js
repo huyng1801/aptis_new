@@ -5,12 +5,138 @@ const {
   QuestionItem, 
   QuestionOption, 
   QuestionSampleAnswer,
+  Exam,
   User,
   sequelize 
 } = require('../../models');
 const { Op } = require('sequelize');
 
 class PracticeController {
+  /**
+   * Get available skills for practice
+   */
+  async getSkillsForPractice(req, res) {
+    try {
+      const skills = await SkillType.findAll({
+        attributes: ['id', 'type_name', 'description'],
+        where: {
+          type_name: ['READING', 'LISTENING', 'WRITING', 'SPEAKING']
+        }
+      });
+
+      res.json({
+        success: true,
+        data: skills
+      });
+    } catch (error) {
+      console.error('Error getting skills for practice:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  /**
+   * Get exams for a specific skill
+   */
+  async getExamsForSkill(req, res) {
+    try {
+      const { skillId } = req.params;
+
+      const skill = await SkillType.findByPk(skillId);
+      if (!skill) {
+        return res.status(404).json({
+          success: false,
+          message: 'Skill not found'
+        });
+      }
+
+      // Get unique exams that have questions with this skill
+      const exams = await sequelize.query(`
+        SELECT DISTINCT e.id, e.title, e.description
+        FROM exams e
+        INNER JOIN exam_sections es ON e.id = es.exam_id
+        INNER JOIN exam_section_questions esq ON es.id = esq.exam_section_id
+        INNER JOIN questions q ON esq.question_id = q.id
+        WHERE q.skill_type_id = :skillId
+      `, {
+        replacements: { skillId },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      res.json({
+        success: true,
+        data: exams
+      });
+    } catch (error) {
+      console.error('Error getting exams for skill:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  /**
+   * Get exam questions for a specific skill
+   */
+  async getExamQuestionsForSkill(req, res) {
+    try {
+      const { examId, skillId } = req.params;
+
+      const questions = await Question.findAll({
+        where: {
+          skill_type_id: skillId
+        },
+        include: [{
+          model: Exam,
+          as: 'exams',
+          where: { id: examId },
+          through: { attributes: [] }
+        }, {
+          model: QuestionType,
+          attributes: ['type_name']
+        }, {
+          model: QuestionItem,
+          as: 'items'
+        }, {
+          model: QuestionOption,
+          as: 'options'
+        }, {
+          model: QuestionSampleAnswer,
+          as: 'sampleAnswers'
+        }]
+      });
+
+      const formattedQuestions = questions.map(question => ({
+        id: question.id,
+        title: question.title,
+        type: question.QuestionType?.type_name,
+        difficulty: question.difficulty,
+        content: question.content,
+        media_url: question.media_url,
+        items: question.items || [],
+        options: question.options || [],
+        sample_answers: question.sampleAnswers || []
+      }));
+
+      res.json({
+        success: true,
+        data: formattedQuestions
+      });
+    } catch (error) {
+      console.error('Error getting exam questions for skill:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
   /**
    * Get practice questions based on skill type, difficulty, and question type
    */

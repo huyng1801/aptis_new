@@ -135,6 +135,13 @@ async function seedQuestionTypes() {
       instruction_template: 'Read the passage quickly. Choose a heading for each numbered paragraph from the drop-down box.',
       scoring_method: 'auto',
     },
+    {
+      skill_type_id: reading.id,
+      code: 'READING_SHORT_TEXT',
+      question_type_name: 'Short Text Matching',
+      instruction_template: 'Match each short text with the correct description or category.',
+      scoring_method: 'auto',
+    },
 
     // ===== SPEAKING (Nói) - Dựa trên APTIS Technical Report =====
     {

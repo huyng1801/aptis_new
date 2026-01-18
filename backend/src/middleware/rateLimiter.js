@@ -52,7 +52,7 @@ const authLimiter = rateLimit({
  */
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 giờ
-  max:  10000000, // Tối đa 10 file
+  max:  100, // Tối đa 50 file
   message: {
     success: false,
     error: {

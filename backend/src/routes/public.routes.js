@@ -16,6 +16,7 @@ const express = require('express');
 const router = express.Router();
 const publicController = require('../controllers/publicController');
 const aiTestController = require('../controllers/aiTestController');
+const practiceController = require('../controllers/studentController/practiceController');
 const { apiLimiter } = require('../middleware/rateLimiter');
 
 // =====================================
@@ -67,5 +68,20 @@ router.post('/ai/requeue', aiTestController.requeuPendingAnswers);
 // GET /public/questions/writing - Lấy tất cả câu hỏi Writing để test dynamic content
 // Dùng cho testing và development
 router.get('/questions/writing', apiLimiter, publicController.getWritingQuestions);
+
+// =====================================
+// PRACTICE ROUTES - LUYỆN TẬP (PUBLIC)
+// =====================================
+// Practice endpoints accessible without authentication
+// Students can view available skills and exams for practice
+
+// GET /public/practice/skills - Lấy danh sách skills cho practice
+router.get('/practice/skills', apiLimiter, practiceController.getSkillsForPractice);
+
+// GET /public/practice/skills/:skillId/exams - Lấy exams có skill này
+router.get('/practice/skills/:skillId/exams', apiLimiter, practiceController.getExamsForSkill);
+
+// GET /public/practice/exams/:examId/skills/:skillId/questions - Lấy questions của exam theo skill
+router.get('/practice/exams/:examId/skills/:skillId/questions', apiLimiter, practiceController.getExamQuestionsForSkill);
 
 module.exports = router;
