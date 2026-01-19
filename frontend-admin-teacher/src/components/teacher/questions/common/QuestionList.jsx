@@ -91,31 +91,87 @@ export default function QuestionList({
     setPreviewOpen(true);
   };
 
+  // Helper function to extract title and description from JSON content
+  const extractTitleAndDescription = (content) => {
+    try {
+      // Try to parse as JSON
+      const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+      
+      // Extract title based on content structure
+      let title = '';
+      let description = '';
+      
+      if (parsed.title) {
+        title = parsed.title;
+      } else if (parsed.content) {
+        title = parsed.content.substring(0, 50) + (parsed.content.length > 50 ? '...' : '');
+      } else if (parsed.summary) {
+        title = parsed.summary.substring(0, 60) + (parsed.summary.length > 60 ? '...' : '');
+      } else {
+        // For other formats, try to extract first meaningful content
+        const keys = Object.keys(parsed);
+        if (keys.length > 0) {
+          const firstValue = parsed[keys[0]];
+          if (typeof firstValue === 'string') {
+            title = firstValue.substring(0, 50) + (firstValue.length > 50 ? '...' : '');
+          } else {
+            title = `[${keys[0]}]`;
+          }
+        }
+      }
+      
+      // Extract description from various possible fields
+      if (parsed.passage) {
+        description = parsed.passage.substring(0, 80) + (parsed.passage.length > 80 ? '...' : '');
+      } else if (parsed.audioScript) {
+        description = parsed.audioScript.substring(0, 80) + (parsed.audioScript.length > 80 ? '...' : '');
+      } else if (parsed.instructions) {
+        description = parsed.instructions.substring(0, 80) + (parsed.instructions.length > 80 ? '...' : '');
+      } else if (parsed.prompt) {
+        description = parsed.prompt.substring(0, 80) + (parsed.prompt.length > 80 ? '...' : '');
+      }
+      
+      return { title: title || 'Unnamed Question', description };
+    } catch (error) {
+      // If not JSON, treat as plain text
+      const text = String(content || '');
+      return {
+        title: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
+        description: text.substring(50, 130) + (text.length > 130 ? '...' : '')
+      };
+    }
+  };
+
   const columns = [
     {
       id: 'title',
       label: 'Tên câu hỏi',
-      render: (row) => (
-        <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-            <Typography variant="body2" fontWeight="bold">
-              {row.title}
-            </Typography>
-            {row.is_used_in_exam && (
-              <Chip
-                label="Đã thêm"
-                size="small"
-                color="success"
-                variant="filled"
-                sx={{ height: 20 }}
-              />
+      render: (row) => {
+        const { title, description } = extractTitleAndDescription(row.content);
+        return (
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+              <Typography variant="body2" fontWeight="bold">
+                {title}
+              </Typography>
+              {row.is_used_in_exam && (
+                <Chip
+                  label="Đã thêm"
+                  size="small"
+                  color="success"
+                  variant="filled"
+                  sx={{ height: 20 }}
+                />
+              )}
+            </Box>
+            {description && (
+              <Typography variant="caption" color="text.secondary">
+                {description}
+              </Typography>
             )}
           </Box>
-          <Typography variant="caption" color="text.secondary">
-            {row.description}
-          </Typography>
-        </Box>
-      )
+        );
+      }
     },
     {
       id: 'question_type',

@@ -75,6 +75,34 @@ const ListeningMatchingForm = ({ questionData, onChange, onValidate }) => {
   });
 
   const [errors, setErrors] = React.useState({});
+  const [isGeneratingAudio, setIsGeneratingAudio] = React.useState(false);
+
+  // Audio generation function
+  const generateAudio = async (text) => {
+    if (!text || !text.trim()) return;
+    
+    try {
+      setIsGeneratingAudio(true);
+      console.log('🎵 Generating audio for Listening Matching...');
+      
+      // Call backend API to generate audio
+      const response = await fetch('/api/teacher/speech/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim(), language: 'en' })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Audio generated:', result.audioUrl);
+        // Could store audioUrl in state if needed
+      }
+    } catch (error) {
+      console.error('❌ Audio generation failed:', error);
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
 
   // Remove auto-validation useEffect - causes infinite loops
   // Validation is only called on demand via button click
@@ -115,6 +143,34 @@ const ListeningMatchingForm = ({ questionData, onChange, onValidate }) => {
     setErrors(newErrors);
     
     const isValid = Object.keys(newErrors).length === 0;
+    
+    // Send data to parent and generate audio when valid
+    if (isValid && onChange) {
+      const validSpeakers = formData.speakers.filter(s => s.name && s.name.trim());
+      const validStatements = formData.statements.filter(s => s.statement && s.statement.trim());
+      
+      const sendData = {
+        ...formData,
+        speakers: validSpeakers,
+        statements: validStatements,
+        type: 'listening_matching'
+      };
+      
+      // Auto-generate audio from transcript
+      if (formData.transcript && formData.transcript.trim()) {
+        generateAudio(formData.transcript.trim());
+      }
+      
+      // Create summary content for database
+      const summary = `Listening Matching (${formData.matching_type}): ${validSpeakers.length} speakers, ${validStatements.length} statements${formData.matching_type === 'statement' ? `, ${formData.options.length} options` : ''}. Transcript: ${formData.transcript.trim().substring(0, 100)}...`;
+      
+      // Send content as JSON string for backend - MUST have meaningful content
+      const finalData = {
+        ...sendData,
+        summary: summary
+      };
+      onChange(JSON.stringify(finalData));
+    }
     
     return isValid;
   };
@@ -581,6 +637,19 @@ const ListeningMatchingForm = ({ questionData, onChange, onValidate }) => {
           />
         </CardContent>
       </Card>
+
+      {/* Manual Validation Button */}
+      <Button
+        onClick={validateForm}
+        variant="contained"
+        color="info"
+        size="small"
+        sx={{ mt: 2, mb: 2 }}
+        disabled={isGeneratingAudio}
+        startIcon={isGeneratingAudio ? <VolumeIcon /> : <InfoIcon />}
+      >
+        {isGeneratingAudio ? 'Đang tạo audio...' : 'Kiểm tra câu hỏi'}
+      </Button>
 
       {/* Summary */}
       <Paper sx={{ p: 2, mt: 3, backgroundColor: '#f9f9f9' }}>

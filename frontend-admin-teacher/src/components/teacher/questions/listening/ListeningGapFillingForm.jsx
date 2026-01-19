@@ -32,6 +32,34 @@ export default function ListeningGapFillingForm({ content, onChange }) {
   // Error handling states
   const [errors, setErrors] = useState({});
   const [isValidated, setIsValidated] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+
+  // Audio generation function
+  const generateAudio = async (text) => {
+    if (!text || !text.trim()) return;
+    
+    try {
+      setIsGeneratingAudio(true);
+      console.log('🎵 Generating audio for Listening Gap Filling...');
+      
+      // Call backend API to generate audio
+      const response = await fetch('/api/teacher/speech/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim(), language: 'en' })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Audio generated:', result.audioUrl);
+        // Could store audioUrl in state if needed
+      }
+    } catch (error) {
+      console.error('❌ Audio generation failed:', error);
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
 
   // Parse existing content if available
   useEffect(() => {
@@ -103,8 +131,33 @@ export default function ListeningGapFillingForm({ content, onChange }) {
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     setIsValidated(isValid);
+    
+    // Send data to parent and generate audio when valid
+    if (isValid && onChange) {
+      const validOptions = options.filter(opt => opt.trim());
+      const validAnswers = correctAnswers.filter(ans => ans.trim());
+      
+      const formData = {
+        title: title.trim(),
+        audioScript: audioScript.trim(),
+        passage: passage.trim(),
+        options: validOptions,
+        correctAnswers: validAnswers,
+        instructions: instructions.trim(),
+        type: 'listening_gap_filling',
+        // Create summary content for database
+        summary: `Listening Gap Filling: ${title.trim()}. Audio script: ${audioScript.trim().substring(0, 100)}... Gap filling with ${validAnswers.length} gaps.`
+      };
+      
+      // Auto-generate audio from script
+      generateAudio(audioScript.trim());
+      
+      // Send content as JSON string for backend - MUST have meaningful content
+      onChange(JSON.stringify(formData));
+    }
+    
     return isValid;
-  }, []);
+  }, [title, audioScript, passage, options, correctAnswers, instructions, onChange]);
 
   // Remove auto-validation useEffect - causes infinite loops
   // Data is sent to parent on every change (via onChange)
@@ -275,8 +328,10 @@ export default function ListeningGapFillingForm({ content, onChange }) {
         color="info"
         size="small"
         sx={{ mb: 3, ml: 1 }}
+        disabled={isGeneratingAudio}
+        startIcon={isGeneratingAudio ? <VolumeUp /> : <CheckCircle />}
       >
-        Kiểm tra câu hỏi
+        {isGeneratingAudio ? 'Đang tạo audio...' : 'Kiểm tra câu hỏi'}
       </Button>
 
       {/* Correct Answers */}

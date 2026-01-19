@@ -442,4 +442,44 @@ router.get(
 // GET /teacher/reports/export - Xuất báo cáo thống kê
 router.get('/reports/export', authMiddleware, isTeacherOrAdmin, reportController.exportStatistics);
 
+// =====================================
+// SPEECH GENERATION - TẠO AUDIO
+// =====================================
+
+// POST /teacher/speech/generate - Generate audio from text for listening questions
+router.post('/speech/generate', authMiddleware, isTeacherOrAdmin, async (req, res) => {
+  try {
+    const { text, language = 'en', filename } = req.body;
+    
+    if (!text || !text.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Text is required for audio generation'
+      });
+    }
+    
+    // Import GTTSService
+    const GTTSService = require('../services/GTTSService');
+    
+    // Generate audio file
+    const audioInfo = await GTTSService.generateAudioFile(text.trim(), language, filename);
+    
+    res.json({
+      success: true,
+      message: 'Audio generated successfully',
+      audioUrl: audioInfo.url,
+      filename: audioInfo.filename,
+      path: audioInfo.path
+    });
+    
+  } catch (error) {
+    console.error('Audio generation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate audio',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

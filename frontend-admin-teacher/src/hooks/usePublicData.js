@@ -14,12 +14,22 @@ export const usePublicData = () => {
     const loadPublicData = async () => {
       try {
         setLoading(true);
+        setError(null);
         console.log('[usePublicData] Starting to load public data...');
         
         const [aptisResponse, skillsResponse, questionsResponse] = await Promise.all([
-          publicApi.getAptisTypes(),
-          publicApi.getSkillTypes(),
-          publicApi.getQuestionTypes()
+          publicApi.getAptisTypes().catch(err => {
+            console.error('[usePublicData] Failed to load APTIS types:', err);
+            return null;
+          }),
+          publicApi.getSkillTypes().catch(err => {
+            console.error('[usePublicData] Failed to load Skill types:', err);
+            return null;
+          }),
+          publicApi.getQuestionTypes().catch(err => {
+            console.error('[usePublicData] Failed to load Question types:', err);
+            return null;
+          })
         ]);
 
         console.log('[usePublicData] APTIS Response:', aptisResponse);
@@ -33,13 +43,20 @@ export const usePublicData = () => {
             // Transform to ensure consistency - backend returns 'name', we normalize to 'aptis_type_name'
             const normalized = aptisData.map(item => ({
               ...item,
-              aptis_type_name: item.aptis_type_name || item.name
+              id: item.id,
+              aptis_type_name: item.aptis_type_name || item.name,
+              aptis_type_code: item.code || item.aptis_type_code,
+              description: item.description
             }));
-            console.log('[usePublicData] Setting APTIS types:', normalized);
+            console.log('[usePublicData] Normalized APTIS types:', normalized);
             setAptisTypes(normalized);
           } else {
             console.warn('[usePublicData] APTIS data is not an array:', aptisData);
+            setAptisTypes([]);
           }
+        } else {
+          console.warn('[usePublicData] No APTIS response received');
+          setAptisTypes([]);
         }
         
         // Handle Skill Types
@@ -49,13 +66,20 @@ export const usePublicData = () => {
             // Transform to ensure consistency - backend returns 'name', we normalize to 'skill_type_name'
             const normalized = skillsData.map(item => ({
               ...item,
-              skill_type_name: item.skill_type_name || item.name
+              id: item.id,
+              skill_type_name: item.skill_type_name || item.name,
+              skill_type_code: item.code || item.skill_type_code,
+              description: item.description
             }));
-            console.log('[usePublicData] Setting skill types:', normalized);
+            console.log('[usePublicData] Normalized skill types:', normalized);
             setSkillTypes(normalized);
           } else {
             console.warn('[usePublicData] Skills data is not an array:', skillsData);
+            setSkillTypes([]);
           }
+        } else {
+          console.warn('[usePublicData] No Skills response received');
+          setSkillTypes([]);
         }
 
         // Handle Question Types
@@ -66,11 +90,20 @@ export const usePublicData = () => {
             setQuestionTypes(questionsData);
           } else {
             console.warn('[usePublicData] Questions data is not an array:', questionsData);
+            setQuestionTypes([]);
           }
+        } else {
+          console.warn('[usePublicData] No Questions response received');
+          setQuestionTypes([]);
+        }
+
+        // Check if all required data is loaded
+        if (!aptisResponse || !skillsResponse) {
+          setError('Không thể tải đầy đủ dữ liệu. Vui lòng kiểm tra kết nối mạng và thử lại.');
         }
       } catch (err) {
         console.error('[usePublicData] Error loading public data:', err);
-        setError(err.message || 'Failed to load data');
+        setError(err.message || 'Không thể tải dữ liệu. Vui lòng thử lại.');
       } finally {
         setLoading(false);
       }

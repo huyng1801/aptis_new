@@ -384,11 +384,17 @@ export default function QuestionForm({
             type="submit"
             variant="contained"
             startIcon={<Save />}
-            disabled={formik.isSubmitting || Object.keys(formik.errors).length > 0}
+            disabled={formik.isSubmitting || Object.keys(formik.errors).length > 0 || !(typeof questionContent === 'string' && questionContent.trim())}
             size="large"
+            title={!(typeof questionContent === 'string' && questionContent.trim()) ? 'Vui lòng điền nội dung câu hỏi' : ''}
           >
             {isEditing ? 'Cập nhật câu hỏi' : 'Tiếp tục'}
           </Button>
+          {!(typeof questionContent === 'string' && questionContent.trim()) && (
+            <Typography variant="caption" color="error" sx={{ mt: 1 }}>
+              Vui lòng điền nội dung câu hỏi
+            </Typography>
+          )}
         </Box>
       </Box>
     </Box>

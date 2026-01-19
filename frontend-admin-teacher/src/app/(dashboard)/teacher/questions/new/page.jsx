@@ -36,7 +36,8 @@ const steps = ['Chọn APTIS & Kỹ năng', 'Chọn loại câu hỏi', 'Nhập 
 export default function NewQuestionPage() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { aptisTypes, skillTypes, questionTypes, loading: publicDataLoading } = usePublicData();
+  const { aptisTypes, skillTypes, questionTypes, loading: publicDataLoading, error: publicDataError } = usePublicData();
+  const [retryCount, setRetryCount] = useState(0);
   
   const [activeStep, setActiveStep] = useState(0);
   const [selectedAptis, setSelectedAptis] = useState('');
@@ -276,7 +277,18 @@ export default function NewQuestionPage() {
                 <CircularProgress />
               </Box>
             ) : aptisTypes.length === 0 || skillTypes.length === 0 ? (
-              <Alert severity="error">
+              <Alert 
+                severity="error"
+                action={
+                  <Button 
+                    color="inherit" 
+                    size="small"
+                    onClick={() => window.location.reload()}
+                  >
+                    Thử lại
+                  </Button>
+                }
+              >
                 Không thể tải dữ liệu APTIS types hoặc Skill types. Vui lòng thử lại.
               </Alert>
             ) : (
@@ -294,7 +306,7 @@ export default function NewQuestionPage() {
                   
                   <Grid container spacing={2}>
                     {skillTypes.map((skill) => (
-                      <Grid item xs={12} md={6} lg={4} key={skill.id}>
+                      <Grid item xs={12} sm={6} key={skill.id}>
                         <Card
                           sx={{
                             cursor: 'pointer',

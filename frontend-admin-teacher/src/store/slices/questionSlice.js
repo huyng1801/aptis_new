@@ -85,19 +85,27 @@ export const createQuestion = createAsyncThunk(
         throw new Error('Missing required question_type_id or aptis_type_id');
       }
 
+      // Validate content
+      if (!questionData.content || (typeof questionData.content === 'string' && questionData.content.trim().length === 0)) {
+        throw new Error('Content is required and cannot be empty');
+      }
+
       const backendData = {
         question_type_id,
         aptis_type_id,
         difficulty: questionData.difficulty || 'medium',
         content: questionData.content,
         media_url: questionData.media_url || '',
-        duration_seconds: questionData.duration_seconds ? parseInt(questionData.duration_seconds) : 0,
+        duration_seconds: questionData.duration_seconds && questionData.duration_seconds > 0 ? parseInt(questionData.duration_seconds) : null,
         parent_question_id: questionData.parent_question_id || null,
         additional_media: questionData.additional_media || null,
         status: questionData.status || 'draft'
       };
       
       console.log('[createQuestion thunk] Backend data:', backendData);
+      console.log('[createQuestion thunk] Content type:', typeof backendData.content);
+      console.log('[createQuestion thunk] Content length:', backendData.content?.length);
+      console.log('[createQuestion thunk] Content value:', backendData.content);
       const response = await questionApi.createQuestion(backendData);
       console.log('[createQuestion thunk] Response:', response);
       return response.data;
