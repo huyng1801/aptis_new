@@ -36,7 +36,7 @@ export default function SubmissionsPage() {
   
   const [filters, setFilters] = useState({
     grading_status: '',
-    skill_type: '',
+    skill_type: '', // Mặc định sẽ được filter trong API chỉ lấy WRITING và SPEAKING
     page: 1,
     limit: 20
   });
@@ -102,7 +102,7 @@ export default function SubmissionsPage() {
   const handleClearFilters = () => {
     setFilters({
       grading_status: '',
-      skill_type: '',
+      skill_type: '', // Reset nhưng API vẫn chỉ lấy WRITING và SPEAKING
       page: 1,
       limit: 20
     });
@@ -161,84 +161,6 @@ export default function SubmissionsPage() {
           </Typography>
         </Box>
 
-        {/* Statistics Cards */}
-        {stats && (
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Card sx={{ height: '100%', bgcolor: 'grey.50' }}>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Assignment sx={{ fontSize: 40, color: 'grey.600', mb: 1 }} />
-                  <Typography color="textSecondary" gutterBottom variant="h6">
-                    Tổng số bài
-                  </Typography>
-                  <Typography variant="h3" fontWeight="bold">
-                    {stats.total || 0}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Card sx={{ height: '100%', bgcolor: 'error.50' }}>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Warning sx={{ fontSize: 40, color: 'error.main', mb: 1 }} />
-                  <Typography color="textSecondary" gutterBottom variant="h6">
-                    Cần chấm ngay
-                  </Typography>
-                  <Typography variant="h3" fontWeight="bold" color="error.main">
-                    {stats.ungraded || 0}
-                  </Typography>
-                  <Chip label="Ưu tiên cao" size="small" color="error" />
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Card sx={{ height: '100%', bgcolor: 'warning.50' }}>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Psychology sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
-                  <Typography color="textSecondary" gutterBottom variant="h6">
-                    AI đã chấm
-                  </Typography>
-                  <Typography variant="h3" fontWeight="bold" color="warning.main">
-                    {stats.ai_graded || 0}
-                  </Typography>
-                  <Chip label="Cần kiểm tra" size="small" color="warning" />
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Card sx={{ height: '100%', bgcolor: 'success.50' }}>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <CheckCircle sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
-                  <Typography color="textSecondary" gutterBottom variant="h6">
-                    GV đã chấm
-                  </Typography>
-                  <Typography variant="h3" fontWeight="bold" color="success.main">
-                    {stats.manually_graded || 0}
-                  </Typography>
-                  <Chip label="Hoàn thành" size="small" color="success" />
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={2.4}>
-              <Card sx={{ height: '100%', bgcolor: 'error.50' }}>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Warning sx={{ fontSize: 40, color: 'error.main', mb: 1 }} />
-                  <Typography color="textSecondary" gutterBottom variant="h6">
-                    Cần xem xét
-                  </Typography>
-                  <Typography variant="h3" fontWeight="bold" color="error.main">
-                    {stats.needs_review || 0}
-                  </Typography>
-                  <Chip label="Cần sửa" size="small" color="error" />
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        )}
 
         {/* Filters */}
         <SubmissionFilters

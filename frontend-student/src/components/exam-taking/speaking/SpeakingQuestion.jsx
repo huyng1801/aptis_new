@@ -84,24 +84,23 @@ export default function SpeakingQuestion({
     sectionInfo,
     hasAnswer: !!question.answer_data?.audio_url,
     step,
-    answerData: question.answer_data
+    answerData: question.answer_data,
+    questionType: question.questionType,
+    QuestionType: question.QuestionType,
+    question_structure: Object.keys(question)
   });
   
   const MAX_UPLOAD_RETRIES = 3;
 
   // Use question type to determine timing
   const getTimingByQuestionType = () => {
-    const questionTypeCode = question.QuestionType?.code;
-    
-    // All speaking questions: 10s prep, 30s record
-    switch (questionTypeCode) {
-      case 'SPEAKING_INTRO':
-      case 'SPEAKING_DESCRIPTION':
-      case 'SPEAKING_COMPARISON':
-      case 'SPEAKING_DISCUSSION':
-      default:
-        return { prep: 10, recording: 30 };      // Unified timing for all speaking questions
+    // Nếu là câu cuối cùng (ví dụ câu 10/10) thì tăng thời gian
+    if (questionNumber === totalQuestions) {
+      return { prep: 30, recording: 60 };     // Câu cuối: 30s prep, 60s record
     }
+    
+    // Các câu khác giữ thời gian bình thường
+    return { prep: 10, recording: 30 };       // Các câu khác: 10s prep, 30s record
   };
 
   const timing = getTimingByQuestionType();

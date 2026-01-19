@@ -324,8 +324,10 @@ exports.getSubmissions = async (req, res, next) => {
               model: SkillType,
               as: 'selectedSkill',
               attributes: ['id', 'code', 'skill_type_name'],
-              required: skill_type ? true : false,
-              where: skill_type ? { code: skill_type } : undefined,
+              required: true, // Luôn require skill để filter
+              where: skill_type ? { code: skill_type } : {
+                code: { [Op.in]: ['WRITING', 'SPEAKING'] } // Mặc định chỉ lấy Writing & Speaking
+              },
             },
           ],
         },
@@ -732,14 +734,16 @@ exports.getGradingStats = async (req, res, next) => {
         as: 'attempt',
         where: Object.keys(attemptWhere).length > 0 ? attemptWhere : undefined,
         attributes: [],
-        include: skill_type ? [
+        include: [
           {
             model: SkillType,
             as: 'selectedSkill',
-            where: { code: skill_type },
+            where: skill_type ? { code: skill_type } : {
+              code: { [Op.in]: ['WRITING', 'SPEAKING'] } // Mặc định chỉ thống kê Writing & Speaking
+            },
             attributes: [],
           },
-        ] : [],
+        ],
       },
     ];
 
