@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Box, Typography, Card, CardContent, Chip, Alert } from '@mui/material';
-import { scoringUtils } from '@/utils/scoringUtils';
 
 // Import specialized result components
 import MCQQuestionResult from './reading/MCQQuestionResult';
@@ -11,20 +10,29 @@ import MatchingQuestionResult from './reading/MatchingQuestionResult';
 import MatchingHeadingsQuestionResult from './reading/MatchingHeadingsQuestionResult';
 import OrderingQuestionResult from './reading/OrderingQuestionResult';
 
-import ShortAnswerQuestionResult from './writing/ShortAnswerQuestionResult';
-import FormFillingQuestionResult from './writing/FormFillingQuestionResult';
+// Import new APTIS-specific writing result components
+import WordLevelWritingResult from './writing/WordLevelWritingResult';
+import ShortTextWritingResult from './writing/ShortTextWritingResult';
+import ChatResponsesWritingResult from './writing/ChatResponsesWritingResult';
+import EmailWritingResult from './writing/EmailWritingResult';
 
 import ListeningMCQQuestionResult from './listening/ListeningMCQQuestionResult';
+import ListeningMultiMCQQuestionResult from './listening/ListeningMultiMCQQuestionResult';
+import ListeningMatchingQuestionResult from './listening/ListeningMatchingQuestionResult';
+import ListeningStatementMatchingQuestionResult from './listening/ListeningStatementMatchingQuestionResult';
 
 import SpeakingQuestionResult from './speaking/SpeakingQuestionResult';
 
 export default function QuestionResultDisplayNew({ answer, question, calculatedScore, showCorrectAnswer = true, feedback = null }) {
-  // Use provided calculatedScore or calculate it
-  const questionScore = calculatedScore || scoringUtils.autoScoreQuestion(
-    question, 
-    answer, 
-    answer.max_score || question.max_score || 1
-  );
+  // Use provided calculatedScore or fallback to answer score from API
+  const questionScore = calculatedScore || {
+    score: answer.final_score !== null ? answer.final_score : (answer.score || 0),
+    percentage: (() => {
+      const actualScore = answer.final_score !== null ? answer.final_score : (answer.score || 0);
+      const maxScore = answer.max_score || question.max_score || 1;
+      return maxScore > 0 ? (actualScore / maxScore) * 100 : 0;
+    })()
+  };
 
   const questionType = question?.question_type?.question_type_name || question?.questionType?.question_type_name;
   const questionCode = question?.question_type?.code || question?.questionType?.code;
@@ -63,20 +71,30 @@ export default function QuestionResultDisplayNew({ answer, question, calculatedS
 
       // Listening question types  
       case 'LISTENING_MCQ':
+        // Check if this is a multi-question MCQ (has items array with multiple items)
+        if (question?.items && question.items.length > 1) {
+          return <ListeningMultiMCQQuestionResult {...commonProps} />;
+        }
         return <ListeningMCQQuestionResult {...commonProps} />;
       
       case 'LISTENING_MATCHING':
-        return <MatchingQuestionResult {...commonProps} />;
+        return <ListeningMatchingQuestionResult {...commonProps} />;
+      
+      case 'LISTENING_STATEMENT_MATCHING':
+        return <ListeningStatementMatchingQuestionResult {...commonProps} />;
 
-      // Writing question types
+      // Writing question types - APTIS specific routing
       case 'WRITING_SHORT':
-      case 'WRITING_LONG':
-      case 'WRITING_EMAIL':
-      case 'WRITING_ESSAY':
-        return <ShortAnswerQuestionResult {...commonProps} />;
+        return <WordLevelWritingResult {...commonProps} />;
       
       case 'WRITING_FORM':
-        return <FormFillingQuestionResult {...commonProps} />;
+        return <ShortTextWritingResult {...commonProps} />;
+      
+      case 'WRITING_LONG':
+        return <ChatResponsesWritingResult {...commonProps} />;
+      
+      case 'WRITING_EMAIL':
+        return <EmailWritingResult {...commonProps} />;
 
       // Speaking question types
       case 'SPEAKING_INTRO':
@@ -97,7 +115,7 @@ export default function QuestionResultDisplayNew({ answer, question, calculatedS
         <br />
         Question: {question.content}
         <br />
-        Answer: {answer.text_answer || answer.selected_option_id || JSON.stringify(answer.answer_data)}
+        Answer: {answer.text_answer || answer.selected_option_id || JSON.stringify(answer.answer_json)}
       </Alert>
     );
   };
@@ -113,7 +131,6 @@ export default function QuestionResultDisplayNew({ answer, question, calculatedS
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               <Chip label={questionType} size="small" variant="outlined" />
-              <Chip label={skillType} size="small" color="info" variant="outlined" />
               <Chip 
                 label={`${questionScore.score}/${answer.max_score || question.max_score || 1}`} 
                 size="small" 

@@ -194,7 +194,7 @@ export default function ResultsSummary({ attempt, exam, skillScores, overallStat
             </Typography>
 
             <Box sx={{ p: 2, backgroundColor: 'white', border: '1px solid #ddd', borderRadius: 1, overflowX: 'auto' }}>
-              <Box display="flex" gap={0}>
+              <Box display="flex" gap={2}>
                 {/* Y-axis labels */}
                 <Box sx={{ minWidth: 50 }}>
                   <Box sx={{ height: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold', color: '#666' }}>

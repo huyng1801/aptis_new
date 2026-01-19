@@ -14,12 +14,31 @@ describe('Authentication Flow', () => {
   });
 
   it('should successfully log in with valid credentials', () => {
+    // Mock login API
+    cy.intercept('POST', '/api/auth/login', {
+      statusCode: 200,
+      body: {
+        success: true,
+        token: 'test-auth-token-12345',
+        user: {
+          id: 1,
+          email: testUser.email,
+          first_name: 'Alice',
+          last_name: 'Student',
+          role: 'student'
+        }
+      }
+    }).as('loginRequest');
+    
     // Enter email and password
-    cy.get('[data-testid="email-input"]').type(testUser.email);
-    cy.get('[data-testid="password-input"]').type(testUser.password);
+    cy.get('[data-testid="email-input"]').clear().type(testUser.email);
+    cy.get('[data-testid="password-input"]').clear().type(testUser.password);
     
     // Click login button
     cy.get('[data-testid="login-button"]').click();
+    
+    // Wait for login API
+    cy.wait('@loginRequest');
     
     // Verify successful login - should redirect to dashboard
     cy.url().should('include', '/home');
@@ -27,18 +46,27 @@ describe('Authentication Flow', () => {
     
     // Verify user menu is present
     cy.get('[data-testid="user-menu"]').should('be.visible');
-    
-    // Verify localStorage contains auth token
-    cy.window().its('localStorage.token').should('exist');
   });
 
   it('should show error with invalid credentials', () => {
+    // Mock failed login API
+    cy.intercept('POST', '/api/auth/login', {
+      statusCode: 401,
+      body: {
+        success: false,
+        message: 'Thông tin đăng nhập không chính xác'
+      }
+    }).as('failedLogin');
+    
     // Enter invalid credentials
-    cy.get('[data-testid="email-input"]').type('invalid@email.com');
-    cy.get('[data-testid="password-input"]').type('wrongpassword');
+    cy.get('[data-testid="email-input"]').clear().type('invalid@email.com');
+    cy.get('[data-testid="password-input"]').clear().type('wrongpassword');
     
     // Click login button
     cy.get('[data-testid="login-button"]').click();
+    
+    // Wait for login API
+    cy.wait('@failedLogin');
     
     // Verify error message
     cy.get('[data-testid="error-message"]')

@@ -29,7 +29,8 @@ export default function SpeakingQuestion({
   onHideHeader,
   questionNumber,
   totalQuestions,
-  sectionInfo
+  sectionInfo,
+  allQuestions // Add this to access parent question data
 }) {
   // Early return if no question
   if (!question) {
@@ -39,6 +40,17 @@ export default function SpeakingQuestion({
       </Box>
     );
   }
+  
+  // Find parent question if this is a follow-up question
+  const parentQuestion = question.parent_question_id && allQuestions ? 
+    allQuestions.find(q => q.id === question.parent_question_id) : null;
+  
+  console.log('[SpeakingQuestion] Parent question check:', { 
+    hasParentId: !!question.parent_question_id,
+    parentId: question.parent_question_id,
+    foundParent: !!parentQuestion,
+    parentMedia: parentQuestion?.additional_media
+  });
   
   // Recording states
   const [step, setStep] = useState('recording');
@@ -414,25 +426,123 @@ export default function SpeakingQuestion({
         <Box sx={{ display: 'grid', gridTemplateColumns: '300px 1fr 360px', gap: 2, alignItems: 'start' }}>
           {/* COLUMN 1: Media (Image or Audio) */}
           <Box>
-            {question.media_url ? (
-              <Paper sx={{ p: 2, backgroundColor: '#f5f5f5', textAlign: 'center', position: 'sticky', top: '20px' }}>
-                {question.media_url.includes('.mp3') || question.media_url.includes('audio') ? (
-                  <audio 
-                    controls 
-                    style={{ width: '100%' }}
-                    src={getAssetUrl(question.media_url)}
-                  >
-                    Browser does not support audio.
-                  </audio>
-                ) : (
-                  <img 
-                    src={question.media_url} 
-                    alt="Question" 
-                    style={{ maxWidth: '100%', maxHeight: '280px', borderRadius: '4px' }}
-                  />
-                )}
-              </Paper>
-            ) : null}
+            {/* Render images from additional_media (SPEAKING section unified structure) */}
+            {(() => {
+              // For follow-up questions, use parent question's media
+              const sourceQuestion = parentQuestion || question;
+              
+              // Handle both string and already parsed JSON
+              let additionalMedia = sourceQuestion.additional_media;
+              if (typeof additionalMedia === 'string') {
+                try {
+                  additionalMedia = JSON.parse(additionalMedia);
+                } catch (e) {
+                  console.error('[SpeakingQuestion] Failed to parse additional_media:', e);
+                  additionalMedia = null;
+                }
+              }
+              
+              console.log('[SpeakingQuestion] Media rendering:', { 
+                questionId: question.id,
+                parentQuestionId: question.parent_question_id,
+                usingParent: !!parentQuestion,
+                sourceQuestionId: sourceQuestion.id,
+                additionalMedia
+              });
+              
+              if (additionalMedia && Array.isArray(additionalMedia)) {
+                return (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {parentQuestion && (
+                      <Typography variant="caption" sx={{ 
+                        color: 'primary.main', 
+                        fontWeight: 'bold', 
+                        mb: 1,
+                        padding: '4px 8px',
+                        backgroundColor: 'primary.50',
+                        borderRadius: 1,
+                        textAlign: 'center'
+                      }}>
+                        📖 Refer to the same image(s) from the previous question
+                      </Typography>
+                    )}
+                    {additionalMedia.map((media, index) => (
+                      <Paper key={index} sx={{ p: 2, backgroundColor: '#f5f5f5', textAlign: 'center', position: 'sticky', top: '20px' }}>
+                        {media.type === 'image' ? (
+                          <Box>
+                            {media.description && (
+                              <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'text.secondary', fontWeight: 'bold' }}>
+                                {media.description}
+                              </Typography>
+                            )}
+                            <img 
+                              src={media.url} 
+                              alt={media.description || 'Question media'} 
+                              style={{ maxWidth: '100%', maxHeight: '280px', borderRadius: '4px', objectFit: 'cover' }}
+                              onError={(e) => { e.target.src = 'https://via.placeholder.com/280x280?text=Image+Not+Found'; }}
+                            />
+                          </Box>
+                        ) : media.type === 'audio' ? (
+                          <Box>
+                            {media.description && (
+                              <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'text.secondary', fontWeight: 'bold' }}>
+                                {media.description}
+                              </Typography>
+                            )}
+                            <audio 
+                              controls 
+                              style={{ width: '100%' }}
+                              src={media.url}
+                            >
+                              Browser does not support audio.
+                            </audio>
+                          </Box>
+                        ) : null}
+                      </Paper>
+                    ))}
+                  </Box>
+                );
+              } else if (sourceQuestion.media_url) {
+                // Fallback to old media_url for backward compatibility
+                return (
+                  <Paper sx={{ p: 2, backgroundColor: '#f5f5f5', textAlign: 'center', position: 'sticky', top: '20px' }}>
+                    {parentQuestion && (
+                      <Typography variant="caption" sx={{ 
+                        color: 'primary.main', 
+                        fontWeight: 'bold', 
+                        mb: 1,
+                        display: 'block'
+                      }}>
+                        📖 Refer to the same image from the previous question
+                      </Typography>
+                    )}
+                    {sourceQuestion.media_url.includes('.mp3') || sourceQuestion.media_url.includes('audio') ? (
+                      <audio 
+                        controls 
+                        style={{ width: '100%' }}
+                        src={getAssetUrl(sourceQuestion.media_url)}
+                      >
+                        Browser does not support audio.
+                      </audio>
+                    ) : (
+                      <img 
+                        src={sourceQuestion.media_url} 
+                        alt="Question" 
+                        style={{ maxWidth: '100%', maxHeight: '280px', borderRadius: '4px' }}
+                      />
+                    )}
+                  </Paper>
+                );
+              } else {
+                return (
+                  <Paper sx={{ p: 2, backgroundColor: '#f9f9f9', textAlign: 'center', border: '2px dashed #ccc' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      No media available for this question
+                    </Typography>
+                  </Paper>
+                );
+              }
+            })()}
           </Box>
 
           {/* COLUMN 2: Question Content & Requirements */}

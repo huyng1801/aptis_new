@@ -4,7 +4,6 @@ const {
   SkillType, 
   QuestionItem, 
   QuestionOption, 
-  QuestionSampleAnswer,
   Exam,
   User,
   sequelize 
@@ -105,9 +104,6 @@ class PracticeController {
         }, {
           model: QuestionOption,
           as: 'options'
-        }, {
-          model: QuestionSampleAnswer,
-          as: 'sampleAnswers'
         }]
       });
 
@@ -119,8 +115,7 @@ class PracticeController {
         content: question.content,
         media_url: question.media_url,
         items: question.items || [],
-        options: question.options || [],
-        sample_answers: question.sampleAnswers || []
+        options: question.options || []
       }));
 
       res.json({
@@ -198,11 +193,6 @@ class PracticeController {
             model: QuestionOption,
             as: 'options',
             required: false
-          },
-          {
-            model: QuestionSampleAnswer,
-            as: 'sampleAnswers',
-            required: false
           }
         ],
         order: sequelize.random(),
@@ -228,8 +218,7 @@ class PracticeController {
         media_url: question.media_url,
         duration_seconds: question.duration_seconds,
         items: question.items || [],
-        options: question.options || [],
-        sample_answers: question.sampleAnswers || []
+        options: question.options || []
       }));
 
       res.json({
@@ -284,10 +273,6 @@ class PracticeController {
           {
             model: QuestionType,
             attributes: ['type_name']
-          },
-          {
-            model: QuestionSampleAnswer,
-            as: 'sampleAnswers'
           },
           {
             model: QuestionOption,

@@ -14,40 +14,23 @@ export default function ReadingOrderingQuestion({ question, onAnswerChange }) {
   const [orderedItems, setOrderedItems] = useState([]);
 
   useEffect(() => {
-    // Check if there's existing answer
-    if (question.answer_data?.answer_json) {
-      try {
-        const parsedData = JSON.parse(question.answer_data.answer_json);
-        if (parsedData.ordered_items && Array.isArray(parsedData.ordered_items)) {
-          setOrderedItems(parsedData.ordered_items);
-          // Remove ordered items from source
-          const orderedIds = parsedData.ordered_items.map(item => item.id);
-          const remaining = question.items
-            .filter(item => !orderedIds.includes(item.id))
-            .map(item => ({
-              id: item.id,
-              text: item.item_text,
-              original_order: item.item_order
-            }));
-          setSourceItems(remaining);
-          return;
-        }
-      } catch (error) {
-        console.error('[ReadingOrderingQuestion] Error parsing answer_json:', error);
-      }
-    }
-    
+    // Filter out instruction items (usually item_order === 0 or answer_text === 0)
+    const orderableItems = question.items?.filter(item => {
+      const position = parseInt(item.answer_text || item.item_order || 0);
+      return position > 0;
+    }) || [];
+
     // Initialize all items in source (shuffled order from backend)
-    if (question.items && question.items.length > 0) {
-      const items = question.items.map(item => ({
+    if (orderableItems && orderableItems.length > 0) {
+      const items = orderableItems.map(item => ({
         id: item.id,
         text: item.item_text,
-        original_order: item.item_order
+        original_order: parseInt(item.answer_text || item.item_order || 0)
       }));
       setSourceItems(items);
       setOrderedItems([]);
     }
-  }, [question.id, question.answer_data?.answer_json, question.items]);
+  }, [question.id, question.items]);
 
   const onDragEnd = (result) => {
     const { source, destination } = result;

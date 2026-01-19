@@ -1,241 +1,130 @@
 
-// Cấu hình AI - Dùng Google Gemini > Groq > Fallback
+// Cấu hình AI - Dùng CHỈ OpenAI ChatGPT (Best for English assessment)
 require('dotenv').config();
 
 // ========================================
-// GOOGLE GEMINI CONFIGURATION (Recommended) 🎯
+// OPENAI CHATGPT CONFIGURATION (PRIMARY - ONLY PROVIDER)
 // ========================================
-const GEMINI_CONFIG = {
-  apiKey: process.env.GOOGLE_GEMINI_API_KEY,
-  model: process.env.GOOGLE_GEMINI_MODEL || 'gemini-2.0-flash-exp', // Most accurate & fastest
-  baseURL: 'https://generativelanguage.googleapis.com/v1beta/models',
-  temperature: 0.3, // Lower = more consistent, deterministic
+const OPENAI_CONFIG = {
+  apiKey: process.env.OPENAI_API_KEY,
+  // Best models for English assessment:
+  // - gpt-4o: Latest, most capable (recommended)
+  // - gpt-4: Fast and accurate
+  // - gpt-4: Most stable for instruction following
+  model: process.env.OPENAI_MODEL || 'gpt-4',
+  baseURL: 'https://api.openai.com/v1',
+  temperature: 1, // Lower for more consistent, deterministic scoring
   maxTokens: 1024, // Enough for scoring JSON responses
 };
 
-// ========================================
-// GROQ CONFIGURATION (Cloud) - Fallback
-// ========================================
-const GROQ_CONFIG = {
-  apiKey: process.env.GROQ_API_KEY,
-  model: process.env.GROQ_MODEL || 'mixtral-8x7b-32768',
-  baseURL: 'https://api.groq.com/openai/v1',
-  temperature: 0.3,
-  maxTokens: 1024,
-};
-
 // Determine which AI provider to use
-let useGemini = !!GEMINI_CONFIG.apiKey;
-let useGroq = !!GROQ_CONFIG.apiKey && !useGemini;
+let useOpenAI = !!OPENAI_CONFIG.apiKey;
 
 // Kiểm tra AI provider khả dụng
 const checkAIProviders = async () => {
-  if (useGemini) {
-    console.log('[AI Config] ✅ Google Gemini API configured');
-    console.log('[AI Config] 🤖 Model: ' + GEMINI_CONFIG.model);
-    return;
-  }
-
-  if (useGroq) {
-    console.log('[AI Config] ✅ Groq API configured (Fallback)');
-    console.log('[AI Config] 🤖 Model: ' + GROQ_CONFIG.model);
+  if (useOpenAI) {
+    console.log('[AI Config] ✅ OpenAI ChatGPT API configured (ONLY PROVIDER)');
+    console.log('[AI Config] 🤖 Model: ' + OPENAI_CONFIG.model);
+    console.log('[AI Config] 🎯 Purpose: English Assessment (Most Accurate)');
     return;
   }
 
   console.log('[AI Config] ❌ No AI provider available');
-  console.log('[AI Config] 💡 Hãy thiết lập GOOGLE_GEMINI_API_KEY hoặc GROQ_API_KEY');
+  console.log('[AI Config] 💡 Please set OPENAI_API_KEY in .env file');
+  console.log('[AI Config] 📖 Get API Key: https://platform.openai.com/api-keys');
 };
 
 // Check providers on startup
 checkAIProviders();
 
 /**
- * Gọi Google Gemini API (Cloud-based, most accurate)
- * @param {string} prompt - Prompt để gửi
- * @returns {Promise<string>} Kết quả từ model
+ * Gọi Google Gemini API (Removed - Using OpenAI only)
+ * This function is deprecated and kept for reference only
  */
 const callGemini = async (prompt) => {
-  if (!GEMINI_CONFIG.apiKey) {
-    throw new Error('GOOGLE_GEMINI_API_KEY not configured');
-  }
-
-  try {
-    console.log(`[Gemini] Calling model: ${GEMINI_CONFIG.model}`);
-    
-    const response = await fetch(
-      `${GEMINI_CONFIG.baseURL}/${GEMINI_CONFIG.model}:generateContent?key=${GEMINI_CONFIG.apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: GEMINI_CONFIG.temperature,
-            maxOutputTokens: GEMINI_CONFIG.maxTokens,
-            topP: 0.95,
-            topK: 40,
-          }
-        }),
-        timeout: 300000 // 5 minute timeout
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      const errorMsg = errorData?.error?.message || `HTTP ${response.status}`;
-      throw new Error(`Gemini API error: ${errorMsg}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error('No response from Gemini');
-    }
-
-    const content = data.candidates[0]?.content?.parts?.[0]?.text || '';
-    console.log('[Gemini] ✅ Response received');
-    return content;
-  } catch (error) {
-    console.error('[Gemini] ❌ Error:', error.message);
-    throw error;
-  }
+  throw new Error('Gemini API is no longer supported. Using OpenAI ChatGPT exclusively.');
 };
 
 /**
- * Gọi Groq API (Cloud-based, very fast)
+ * Gọi OpenAI ChatGPT API (Cloud-based, most capable)
  * @param {string} prompt - Prompt để gửi
+ * @param {object} options - Options for the API call
  * @returns {Promise<string>} Kết quả từ model
  */
-const callGroq = async (prompt) => {
-  if (!GROQ_CONFIG.apiKey) {
-    throw new Error('GROQ_API_KEY not configured');
+const callOpenAI = async (prompt, options = {}) => {
+  if (!OPENAI_CONFIG.apiKey) {
+    throw new Error('OPENAI_API_KEY not configured');
   }
 
   try {
-    console.log(`[Groq] Calling model: ${GROQ_CONFIG.model}`);
+    console.log(`[OpenAI] Calling model: ${OPENAI_CONFIG.model}`);
     
-    const response = await fetch(`${GROQ_CONFIG.baseURL}/chat/completions`, {
+    // Prepare request body
+    const requestBody = {
+      model: OPENAI_CONFIG.model,
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_completion_tokens: options.max_completion_tokens || OPENAI_CONFIG.maxTokens,
+      temperature: options.temperature !== undefined ? options.temperature : OPENAI_CONFIG.temperature,
+    };
+    
+    const response = await fetch(`${OPENAI_CONFIG.baseURL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_CONFIG.apiKey}`
+        'Authorization': `Bearer ${OPENAI_CONFIG.apiKey}`
       },
-      body: JSON.stringify({
-        model: GROQ_CONFIG.model,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: GROQ_CONFIG.temperature,
-        max_tokens: GROQ_CONFIG.maxTokens,
-      }),
+      body: JSON.stringify(requestBody),
       timeout: 300000 // 5 minute timeout
     });
 
     if (!response.ok) {
       const errorData = await response.json();
       const errorMsg = errorData?.error?.message || `HTTP ${response.status}`;
-      throw new Error(`Groq API error: ${errorMsg}`);
+      throw new Error(`OpenAI API error: ${errorMsg}`);
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
-    console.log('[Groq] ✅ Response received');
+    
+    // Debug logging
+    if (!content || content.trim().length === 0) {
+      console.log('[OpenAI] ⚠️  Empty content received. Full response:', JSON.stringify(data, null, 2));
+    }
+    
+    console.log('[OpenAI] ✅ Response received');
     return content;
   } catch (error) {
-    console.error('[Groq] ❌ Error:', error.message);
+    console.error('[OpenAI] ❌ Error:', error.message);
     throw error;
   }
 };
 
 /**
- * Gọi Ollama API (local inference)
- * @param {string} prompt - Prompt để gửi tới model
- * @param {object} options - Tùy chọn (model, temperature, v.v.)
- * @returns {Promise<string>} Kết quả từ model
- */
-const callOllama = async (prompt, options = {}) => {
-  const model = options.model || OLLAMA_CONFIG.model;
-  const temperature = options.temperature ?? OLLAMA_CONFIG.temperature;
-  
-  try {
-    console.log(`[Ollama] Calling model: ${model}`);
-    const response = await fetch(`${OLLAMA_CONFIG.baseURL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        prompt,
-        stream: false,
-        options: {
-          temperature,
-          num_predict: options.max_tokens || OLLAMA_CONFIG.num_predict,
-        }
-      }),
-      timeout: 300000 // 5 minute timeout for local inference
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Ollama API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('[Ollama] ✅ Response received');
-    return data.response || '';
-  } catch (error) {
-    console.error('[Ollama] ❌ Error:', error.message);
-    throw error;
-  }
-};
-
-
-
-/**
- * Gọi AI service (Gemini > Groq fallback)
+ * Gọi AI service - OpenAI ChatGPT ONLY
  * @param {string} prompt - Prompt để gửi
  * @param {object} options - Tùy chọn
  * @returns {Promise<string>} Kết quả từ model
  */
 const callAI = async (prompt, options = {}) => {
-  if (useGemini) {
-    console.log('[AI] Calling Google Gemini...');
-    return callGemini(prompt);
-  } else if (useGroq) {
-    console.log('[AI] Calling Groq (fallback)...');
-    return callGroq(prompt);
-  } else {
-    throw new Error('No AI provider available. Please configure GOOGLE_GEMINI_API_KEY or GROQ_API_KEY.');
-  }
+  console.log('[AI] Calling OpenAI ChatGPT (Only provider)...');
+  return callOpenAI(prompt, options);
 };
 
 // Export các thành phần cấu hình AI
 module.exports = {
-  // Gemini (Cloud)
-  callGemini,
-  GEMINI_CONFIG,
+  // OpenAI ChatGPT (ONLY PROVIDER - Best for English assessment)
+  callOpenAI,
+  OPENAI_CONFIG,
   
-  // Groq (Cloud fallback)
-  callGroq,
-  GROQ_CONFIG,
-  
-  // AI provider chung (Gemini > Groq)
+  // AI service (calls OpenAI directly)
   callAI,
   checkAIProviders,
   
   // Status
-  isUsingGemini: () => useGemini,
-  isUsingGroq: () => useGroq,
+  isUsingOpenAI: () => useOpenAI,
 };

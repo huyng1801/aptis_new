@@ -225,6 +225,7 @@ export default function SpeakingSection({
           questionNumber={sectionInfo.globalQuestion}
           totalQuestions={questions.length}
           sectionInfo={sectionInfo}
+          allQuestions={questions}
         />
       </Paper>
 

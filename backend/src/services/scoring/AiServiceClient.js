@@ -1,9 +1,10 @@
 /**
  * AI Service Client
  * Handles AI API calls and response parsing
+ * Uses OpenAI ChatGPT exclusively for best English assessment accuracy
  */
 
-const { callAI, GEMINI_CONFIG, GROQ_CONFIG, isUsingGemini, isUsingGroq } = require('../../config/ai');
+const { callAI, OPENAI_CONFIG, isUsingOpenAI } = require('../../config/ai');
 const { AI_SCORING_CONFIG } = require('../../utils/constants');
 const { delay } = require('../../utils/helpers');
 
@@ -19,13 +20,16 @@ class AiServiceClient {
         console.log(`[callAiWithRetry] Attempt ${attempt}/${maxRetries}: Calling AI service...`);
 
         // 🚀 OPTIMIZED: Minimal system prompt = faster processing
-        const systemPrompt = 'Expert APTIS examiner. Respond JSON only.';
+        const systemPrompt = 'Expert APTIS English assessor. Respond JSON only. Be precise with CEFR levels.';
         const fullPrompt = `${systemPrompt}\n\n${prompt}`;
         
-        const content = await callAI(fullPrompt, {
-          temperature: isUsingGemini() ? GEMINI_CONFIG.temperature : (isUsingGroq() ? GROQ_CONFIG.temperature : 0.3),
-          max_tokens: isUsingGemini() ? GEMINI_CONFIG.maxTokens : (isUsingGroq() ? GROQ_CONFIG.maxTokens : 512)
-        });
+        // Prepare options - handle models that don't support temperature
+        const options = {
+          max_completion_tokens: OPENAI_CONFIG.maxTokens,
+          temperature: OPENAI_CONFIG.temperature
+        };
+        
+        const content = await callAI(fullPrompt, options);
 
         if (!content || content.trim().length === 0) {
           throw new Error('No response content from AI service');
@@ -93,17 +97,24 @@ class AiServiceClient {
       console.log(`[parseAiResponse] ✅ Successfully parsed AI response:`, parsed);
 
       // Validate required fields
+      if (parsed.score === null || parsed.score === undefined) {
+        throw new Error('Missing required field: score');
+      }
       if (!parsed.cefr_level) {
-        throw new Error('Missing required field: cefr_level');
+        console.warn('[parseAiResponse] ⚠️ Missing cefr_level, will use fallback');
       }
 
-      // Convert CEFR level to numeric score using the converter
-      const CefrConverter = require('./CefrConverterService');
-      const score = CefrConverter.convertCefrToScore(parsed.cefr_level, 'GENERAL', maxScore);
+      // Use AI's direct score (already in 0-maxScore range)
+      const score = parseFloat(parsed.score);
+      
+      // Validate score is within valid range
+      if (isNaN(score) || score < 0 || score > maxScore) {
+        throw new Error(`Invalid score: ${parsed.score} (must be 0-${maxScore})`);
+      }
 
       return {
-        score: Math.max(0, Math.min(maxScore, score)),
-        cefrLevel: parsed.cefr_level,
+        score: Math.max(0, Math.min(maxScore, score)), // Ensure within bounds
+        cefrLevel: parsed.cefr_level || 'N/A',
         comment: parsed.comment || 'No comment provided',
         strengths: parsed.strengths || 'N/A',
         weaknesses: parsed.weaknesses || 'N/A',
@@ -115,19 +126,25 @@ class AiServiceClient {
       console.error(`[parseAiResponse] Raw response length: ${responseText.length}`);
 
       // Enhanced fallback parsing - try to extract individual fields
+      const scoreMatch = responseText.match(/["\']score["\']:\s*([0-9]+\.?[0-9]*)/i);
       const cefrMatch = responseText.match(/["\']cefr_level["\']:\s*["\']([ABC][12](?:\.[12])?)["\']?/i);
-      const commentMatch = responseText.match(/["\']comment["\']:\s*["\']([^"']*)["\']?/i);
-
-      const suggestionsMatch = responseText.match(/["\']suggestions["\']:\s*(?:["\']([^"']*)["\']?|\[([^\]]*)\])/i);
+      const commentMatch = responseText.match(/["\']comment["\']:\s*["\']([^"\']*)["\'\']?/i);
+      const suggestionsMatch = responseText.match(/["\']suggestions["\']:\s*(?:["\']([^"\']*)["\'\']?|\[([^\]]*)\])/i);
       
       let fallbackScore = maxScore * 0.5; // Default to 50%
-      let extractedCefr = 'B1';
+      let extractedCefr = 'N/A';
 
+      if (scoreMatch && scoreMatch[1]) {
+        const extractedScore = parseFloat(scoreMatch[1]);
+        if (!isNaN(extractedScore) && extractedScore >= 0 && extractedScore <= maxScore) {
+          fallbackScore = extractedScore;
+          console.log(`[parseAiResponse] 🔧 Extracted score: ${fallbackScore}`);
+        }
+      }
+      
       if (cefrMatch && cefrMatch[1]) {
-        const CefrConverter = require('./CefrConverterService');
         extractedCefr = cefrMatch[1].toUpperCase();
-        fallbackScore = CefrConverter.convertCefrToScore(extractedCefr, 'GENERAL', maxScore);
-        console.log(`[parseAiResponse] 🔧 Extracted CEFR level: ${extractedCefr} -> Score: ${fallbackScore}`);
+        console.log(`[parseAiResponse] 🔧 Extracted CEFR level: ${extractedCefr}`);
       }
 
       return {
@@ -168,31 +185,22 @@ class AiServiceClient {
    * Get AI service status and configuration
    */
   getServiceStatus() {
-    if (isUsingGemini()) {
+    if (isUsingOpenAI()) {
       return {
         available: true,
-        provider: 'Gemini',
-        model: GEMINI_CONFIG.model,
+        provider: 'OpenAI ChatGPT',
+        model: OPENAI_CONFIG.model,
+        purpose: 'English Assessment (Most Accurate)',
         maxRetries: AI_SCORING_CONFIG.MAX_RETRIES,
         retryDelay: AI_SCORING_CONFIG.RETRY_DELAY,
-        temperature: GEMINI_CONFIG.temperature,
-        maxTokens: GEMINI_CONFIG.maxTokens
-      };
-    } else if (isUsingGroq()) {
-      return {
-        available: true,
-        provider: 'Groq',
-        model: GROQ_CONFIG.model,
-        maxRetries: AI_SCORING_CONFIG.MAX_RETRIES,
-        retryDelay: AI_SCORING_CONFIG.RETRY_DELAY,
-        temperature: GROQ_CONFIG.temperature,
-        maxTokens: GROQ_CONFIG.maxTokens
+        temperature: OPENAI_CONFIG.temperature,
+        maxTokens: OPENAI_CONFIG.maxTokens
       };
     } else {
       return {
         available: false,
         provider: 'None',
-        error: 'No AI provider configured'
+        error: 'OpenAI ChatGPT not configured'
       };
     }
   }

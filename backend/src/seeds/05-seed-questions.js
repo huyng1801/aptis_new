@@ -3,7 +3,6 @@ const {
   Question,
   QuestionItem,
   QuestionOption,
-  QuestionSampleAnswer,
   QuestionType,
   AptisType,
   User,
@@ -258,11 +257,11 @@ Match the following questions with the correct person:
   });
 
   const questions = [
-    { text: 'Who thinks reading factual books is boring?', correct: 'A' },
-    { text: 'Who reads more than another family member?', correct: 'B' },
-    { text: 'Who has limited time for reading?', correct: 'A' },
-    { text: 'Who has difficulty in finishing a book?', correct: 'D' },
-    { text: 'Who reads many books at once?', correct: 'C' }
+    { text: 'Who thinks reading factual books is boring?', correct: 'Person A' },
+    { text: 'Who reads more than another family member?', correct: 'Person B' },
+    { text: 'Who has limited time for reading?', correct: 'Person A' },
+    { text: 'Who has difficulty in finishing a book?', correct: 'Person D' },
+    { text: 'Who reads many books at once?', correct: 'Person C' }
   ];
 
   // Create options once (question-level)
@@ -536,6 +535,20 @@ async function seedListeningQuestions(aptisType, teacher) {
   ];
   const musicOptions = ['After waking up', 'While studying', 'To relax', 'While reading', 'While exercising', 'Before sleeping'];
 
+  // Create options first
+  const options = [];
+  for (let i = 0; i < musicOptions.length; i++) {
+    const option = await QuestionOption.create({
+      question_id: question2.id,
+      item_id: null,
+      option_text: musicOptions[i],
+      option_order: i + 1,
+      is_correct: false,
+    });
+    options.push(option);
+  }
+
+  // Create items with correct option mapping
   for (let i = 0; i < 6; i++) {
     // Generate individual speaker audio
     console.log(`[Seed]     Generating audio for ${speakers[i]}...`);
@@ -546,17 +559,7 @@ async function seedListeningQuestions(aptisType, teacher) {
       item_text: speakers[i],
       item_order: i + 1,
       media_url: speakerAudioInfo.url,
-    });
-  }
-
-  // Create options for all speakers
-  for (let i = 0; i < musicOptions.length; i++) {
-    await QuestionOption.create({
-      question_id: question2.id,
-      item_id: null,
-      option_text: musicOptions[i],
-      option_order: i + 1,
-      is_correct: false,
+      correct_option_id: options[i].id, // Speaker A -> After waking up, Speaker B -> While studying, etc.
     });
   }
 
@@ -587,23 +590,28 @@ async function seedListeningQuestions(aptisType, teacher) {
     'Music can be used to manipulate people\'s feelings.'
   ];
 
-  for (let i = 0; i < 4; i++) {
-    await QuestionItem.create({
-      question_id: question3.id,
-      item_text: statements[i],
-      item_order: i + 1,
-    });
-  }
-
-  // Create options for statement matching
+  // Create options first
   const statementOptions = ['Man', 'Woman', 'Both'];
+  const statementOptionsData = [];
   for (let i = 0; i < 3; i++) {
-    await QuestionOption.create({
+    const option = await QuestionOption.create({
       question_id: question3.id,
       item_id: null,
       option_text: statementOptions[i],
       option_order: i + 1,
       is_correct: false,
+    });
+    statementOptionsData.push(option);
+  }
+
+  // Create items with correct mappings based on the discussion
+  const correctAnswers = [0, 1, 0, 1]; // Man, Woman, Man, Woman based on the discussion content
+  for (let i = 0; i < 4; i++) {
+    await QuestionItem.create({
+      question_id: question3.id,
+      item_text: statements[i],
+      item_order: i + 1,
+      correct_option_id: statementOptionsData[correctAnswers[i]].id,
     });
   }
 
@@ -815,76 +823,81 @@ async function seedSpeakingQuestions(aptisType, teacher) {
     status: 'active',
   });
 
-  // ===== SECTION 2: Picture Description (3 questions) =====
-  // Q4: Describe a park scene
-  await Question.create({
+  // ===== SECTION 2: Picture Description (3 questions - all relate to same image) =====
+  // Q4: Primary question - Describe a park scene (shows image)
+  const q4 = await Question.create({
     question_type_id: speakingDescriptionType.id,
     aptis_type_id: aptisType.id,
     difficulty: 'medium',
-    content: 'Look at the picture of a park.\n\nDescribe:\n- The people and what they are doing\n- The buildings and nature\n- The overall atmosphere and season\n\n1 minute to prepare, 1.5 minutes to speak.',
-    media_url: 'https://picsum.photos/640/480?random=1',
+    content: 'Look at the picture of a park.\n\nDescribe:\n- The people and what they are doing',
+    additional_media: JSON.stringify([
+      { type: 'image', description: 'Park scene', url: 'https://picsum.photos/640/480?random=1' }
+    ]),
     duration_seconds: 150,
     created_by: teacher.id,
     status: 'active',
   });
 
-  // Q5: Describe a busy street
+  // Q5: Follow-up question - Still refer to same park image from Q4
   await Question.create({
     question_type_id: speakingDescriptionType.id,
     aptis_type_id: aptisType.id,
     difficulty: 'medium',
-    content: 'Look at the picture of a busy city street.\n\nDescribe:\n- The people and their activities\n- The vehicles and buildings\n- The time of day and weather\n\n1 minute to prepare, 1.5 minutes to speak.',
-    media_url: 'https://picsum.photos/640/480?random=2',
-    duration_seconds: 150,
+    content: 'What would you like to do there?',
+    parent_question_id: q4.id,
+    duration_seconds: 90,
     created_by: teacher.id,
     status: 'active',
   });
 
-  // Q6: Describe a restaurant scene
+  // Q6: Follow-up question - Still refer to same park image from Q4
   await Question.create({
     question_type_id: speakingDescriptionType.id,
     aptis_type_id: aptisType.id,
     difficulty: 'medium',
-    content: 'Look at the picture of a restaurant.\n\nDescribe:\n- What people are doing\n- The interior and decoration\n- The type of food or service you see\n\n1 minute to prepare, 1.5 minutes to speak.',
-    media_url: 'https://picsum.photos/640/480?random=3',
-    duration_seconds: 150,
+    content: 'Looking back at the park:\n\nNow tell me:\n- What activities could families do there?\n- How often would you visit this place?\n- What would you change to improve it?\n\n10 seconds to prepare, 30 seconds to speak.',
+    parent_question_id: q4.id,
+    duration_seconds: 40,
     created_by: teacher.id,
     status: 'active',
   });
 
-  // ===== SECTION 3: Comparison (3 questions) =====
-  // Q7: Compare transportation methods
-  await Question.create({
+  // ===== SECTION 3: Comparison (3 questions - Q7 shows 2 images, Q8-Q9 refer to those same images) =====
+  // Q7: Primary question - Compare two transportation methods (shows 2 images)
+  const q7 = await Question.create({
     question_type_id: speakingComparisonType.id,
     aptis_type_id: aptisType.id,
     difficulty: 'medium',
     content: 'Look at the two pictures showing different ways to travel.\n\nCompare them:\n- What are the similarities and differences?\n- Which method is faster and why?\n- Which would you prefer and why?\n\n1 minute to prepare, 1.5 minutes to speak.',
-    media_url: 'https://picsum.photos/640/480?random=4',
+    additional_media: JSON.stringify([
+      { type: 'image', description: 'Transportation method A', url: 'https://picsum.photos/640/480?random=4' },
+      { type: 'image', description: 'Transportation method B', url: 'https://picsum.photos/640/480?random=41' }
+    ]),
     duration_seconds: 150,
     created_by: teacher.id,
     status: 'active',
   });
 
-  // Q8: Compare two ways of working
+  // Q8: Follow-up question - Still refer to same 2 transportation images from Q7
   await Question.create({
     question_type_id: speakingComparisonType.id,
     aptis_type_id: aptisType.id,
     difficulty: 'medium',
-    content: 'Look at the two pictures showing different work environments.\n\nCompare them:\n- Describe what you see in each picture\n- What are the advantages and disadvantages of each?\n- Which would you prefer and why?\n\n1 minute to prepare, 1.5 minutes to speak.',
-    media_url: 'https://picsum.photos/640/480?random=5',
-    duration_seconds: 150,
+    content: 'Thinking about the two transportation methods you just compared:\n\nDiscuss:\n- Which method is better for the environment and why?\n- What are the costs associated with each method?\n- Which do you use more often and why?\n\n30 seconds to prepare, 1 minute to speak.',
+    parent_question_id: q7.id,
+    duration_seconds: 90,
     created_by: teacher.id,
     status: 'active',
   });
 
-  // Q9: Compare two leisure activities
+  // Q9: Follow-up question - Still refer to same 2 transportation images from Q7
   await Question.create({
     question_type_id: speakingComparisonType.id,
     aptis_type_id: aptisType.id,
     difficulty: 'medium',
-    content: 'Look at the two pictures showing different leisure activities.\n\nCompare them:\n- What are people doing in each picture?\n- What are the benefits of each activity?\n- Which activity would you enjoy more and why?\n\n1 minute to prepare, 1.5 minutes to speak.',
-    media_url: 'https://picsum.photos/640/480?random=6',
-    duration_seconds: 150,
+    content: 'Based on the two transportation methods shown:\n\nDescribe:\n- How would cities improve public transportation in the future?\n- What are the advantages for travelers in the long term?\n- If you could improve one method, what would you change?\n\n30 seconds to prepare, 1 minute to speak.',
+    parent_question_id: q7.id,
+    duration_seconds: 90,
     created_by: teacher.id,
     status: 'active',
   });
@@ -896,7 +909,9 @@ async function seedSpeakingQuestions(aptisType, teacher) {
     aptis_type_id: aptisType.id,
     difficulty: 'hard',
     content: 'Topic: Technology in Education\n\nDiscuss:\n- How has technology changed the way people learn?\n- What are the advantages and disadvantages of online learning?\n- What will be the future of education?\n\n1 minute to prepare, 2 minutes to speak.',
-    media_url: 'https://picsum.photos/640/480?random=7',
+    additional_media: JSON.stringify([
+      { type: 'image', description: 'Technology in classroom', url: 'https://picsum.photos/640/480?random=7' }
+    ]),
     duration_seconds: 180,
     created_by: teacher.id,
     status: 'active',

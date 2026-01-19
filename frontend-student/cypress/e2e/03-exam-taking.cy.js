@@ -4,6 +4,64 @@
  */
 describe('Exam Taking Flow', () => {
   beforeEach(() => {
+    // Mock auth check
+    cy.intercept('GET', '/api/auth/me', {
+      statusCode: 200,
+      body: {
+        user: {
+          id: 1,
+          email: 'student1@aptis.local',
+          first_name: 'Alice',
+          last_name: 'Student',
+          role: 'student'
+        }
+      }
+    });
+    
+    // Mock exams list API
+    cy.intercept('GET', '/api/student/exams*', {
+      statusCode: 200,
+      body: {
+        exams: [
+          {
+            id: 1,
+            title: 'APTIS Full Test 1',
+            description: 'Complete APTIS exam',
+            duration_minutes: 120,
+            total_questions: 50
+          },
+          {
+            id: 2,
+            title: 'APTIS Full Test 2',
+            description: 'Complete APTIS exam',
+            duration_minutes: 120,
+            total_questions: 50
+          },
+          {
+            id: 3,
+            title: 'APTIS Reading Practice',
+            description: 'Reading skill practice',
+            duration_minutes: 30,
+            total_questions: 20
+          },
+          {
+            id: 4,
+            title: 'APTIS Writing Practice',
+            description: 'Writing skill practice',
+            duration_minutes: 40,
+            total_questions: 15
+          },
+          {
+            id: 5,
+            title: 'APTIS Speaking Practice',
+            description: 'Speaking skill practice',
+            duration_minutes: 30,
+            total_questions: 12
+          }
+        ]
+      }
+    });
+    
     // Login and navigate to exams page
     cy.login('student1@aptis.local', 'password123');
     cy.visit('/exams');

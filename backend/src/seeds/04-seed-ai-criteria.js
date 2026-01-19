@@ -35,110 +35,94 @@ async function loadReferences() {
 // ========================================
 function buildWritingCriteria(adminId, aptisId, questionTypes) {
   return [
-    // Task 1 - A1 Form Filling (0-4 scale)
+    // Task 1 - Word-level Writing (0-3 scale)
     {
       aptis_type_id: aptisId,
       question_type_id: questionTypes.WRITING_SHORT.id,
-      criteria_name: 'Overall Impression',
+      criteria_name: 'Task Fulfilment and Communicative Competence',
       created_by: adminId,
-      rubric_prompt: 'Evaluate overall effectiveness of A1-level form-filling response.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.WRITING_SHORT.id,
-      criteria_name: 'Task Completion',
-      created_by: adminId,
-      rubric_prompt: 'Assess if all required gaps are filled with appropriate A1-level vocabulary.',
+      rubric_prompt: `APTIS Writing Part 1 - Word-level writing (0-3 scale):
+
+3 (above A1): Fully intelligible responses for all five questions. Test-taker completely achieves the task.
+
+2 (A1.2): Three or four of the responses are intelligible. Errors impede understanding in one or two responses.
+
+1 (A1.1): One or two of the responses are intelligible. Errors impede understanding in two or three responses.
+
+0 (A0): No intelligible responses.
+
+Assessment focus: Simple word/phrase completion with appropriate vocabulary for basic information gaps.`,
     },
 
-    // Task 2 - A2 Form Filling (0-5 scale, 20-30 words)
+    // Task 2 - Short Text Writing (0-5 scale, 20-30 words)
     {
       aptis_type_id: aptisId,
       question_type_id: questionTypes.WRITING_FORM.id,
-      criteria_name: 'Overall Impression',
+      criteria_name: 'Task Fulfilment and Topic Relevance',
       created_by: adminId,
-      rubric_prompt: 'Evaluate overall effectiveness at A2 level with appropriate short sentences.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.WRITING_FORM.id,
-      criteria_name: 'Relevance of Content to Topic',
-      created_by: adminId,
-      rubric_prompt: 'Assess how well response addresses the question and maintains topic relevance.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.WRITING_FORM.id,
-      criteria_name: 'Task Completion',
-      created_by: adminId,
-      rubric_prompt: 'Evaluate if response meets 20-30 word count requirement and demonstrates A2-level completion.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.WRITING_FORM.id,
-      criteria_name: 'Grammar and Vocabulary',
-      created_by: adminId,
-      rubric_prompt: 'Assess basic grammatical accuracy and vocabulary usage for A2 level.',
+      rubric_prompt: `APTIS Writing Part 2 - Short text writing (0-5 scale):
+
+5 (B1 or above): Likely to be above A2 level.
+
+4 (A2.2): On topic. Uses simple grammatical structures to produce writing at sentence level. Errors with basic structures common but do not impede understanding. Mostly accurate punctuation and spelling. Vocabulary sufficient. Some attempts at simple connectors and cohesive devices.
+
+3 (A2.1): On topic. Uses simple grammatical structures at sentence level. Errors with basic structures common and impede understanding in parts. Punctuation and spelling mistakes noticeable. Vocabulary mostly sufficient but inappropriate lexical choices noticeable. Response is list of sentences with no connectors.
+
+2 (A1.2): Not fully on topic. Grammatical structure limited to words and phrases. Errors impede understanding. Little accurate punctuation. Vocabulary limited to basic personal information and insufficient. No cohesion.
+
+1 (A1.1): Response limited to few words/phrases. Grammar and vocabulary errors so serious meaning is unintelligible.
+
+0 (A0): No meaningful language or completely off-topic.
+
+Areas assessed: Task fulfilment/topic relevance, grammatical range and accuracy, punctuation, vocabulary range and accuracy, cohesion.`,
     },
 
-    // Task 3 - B1 Chat Responses (0-5 scale, 30-40 words each)
+    // Task 3 - Three Written Responses (0-5 scale, 30-40 words each)
     {
       aptis_type_id: aptisId,
       question_type_id: questionTypes.WRITING_LONG.id,
-      criteria_name: 'Relevance of Content to Topic',
+      criteria_name: 'Task Fulfilment and Language Control',
       created_by: adminId,
-      rubric_prompt: 'Evaluate how well each response addresses the question and maintains topic relevance.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.WRITING_LONG.id,
-      criteria_name: 'Task Completion',
-      created_by: adminId,
-      rubric_prompt: 'Assess if all 3 responses provided with 30-40 words each and demonstrate B1-level completion.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.WRITING_LONG.id,
-      criteria_name: 'Grammatical Accuracy',
-      created_by: adminId,
-      rubric_prompt: 'Evaluate grammatical accuracy appropriate for B1 level across all responses.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.WRITING_LONG.id,
-      criteria_name: 'Vocabulary Accuracy',
-      created_by: adminId,
-      rubric_prompt: 'Assess vocabulary usage and accuracy for B1-level communication.',
+      rubric_prompt: `APTIS Writing Part 3 - Three written responses (0-5 scale):
+
+5 (B2 or above): Likely to be above B1 level.
+
+4 (B1.2): Responses to all three questions on topic. Control of simple grammatical structures. Errors when attempting complex structures. Punctuation and spelling mostly accurate, errors don't impede understanding. Vocabulary sufficient. Uses simple cohesive devices to organise as linear sequence.
+
+3 (B1.1): Responses to two questions on topic with same language features as B1.2.
+
+2 (A2.2): Responses to at least two questions on topic. Uses simple grammatical structures at sentence level. Errors common and sometimes impede understanding. Punctuation/spelling mistakes noticeable. Vocabulary insufficient, inappropriate choices impede understanding. Responses are lists, not cohesive texts.
+
+1 (A2.1): Response to one question on topic with same language features as A2.2.
+
+0: Performance below A2, no meaningful language, or completely off-topic.
+
+Areas assessed: Task fulfilment/topic relevance, punctuation, grammatical range and accuracy, vocabulary range and accuracy, cohesion.`,
     },
 
-    // Task 4 - B2 Email Writing (0-6 scale, dual register)
+    // Task 4 - Formal and Informal Writing (0-6 scale)
     {
       aptis_type_id: aptisId,
       question_type_id: questionTypes.WRITING_EMAIL.id,
       criteria_name: 'Task Achievement and Register Control',
       created_by: adminId,
-      rubric_prompt: 'Evaluate how well both emails address requirements with appropriate register control between friend and authority figure.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.WRITING_EMAIL.id,
-      criteria_name: 'Coherence and Cohesion',
-      created_by: adminId,
-      rubric_prompt: 'Assess organization, logical flow, and use of linking devices in both emails.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.WRITING_EMAIL.id,
-      criteria_name: 'Lexical Resource',
-      created_by: adminId,
-      rubric_prompt: 'Evaluate vocabulary range, appropriacy for both registers, and accuracy.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.WRITING_EMAIL.id,
-      criteria_name: 'Grammatical Range and Accuracy',
-      created_by: adminId,
-      rubric_prompt: 'Assess variety of structures and grammatical accuracy with 6-point scale distinction.',
+      rubric_prompt: `APTIS Writing Part 4 - Formal and informal writing (0-6 scale):
+
+6 (C2): Likely to be above C1 level.
+
+5 (C1): Features as B2.2 but higher proficiency level.
+
+4 (B2.2): Response on topic, task fulfilled with appropriate register. Two clearly different registers. Range of complex grammar used accurately, minor errors don't impede understanding. Range of vocabulary, some awkward usage. Range of cohesive devices clearly indicate links.
+
+3 (B2.1): Response partially on topic, task partially fulfilled: appropriate register used consistently in ONE response. Some complex grammar used accurately, errors don't lead to misunderstanding. Minor punctuation/spelling errors don't impede understanding. Sufficient vocabulary range. Limited cohesive devices.
+
+2 (B1.2): Response partially on topic, task NOT fulfilled: appropriate register not used consistently in either response. Control of simple grammatical structures, errors when attempting complex. Punctuation/spelling mostly accurate. Vocabulary limitations make task difficult, errors impede understanding in parts. Only simple cohesive devices.
+
+1 (B1.1): Response not on topic, task not fulfilled. No evidence of register awareness. Same language features as B1.2 but errors impede understanding in most of text.
+
+0 (A1/A2): Performance below B1, no meaningful language, or completely off-topic.
+
+Key focus: Register control between informal (friend) and formal (unknown person) writing. Word counts: 40-50 words informal, 120-150 words formal.`,
     },
   ];
 }
@@ -147,97 +131,103 @@ function buildWritingCriteria(adminId, aptisId, questionTypes) {
 // Speaking Criteria Builders
 // ========================================
 function buildSpeakingCriteria(adminId, aptisId, questionTypes) {
-  const b1SpeakingScale = `OFFICIAL APTIS SPEAKING SCALE for B1 Tasks (from Technical Report Appendix 1):
-
-5 - Likely to be above B1 level.
-
-4 (B1.2) - Responses on topic with: control of simple grammatical structures; sufficient vocabulary range; intelligible pronunciation; some pausing/reformulations; simple cohesive devices.
-
-3 (B1.1) - At least two responses on topic with: control of simple grammatical structures; sufficient vocabulary range; intelligible pronunciation; some pausing/reformulations; simple cohesive devices.
-
-2 (A2.2) - At least two responses on topic with: some simple grammatical structures; limited vocabulary; noticeable mispronunciations; noticeable pausing; limited cohesion.
-
-1 (A2.1) - One response on topic with: basic grammatical structures with mistakes; limited vocabulary; noticeable mispronunciations; noticeable pausing; limited cohesion.
-
-0 - Performance below A2.`;
-
   return [
-    // Task 1 - A2 Personal Introduction (0-5 scale)
+    // Task 1 - Personal Information (0-5 scale)
     {
       aptis_type_id: aptisId,
       question_type_id: questionTypes.SPEAKING_INTRO.id,
-      criteria_name: 'Overall Impression',
+      criteria_name: 'Personal Information Speaking Assessment',
       created_by: adminId,
-      rubric_prompt: 'Evaluate overall effectiveness and sustainability of A2-level performance. Focus on ability to maintain CEFR level throughout response.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.SPEAKING_INTRO.id,
-      criteria_name: 'Content and Task Completion',
-      created_by: adminId,
-      rubric_prompt: 'Assess relevant personal information appropriate for A2 level and coverage of required elements.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.SPEAKING_INTRO.id,
-      criteria_name: 'Fluency and Pronunciation',
-      created_by: adminId,
-      rubric_prompt: 'Assess speech flow and pronunciation for A2 level with consideration for minor hesitations.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.SPEAKING_INTRO.id,
-      criteria_name: 'Language Range and Control',
-      created_by: adminId,
-      rubric_prompt: 'Evaluate adequate range for A2+ with good control of basic structures. Note: Intonation is least important.',
+      rubric_prompt: `APTIS Speaking Part 1 - Personal information (0-5 scale):
+
+5 (B1 or above): Likely to be above A2 level.
+
+4 (A2.2): Responses to all three questions on topic. Some simple grammatical structures used correctly but basic mistakes systematically occur. Vocabulary sufficient although inappropriate lexical choices noticeable. Mispronunciations noticeable and frequently strain listener. Frequent pausing, false starts and reformulations but meaning still clear.
+
+3 (A2.1): Responses to two questions on topic with same language features as A2.2.
+
+2 (A1.2): Responses to at least two questions on topic. Grammatical structure limited to words and phrases. Errors in basic patterns impede understanding. Vocabulary limited to very basic words related to personal information. Pronunciation mostly unintelligible except isolated words. Frequent pausing impedes understanding.
+
+1 (A1.1): Response to one question on topic with same language features as A1.2.
+
+0 (A0): No meaningful language or all responses completely off-topic.
+
+Areas assessed: Task fulfilment/topic relevance, grammatical range and accuracy, vocabulary range and accuracy, pronunciation, fluency.
+Time limit: 30 seconds per question (3 questions total).`,
     },
 
-    // Task 2 - B1 Picture Description (0-5 scale)
+    // Task 2 - Describe, Express Opinion (0-5 scale, same scale as Task 3)
     {
       aptis_type_id: aptisId,
       question_type_id: questionTypes.SPEAKING_DESCRIPTION.id,
-      criteria_name: 'APTIS B1 Speaking Scale (Tasks 2&3)',
+      criteria_name: 'APTIS Speaking Scale for Parts 2&3',
       created_by: adminId,
-      rubric_prompt: b1SpeakingScale,
+      rubric_prompt: `APTIS Speaking Parts 2&3 - Describe/Compare (0-5 scale):
+
+5 (B2 or above): Likely to be above B1 level.
+
+4 (B1.2): Responses to all three questions on topic. Control of simple grammatical structures, errors when attempting complex structures. Sufficient range and control of vocabulary for task, errors when expressing complex thoughts. Pronunciation intelligible but inappropriate mispronunciations occasionally strain listener. Some pausing, false starts and reformulations. Uses only simple cohesive devices, links not always clearly indicated.
+
+3 (B1.1): Responses to two questions on topic with same language features as B1.2.
+
+2 (A2.2): Responses to at least two questions on topic. Uses some simple grammatical structures correctly but systematically makes basic mistakes. Vocabulary limited to concrete topics and descriptions, inappropriate lexical choices noticeable. Mispronunciations noticeable and strain listener. Noticeable pausing, false starts and reformulations. Cohesion limited, responses tend to be list of points.
+
+1 (A2.1): Response to one question on topic with same language features as A2.2.
+
+0: Performance below A2, no meaningful language, or completely off-topic.
+
+Areas assessed: Task fulfilment/topic relevance, grammatical range and accuracy, vocabulary range and accuracy, pronunciation, fluency and cohesion.
+Time limit: 45 seconds per question (3 questions total).`,
     },
 
-    // Task 3 - B1 Comparison (0-5 scale, same scale as Task 2)
+    // Task 3 - Compare and Provide Reasons (0-5 scale, SAME as Task 2)
     {
       aptis_type_id: aptisId,
       question_type_id: questionTypes.SPEAKING_COMPARISON.id,
-      criteria_name: 'APTIS B1 Speaking Scale (Tasks 2&3)',
+      criteria_name: 'APTIS Speaking Scale for Parts 2&3',
       created_by: adminId,
-      rubric_prompt: b1SpeakingScale,
+      rubric_prompt: `APTIS Speaking Parts 2&3 - Describe/Compare (0-5 scale):
+
+5 (B2 or above): Likely to be above B1 level.
+
+4 (B1.2): Responses to all three questions on topic. Control of simple grammatical structures, errors when attempting complex structures. Sufficient range and control of vocabulary for task, errors when expressing complex thoughts. Pronunciation intelligible but inappropriate mispronunciations occasionally strain listener. Some pausing, false starts and reformulations. Uses only simple cohesive devices, links not always clearly indicated.
+
+3 (B1.1): Responses to two questions on topic with same language features as B1.2.
+
+2 (A2.2): Responses to at least two questions on topic. Uses some simple grammatical structures correctly but systematically makes basic mistakes. Vocabulary limited to concrete topics and descriptions, inappropriate lexical choices noticeable. Mispronunciations noticeable and strain listener. Noticeable pausing, false starts and reformulations. Cohesion limited, responses tend to be list of points.
+
+1 (A2.1): Response to one question on topic with same language features as A2.2.
+
+0: Performance below A2, no meaningful language, or completely off-topic.
+
+Areas assessed: Task fulfilment/topic relevance, grammatical range and accuracy, vocabulary range and accuracy, pronunciation, fluency and cohesion.
+Time limit: 45 seconds per question (3 questions total).`,
     },
 
-    // Task 4 - B2 Discussion (0-6 scale, allows C1/C2 extension)
+    // Task 4 - Abstract Topic Discussion (0-6 scale)
     {
       aptis_type_id: aptisId,
       question_type_id: questionTypes.SPEAKING_DISCUSSION.id,
-      criteria_name: 'Task Achievement and Sustainability',
+      criteria_name: 'Abstract Topic Discussion Assessment',
       created_by: adminId,
-      rubric_prompt: 'BAND 6: C2 performance. BAND 5: C1 performance. BAND 4: Strong B2 sustained. BAND 3: Typical B2 (TARGET). BAND 2: B1+. BAND 0-1: Below B1.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.SPEAKING_DISCUSSION.id,
-      criteria_name: 'Fluency and Coherence',
-      created_by: adminId,
-      rubric_prompt: 'BAND 6: Natural effortless delivery. BAND 5: Minor hesitations, coherent complex topics. BAND 4: Generally fluent with clear organization. BAND 3: Adequate for B1-2. BAND 0-2: Frequent issues.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.SPEAKING_DISCUSSION.id,
-      criteria_name: 'Lexical Resource',
-      created_by: adminId,
-      rubric_prompt: 'BAND 6: Sophisticated, precise vocabulary. BAND 5: Wide range, abstract concepts. BAND 4: Good discussion vocabulary. BAND 3: Adequate range for B2. BAND 0-2: Limited vocabulary.',
-    },
-    {
-      aptis_type_id: aptisId,
-      question_type_id: questionTypes.SPEAKING_DISCUSSION.id,
-      criteria_name: 'Grammatical Range and Accuracy',
-      created_by: adminId,
-      rubric_prompt: 'BAND 6: Consistently accurate sophisticated structures. BAND 5: Good range, generally high accuracy. BAND 4: B2 structures with variety. BAND 3: Adequate range with reasonable accuracy. BAND 0-2: Limited range.',
+      rubric_prompt: `APTIS Speaking Part 4 - Abstract topic discussion (0-6 scale):
+
+6 (C2): Likely to be above C1 level.
+
+5 (C1): Features as B2.2 but at higher proficiency level.
+
+4 (B2.2): Response addresses all three questions and is well-structured. Uses range of complex grammar constructions accurately, minor errors don't impede understanding. Uses range of vocabulary to discuss topics, some awkward usage. Pronunciation clearly intelligible. Backtracking and reformulations don't fully interrupt flow. Range of cohesive devices clearly indicate links.
+
+3 (B2.1): Responses to two questions on topic. Some complex grammar constructions used accurately, errors don't lead to misunderstanding. Sufficient vocabulary range, inappropriate choices don't lead to misunderstanding. Pronunciation intelligible, mispronunciations don't strain listener. Some pausing while searching for vocabulary doesn't strain listener. Limited cohesive devices indicate links.
+
+2 (B1.2): Responses to at least two questions on topic. Control of simple grammatical structures, errors when attempting complex. Vocabulary limitations make task difficult. Pronunciation intelligible but occasional mispronunciations strain listener. Noticeable pausing, false starts, reformulations and repetition. Uses only simple cohesive devices, links not always clearly indicated.
+
+1 (B1.1): Response to one question on topic with same language features as B1.2.
+
+0 (A1/A2): Performance below B1, no meaningful language, or completely off-topic.
+
+Format: 1 minute preparation + 2 minutes response time for all three questions together.
+Areas assessed: Task fulfilment/topic relevance, grammatical range and accuracy, vocabulary range and accuracy, pronunciation, fluency and cohesion.`,
     },
   ];
 }

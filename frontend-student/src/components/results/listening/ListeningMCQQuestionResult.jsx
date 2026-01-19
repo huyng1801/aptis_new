@@ -33,7 +33,14 @@ export default function ListeningMCQQuestionResult({ answer, question, showCorre
   const userAnswer = options.find(opt => opt.id === userAnswerId);
   const correctAnswer = options.find(opt => opt.is_correct);
   const isCorrect = userAnswerId === correctAnswer?.id;
-  const audioUrl = question.audio_url;
+  
+  // Fix audio URL path
+  const audioUrl = question.media_url || question.audio_url;
+  const fullAudioUrl = audioUrl?.startsWith('http') 
+    ? audioUrl 
+    : `http://localhost:3001${audioUrl}`;
+  
+  console.log('[ListeningMCQResult] Audio URL:', audioUrl, '-> Full URL:', fullAudioUrl);
 
   const handlePlayPause = () => {
     if (!audioRef.current) return;
@@ -55,7 +62,12 @@ export default function ListeningMCQQuestionResult({ answer, question, showCorre
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
       setDuration(audioRef.current.duration);
+      console.log('[ListeningMCQResult] Audio loaded successfully, duration:', audioRef.current.duration);
     }
+  };
+
+  const handleError = (e) => {
+    console.error('[ListeningMCQResult] Audio load error:', e, 'URL:', fullAudioUrl);
   };
 
   const handleEnded = () => {
@@ -74,7 +86,7 @@ export default function ListeningMCQQuestionResult({ answer, question, showCorre
   return (
     <Box>
       {/* Audio player */}
-      {audioUrl && (
+      {fullAudioUrl && (
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -84,10 +96,11 @@ export default function ListeningMCQQuestionResult({ answer, question, showCorre
             
             <audio
               ref={audioRef}
-              src={audioUrl}
+              src={fullAudioUrl}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={handleEnded}
+              onError={handleError}
               style={{ display: 'none' }}
             />
             
@@ -183,24 +196,6 @@ export default function ListeningMCQQuestionResult({ answer, question, showCorre
                 <ListItemIcon sx={{ minWidth: 'auto' }}>
                   {icon}
                 </ListItemIcon>
-              )}
-              {isUserAnswer && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    position: 'absolute',
-                    top: 4,
-                    right: 8,
-                    bgcolor: isCorrectOption ? 'success.dark' : 'error.dark',
-                    color: 'white',
-                    px: 1,
-                    py: 0.5,
-                    borderRadius: 1,
-                    fontSize: '0.7rem'
-                  }}
-                >
-                  Your Answer
-                </Typography>
               )}
             </ListItem>
           );

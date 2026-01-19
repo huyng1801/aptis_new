@@ -1,9 +1,14 @@
 const fs = require('fs').promises;
 const path = require('path');
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegStatic = require('ffmpeg-static');
 const { UPLOAD_LIMITS } = require('../utils/constants');
 const { STORAGE_CONFIG } = require('../config/storage');
 const { BadRequestError } = require('../utils/errors');
 const AzureSpeechService = require('./AzureSpeechService');
+
+// Configure FFmpeg path for fluent-ffmpeg
+ffmpeg.setFfmpegPath(ffmpegStatic);
 
 class SpeechToTextService {
   constructor() {
@@ -19,6 +24,7 @@ class SpeechToTextService {
   }
 
   async convertAudioToText(audioFilePath, language = 'en', referenceText = '') {
+    let convertedFilePath = null;
     try {
       const fileExists = await fs.access(audioFilePath).then(() => true).catch(() => false);
       if (!fileExists) throw new BadRequestError('Audio file not found');
@@ -32,8 +38,19 @@ class SpeechToTextService {
       
       const azureLanguage = language === 'vi' ? 'vi-VN' : 'en-US';
       
+      // Convert to WAV if not already WAV (Azure Speech works best with WAV)
+      const ext = path.extname(audioFilePath).toLowerCase();
+      let fileToProcess = audioFilePath;
+      
+      if (ext !== '.wav') {
+        console.log('🔄 Converting audio to WAV format for Azure Speech...');
+        convertedFilePath = await this.convertToWav(audioFilePath);
+        fileToProcess = convertedFilePath;
+        console.log('✅ Audio converted to WAV:', path.basename(convertedFilePath));
+      }
+      
       // Use Azure Speech transcription
-      const transcriptionResult = await AzureSpeechService.transcribeWithAzure(audioFilePath, azureLanguage);
+      const transcriptionResult = await AzureSpeechService.transcribeWithAzure(fileToProcess, azureLanguage);
       
       // Convert to enhanced analysis format
       const speechAnalysis = this.convertAzureTranscriptionToAnalysis(transcriptionResult);
@@ -52,7 +69,47 @@ class SpeechToTextService {
     } catch (error) {
       console.error('❌ Azure Speech analysis failed:', error.message);
       throw new BadRequestError(`Speech analysis failed: ${error.message}`);
+    } finally {
+      // Cleanup converted file if exists
+      if (convertedFilePath) {
+        try {
+          await fs.unlink(convertedFilePath);
+          console.log('🗑️ Cleaned up converted WAV file:', path.basename(convertedFilePath));
+        } catch (err) {
+          console.warn('⚠️ Failed to cleanup converted file:', err.message);
+        }
+      }
     }
+  }
+
+  /**
+   * Convert audio file to WAV format (16kHz, 16-bit, mono)
+   * Azure Speech works best with WAV format
+   * @param {string} inputPath - Path to input audio file
+   * @returns {Promise<string>} - Path to converted WAV file
+   */
+  async convertToWav(inputPath) {
+    return new Promise((resolve, reject) => {
+      const outputPath = inputPath.replace(/\.[^.]+$/, '') + '-converted.wav';
+      
+      ffmpeg(inputPath)
+        .audioFrequency(16000) // 16kHz sample rate (Azure Speech requirement)
+        .audioChannels(1)       // Mono
+        .audioCodec('pcm_s16le') // 16-bit PCM
+        .format('wav')
+        .on('start', (commandLine) => {
+          console.log('[FFmpeg] Converting audio:', commandLine);
+        })
+        .on('end', () => {
+          console.log('[FFmpeg] ✅ Conversion complete:', path.basename(outputPath));
+          resolve(outputPath);
+        })
+        .on('error', (err) => {
+          console.error('[FFmpeg] ❌ Conversion failed:', err.message);
+          reject(new Error(`Audio conversion failed: ${err.message}`));
+        })
+        .save(outputPath);
+    });
   }
 
   // Phân tích cảm xúc từ kết quả pronunciation

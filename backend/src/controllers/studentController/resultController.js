@@ -8,6 +8,7 @@ const {
   Question,
   QuestionType,
   QuestionItem,
+  QuestionOption,
   SkillType,
   Exam,
 } = require('../../models');
@@ -127,6 +128,20 @@ exports.getResults = async (req, res, next) => {
                 },
               ],
             },
+            // Include question items for gap filling, ordering, matching
+            {
+              model: QuestionItem,
+              as: 'items',
+              attributes: ['id', 'item_text', 'item_order', 'correct_option_id', 'answer_text'],
+              required: false,
+            },
+            // Include question options for MCQ, matching
+            {
+              model: QuestionOption,
+              as: 'options',
+              attributes: ['id', 'option_text', 'option_order', 'is_correct'],
+              required: false,
+            },
           ],
         },
         {
@@ -162,6 +177,7 @@ exports.getResults = async (req, res, next) => {
               ? JSON.parse(answer.answer_json) 
               : answer.answer_json;
             
+            // Handle both old format {matches: {}} and new format {itemId: optionId}
             const matches = answerData.matches || answerData || {};
             const answeredItems = Object.keys(matches).filter(key => matches[key]).length;
             answeredQuestionsCount += answeredItems;

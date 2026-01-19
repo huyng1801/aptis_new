@@ -5,7 +5,6 @@ const {
   AptisType,
   QuestionItem,
   QuestionOption,
-  QuestionSampleAnswer,
   ExamSectionQuestion,
 } = require('../../models');
 const { paginate, paginationResponse } = require('../../utils/helpers');
@@ -63,25 +62,12 @@ exports.createQuestion = async (req, res, next) => {
       }
     }
 
-    if (sample_answer) {
-      await QuestionSampleAnswer.create({
-        question_id: question.id,
-        sample_answer: sample_answer.sample_answer,
-        answer_key_points: sample_answer.answer_key_points || null,
-        min_words: sample_answer.min_words || null,
-        max_words: sample_answer.max_words || null,
-        min_duration_seconds: sample_answer.min_duration_seconds || null,
-        max_duration_seconds: sample_answer.max_duration_seconds || null,
-      });
-    }
-
     const fullQuestion = await Question.findByPk(question.id, {
       include: [
         { model: QuestionType, as: 'questionType' },
         { model: AptisType, as: 'aptisType' },
         { model: QuestionItem, as: 'items' },
         { model: QuestionOption, as: 'options' },
-        { model: QuestionSampleAnswer, as: 'sampleAnswer' },
       ],
     });
 
@@ -211,7 +197,6 @@ exports.getQuestionDetails = async (req, res, next) => {
         { model: AptisType, as: 'aptisType' },
         { model: QuestionItem, as: 'items' },
         { model: QuestionOption, as: 'options' },
-        { model: QuestionSampleAnswer, as: 'sampleAnswer' },
       ],
     });
 

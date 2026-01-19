@@ -33,13 +33,14 @@ const AnswerAiFeedback = sequelize.define(
       allowNull: true,
     },
     suggestions: {
-      // Đề xuất cải thiện từ AI
-      type: DataTypes.TEXT,
+      // Đề xuất cải thiện từ AI (stored as JSON array)
+      type: DataTypes.JSON,
       allowNull: true,
+      defaultValue: null,
     },
     cefr_level: {
-      // Mức độ CEFR mà AI đánh giá cho câu trả lời (A1, A2, B1, B2, C1, C2)
-      type: DataTypes.ENUM('A1', 'A2', 'B1', 'B2', 'C1', 'C2'),
+      // Mức độ CEFR mà AI đánh giá cho câu trả lời (supports detailed levels like A1.1, A1.2, above A1, etc.)
+      type: DataTypes.STRING(50),
       allowNull: true,
     },
   },

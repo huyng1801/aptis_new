@@ -18,7 +18,7 @@ import {
 import { CheckCircle, Cancel } from '@mui/icons-material';
 
 export default function MatchingQuestionResult({ answer, question, showCorrectAnswer = true }) {
-  const matches = answer.answer_data ? JSON.parse(answer.answer_data)?.matches || {} : {};
+  const matches = answer.answer_json ? JSON.parse(answer.answer_json)?.matches || {} : {};
   const options = question.options || [];
   const items = question.items || [];
 

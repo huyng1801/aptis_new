@@ -10,8 +10,8 @@ import {
 } from '@mui/material';
 
 export default function GapFillingQuestionResult({ answer, question, showCorrectAnswer = true }) {
-  // Parse user answers from answer_data (matches exam-taking structure)
-  const gaps = answer.answer_data ? JSON.parse(answer.answer_data)?.gaps || {} : {};
+  // Parse user answers from answer_json (matches exam-taking structure)
+  const gaps = answer.answer_json ? JSON.parse(answer.answer_json)?.gaps || {} : {};
   const options = question.options || [];
   const items = question.items || [];
 
@@ -116,21 +116,6 @@ export default function GapFillingQuestionResult({ answer, question, showCorrect
 
   return (
     <Box>
-      {/* Score Summary */}
-      <Box sx={{ mb: 2 }}>
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Chip 
-            label={`Score: ${correctCount}/${totalGaps}`}
-            color={correctCount === totalGaps ? 'success' : correctCount > 0 ? 'warning' : 'error'}
-            size="large"
-          />
-          <Chip 
-            label={`${Math.round((correctCount / totalGaps) * 100)}% correct`}
-            variant="outlined"
-          />
-        </Stack>
-      </Box>
-
       {/* Question content with gaps (matching exam-taking exactly) */}
       <Paper sx={{ p: 3, mb: 2, bgcolor: 'grey.50' }}>
         <Typography 

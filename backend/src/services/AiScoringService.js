@@ -4,7 +4,6 @@ const {
   AiScoringCriteria,
   AnswerAiFeedback,
   Question,
-  QuestionSampleAnswer,
   QuestionType,
   ExamSection,
   Exam,
@@ -16,13 +15,15 @@ const { BadRequestError, NotFoundError } = require('../utils/errors');
 // Import modular services
 const CefrConverter = require('./scoring/CefrConverterService');
 const ScoringPromptBuilder = require('./scoring/ScoringPromptBuilder');
+const SpeakingScoringPromptBuilder = require('./scoring/SpeakingScoringPromptBuilder');
 const AudioAnalysisEnhancer = require('./scoring/AudioAnalysisEnhancer');
 const FeedbackGenerator = require('./scoring/FeedbackGenerator');
 const AiServiceClient = require('./scoring/AiServiceClient');
 
 class AiScoringService {
   /**
-   * Validate and correct CEFR level based on actual score percentage
+   * Validate CEFR level - enforce consistency between score and CEFR level
+   * If AI provides inconsistent CEFR level, correct it based on score percentage
    * @param {number} score - Actual score achieved
    * @param {number} maxScore - Maximum possible score
    * @param {string} aiCefrLevel - CEFR level suggested by AI
@@ -31,29 +32,118 @@ class AiScoringService {
   validateCefrLevel(score, maxScore, aiCefrLevel) {
     const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
     
-    // Define CEFR thresholds based on percentage
-    let validatedLevel;
-    if (percentage >= 90) {
-      validatedLevel = ['C2', 'C1'].includes(aiCefrLevel) ? aiCefrLevel : 'C1';
-    } else if (percentage >= 80) {
-      validatedLevel = ['C1', 'B2', 'C2'].includes(aiCefrLevel) ? (aiCefrLevel === 'C2' ? 'C1' : aiCefrLevel) : 'B2';
-    } else if (percentage >= 70) {
-      validatedLevel = ['B2', 'B1', 'C1'].includes(aiCefrLevel) ? (aiCefrLevel === 'C1' ? 'B2' : aiCefrLevel) : 'B2';
-    } else if (percentage >= 60) {
-      validatedLevel = ['B1', 'B2'].includes(aiCefrLevel) ? aiCefrLevel : 'B1';
-    } else if (percentage >= 50) {
-      validatedLevel = ['B1', 'A2'].includes(aiCefrLevel) ? aiCefrLevel : 'A2';
-    } else if (percentage >= 30) {
-      validatedLevel = ['A2', 'A1'].includes(aiCefrLevel) ? aiCefrLevel : 'A2';
+    // Define CEFR level thresholds based on score percentage
+    let expectedCefrLevel;
+    if (percentage < 30) {
+      expectedCefrLevel = 'A1';
+    } else if (percentage < 50) {
+      expectedCefrLevel = 'A2';
+    } else if (percentage < 60) {
+      expectedCefrLevel = 'B1';
+    } else if (percentage < 70) {
+      expectedCefrLevel = 'B1-B2';
+    } else if (percentage < 80) {
+      expectedCefrLevel = 'B2';
+    } else if (percentage < 90) {
+      expectedCefrLevel = 'B2-C1';
     } else {
-      validatedLevel = 'A1';
+      expectedCefrLevel = 'C1-C2';
     }
     
-    if (validatedLevel !== aiCefrLevel) {
-      console.warn(`[validateCefrLevel] ⚠️  CEFR level corrected: AI suggested '${aiCefrLevel}' but score ${score}/${maxScore} (${percentage.toFixed(1)}%) indicates '${validatedLevel}'`);
+    // Check if AI's CEFR level is consistent with score
+    const aiCefrClean = (aiCefrLevel || 'N/A').toUpperCase().replace(/[.\s]/g, '');
+    const expectedCefrClean = expectedCefrLevel.toUpperCase().replace(/[.\s]/g, '');
+    
+    // Allow some flexibility: if AI says B2.1 and expected is B2, that's OK
+    const isConsistent = 
+      aiCefrClean === expectedCefrClean ||
+      aiCefrClean.startsWith(expectedCefrClean) ||
+      expectedCefrClean.includes(aiCefrClean.substring(0, 2)) ||
+      (percentage >= 50 && percentage < 80 && aiCefrClean.startsWith('B')) || // B1/B2 range
+      (percentage >= 30 && percentage < 60 && aiCefrClean.startsWith('A')); // A1/A2 range
+    
+    if (!isConsistent) {
+      console.warn(`[validateCefrLevel] ⚠️ CEFR inconsistency detected!`);
+      console.warn(`[validateCefrLevel]   AI suggested: ${aiCefrLevel}`);
+      console.warn(`[validateCefrLevel]   Score: ${score}/${maxScore} (${percentage.toFixed(1)}%)`);
+      console.warn(`[validateCefrLevel]   Expected CEFR: ${expectedCefrLevel}`);
+      console.warn(`[validateCefrLevel]   ✓ Correcting to: ${expectedCefrLevel}`);
+      return expectedCefrLevel;
     }
     
-    return validatedLevel;
+    console.log(`[validateCefrLevel] ✓ CEFR Level: ${aiCefrLevel} | Score: ${score}/${maxScore} (${percentage.toFixed(1)}%)`);
+    return aiCefrLevel;
+  }
+
+  /**
+   * Map CEFR level to numerical score based on question type and max score
+   * @param {string} cefrLevel - CEFR level from AI assessment
+   * @param {number} maxScore - Maximum score for the question
+   * @param {string} questionTypeCode - Question type code (WRITING_SHORT, etc.)
+   * @returns {number} Mapped numerical score
+   */
+  mapCefrToNumericalScore(cefrLevel, maxScore, questionTypeCode) {
+    if (!cefrLevel) return 0;
+
+    const mappings = {
+      'WRITING_SHORT': { // Task 1: 0-3 scale
+        'A0': 0,
+        'A1.1': 1,
+        'A1.2': 2, 
+        'above A1': 3
+      },
+      'WRITING_FORM': { // Task 2: 0-5 scale
+        'A0': 0,
+        'A1.1': 1,
+        'A1.2': 2,
+        'A2.1': 3,
+        'A2.2': 4,
+        'B1+': 5
+      },
+      'WRITING_LONG': { // Task 3: 0-5 scale
+        'A0': 0,
+        'A2.1': 1,
+        'A2.2': 2, 
+        'B1.1': 3,
+        'B1.2': 4,
+        'B2+': 5
+      },
+      'WRITING_EMAIL': { // Task 4: 0-6 scale
+        'A1/A2': 0,
+        'B1.1': 1,
+        'B1.2': 2,
+        'B2.1': 3,
+        'B2.2': 4,
+        'C1': 5,
+        'C2': 6
+      }
+    };
+
+    const mapping = mappings[questionTypeCode];
+    if (!mapping) {
+      console.log(`[mapCefrToNumericalScore] No mapping found for ${questionTypeCode}, using percentage mapping`);
+      // Fallback: map common CEFR levels to percentage of max score
+      const percentageMapping = {
+        'A0': 0,
+        'A1': 0.2,
+        'A2': 0.4, 
+        'B1': 0.6,
+        'B2': 0.8,
+        'C1': 0.9,
+        'C2': 1.0
+      };
+      const level = cefrLevel.split('.')[0]; // Get base level (A1, A2, etc.)
+      const percentage = percentageMapping[level] || 0;
+      return Math.round(maxScore * percentage);
+    }
+
+    const score = mapping[cefrLevel];
+    if (score === undefined) {
+      console.log(`[mapCefrToNumericalScore] CEFR level "${cefrLevel}" not found in mapping for ${questionTypeCode}`);
+      return 0;
+    }
+
+    return Math.min(score, maxScore); // Ensure score doesn't exceed max
   }
 
   async scoreWriting(answerId) {
@@ -470,6 +560,34 @@ class AiScoringService {
     console.log(`[scoreEntireAnswer] Scoring entire answer with ${criteria.length} criteria as context`);
 
     try {
+      // Load parent question if this is a child question (to get images/context)
+      let parentQuestion = null;
+      if (question.parent_question_id) {
+        console.log(`[scoreEntireAnswer] Loading parent question ID: ${question.parent_question_id}`);
+        parentQuestion = await Question.findByPk(question.parent_question_id);
+        
+        if (parentQuestion && parentQuestion.additional_media) {
+          console.log(`[scoreEntireAnswer] ✓ Parent question has media (images/audio) for context`);
+          // Merge parent's media into current question for AI context
+          const parentMedia = typeof parentQuestion.additional_media === 'string' 
+            ? JSON.parse(parentQuestion.additional_media) 
+            : parentQuestion.additional_media;
+          
+          const currentMedia = question.additional_media 
+            ? (typeof question.additional_media === 'string' ? JSON.parse(question.additional_media) : question.additional_media)
+            : [];
+          
+          // Add parent media with context note
+          question.additional_media = [...currentMedia, ...parentMedia.map(m => ({
+            ...m,
+            source: 'parent_question',
+            description: `${m.description} (from main question)`
+          }))];
+          
+          console.log(`[scoreEntireAnswer] ✓ Added ${parentMedia.length} media item(s) from parent question`);
+        }
+      }
+
       console.log(`[scoreEntireAnswer] Building prompt for ${criteria.length} criteria`);
       // Build comprehensive prompt with all criteria
       const prompt = this.buildComprehensiveScoringPrompt(answerText, question, criteria, taskType);
@@ -477,22 +595,33 @@ class AiScoringService {
       // Call AI service
       const aiResponse = await AiServiceClient.callAiWithRetry(prompt);
       console.log(`[scoreEntireAnswer] Raw AI response: ${aiResponse.substring(0, 200)}...`);
-      const parsedResult = AiServiceClient.parseAiResponse(aiResponse, question.max_score || 10);
       
-      // Validate CEFR level against score
-      const maxScore = question.max_score || 10;
-      const validatedCefrLevel = this.validateCefrLevel(parsedResult.score, maxScore, parsedResult.cefrLevel);
+      // Get max score from question
+      const maxScore = this.getMaxScoreFromCriteria(criteria, question);
+      
+      // Parse AI response - AI calculates score directly based on CEFR and maxScore in prompt
+      const parsedResult = AiServiceClient.parseAiResponse(aiResponse, maxScore);
+      
+      // Use AI's calculated score (already converted from CEFR in prompt)
+      const finalScore = parsedResult.score || 0;
+      console.log(`[scoreEntireAnswer] ✅ AI scored: ${finalScore}/${maxScore} (CEFR: ${parsedResult.cefrLevel})`);
+      
+      // Validate CEFR level against final score
+      const validatedCefrLevel = this.validateCefrLevel(finalScore, maxScore, parsedResult.cefrLevel);
 
       const result = {
-        score: Math.round(parsedResult.score * 100) / 100,
+        totalScore: Math.round(finalScore * 100) / 100,
+        totalMaxScore: maxScore,
+        score: Math.round(finalScore * 100) / 100, // For backward compatibility
         overallFeedback: parsedResult.comment || 'No feedback provided',
         comment: parsedResult.comment,
         suggestions: parsedResult.suggestions,
         cefrLevel: validatedCefrLevel, // Use validated level
+        aiCefrLevel: parsedResult.cefrLevel, // Keep original AI assessment
         criteriaUsed: criteria.map(c => c.criteria_name)
       };
 
-      console.log(`[scoreEntireAnswer] ✅ Answer scored: ${result.score}/${question.max_score}`);
+      console.log(`[scoreEntireAnswer] ✅ Answer scored: ${result.score}/${maxScore} (CEFR: ${result.cefrLevel})`);
       return result;
     } catch (error) {
       console.error(`[scoreEntireAnswer] ❌ Failed to score answer:`, error.message);
@@ -524,21 +653,25 @@ class AiScoringService {
       // Call AI service
       const aiResponse = await AiServiceClient.callAiWithRetry(prompt);
       console.log(`[scoreEntireAnswerWithAudio] Raw AI response: ${aiResponse.substring(0, 200)}...`);
-      const parsedResult = AiServiceClient.parseAiResponse(aiResponse, question.max_score || 10);
+      
+      const maxScore = question.max_score || 10;
+      const parsedResult = AiServiceClient.parseAiResponse(aiResponse, maxScore);
+
+      // Use AI's calculated score (already converted from CEFR in prompt)
+      let finalScore = parsedResult.score || 0;
+      console.log(`[scoreEntireAnswerWithAudio] ✅ AI scored: ${finalScore}/${maxScore} (CEFR: ${parsedResult.cefrLevel})`);
 
       // Apply audio analysis adjustments if available
-      let finalScore = parsedResult.score;
       if (audioAnalysis && AudioAnalysisEnhancer.validateAudioAnalysis(audioAnalysis)) {
         finalScore = AudioAnalysisEnhancer.applyOverallAudioAnalysisAdjustment(
-          parsedResult.score,
+          finalScore,
           audioAnalysis,
-          question.max_score || 10
+          maxScore
         );
-        finalScore = Math.max(0, Math.min(question.max_score || 10, finalScore));
+        finalScore = Math.max(0, Math.min(maxScore, finalScore));
       }
       
       // Validate CEFR level against final score
-      const maxScore = question.max_score || 10;
       const validatedCefrLevel = this.validateCefrLevel(finalScore, maxScore, parsedResult.cefrLevel);
 
       const result = {
@@ -551,7 +684,7 @@ class AiScoringService {
         audioAnalysisUsed: !!audioAnalysis
       };
 
-      console.log(`[scoreEntireAnswerWithAudio] ✅ Answer scored: ${result.score}/${question.max_score}`);
+      console.log(`[scoreEntireAnswerWithAudio] ✅ Answer scored: ${result.score}/${maxScore} (CEFR: ${result.cefrLevel})`);
       return result;
     } catch (error) {
       console.error(`[scoreEntireAnswerWithAudio] ❌ Failed to score answer:`, error.message);
@@ -563,8 +696,237 @@ class AiScoringService {
    * Build comprehensive prompt for scoring entire answer
    */
   buildComprehensiveScoringPrompt(answerText, question, criteria, taskType) {
+    const criterion = criteria[0]; // Use first criterion as main assessment guideline
+    const maxScore = this.getMaxScoreFromCriteria(criteria, question);
+    
+    // Detect question type
+    const questionTypeCode = question.questionType?.code || taskType;
+    
+    // Use specialized Speaking prompt builder for speaking questions
+    if (questionTypeCode.toLowerCase().includes('speaking')) {
+      console.log(`[buildComprehensiveScoringPrompt] Using SpeakingScoringPromptBuilder for ${questionTypeCode}`);
+      return SpeakingScoringPromptBuilder.buildSpeakingPrompt(answerText, question, criteria, maxScore);
+    }
+    
+    // Use specialized Writing prompt builder for writing questions
+    if (questionTypeCode === 'WRITING_SHORT') {
+      return this.buildWritingTask1Prompt(answerText, question, criterion, maxScore);
+    } else if (questionTypeCode === 'WRITING_FORM') {
+      return this.buildWritingTask2Prompt(answerText, question, criterion, maxScore);
+    } else if (questionTypeCode === 'WRITING_LONG') {
+      return this.buildWritingTask3Prompt(answerText, question, criterion, maxScore);
+    } else if (questionTypeCode === 'WRITING_EMAIL') {
+      return this.buildWritingTask4Prompt(answerText, question, criterion, maxScore);
+    }
+    
+    // Fallback for other question types
+    return this.buildGenericScoringPrompt(answerText, question, criteria, taskType, maxScore);
+  }
+
+  // REMOVED: getCefrScale() - AI now uses max_score directly from question
+  // No need for hardcoded CEFR scales
+
+  /**
+   * Get max score from question
+   * IMPORTANT: Always use question.max_score for flexible scoring (10, 10, 10, 20, etc.)
+   */
+  getMaxScoreFromCriteria(criteria, question) {
+    const maxScore = question.max_score || 10; // Default to 10 if not set
+    console.log(`[getMaxScoreFromCriteria] Using max_score: ${maxScore}`);
+    return maxScore;
+  }
+
+  /**
+   * APTIS Writing Task 1: Word-level writing (0-3 scale)
+   */
+  buildWritingTask1Prompt(answerText, question, criterion, maxScore) {
+    return `You are an official APTIS assessor scoring Writing Task 1 - Word-level writing.
+
+OFFICIAL APTIS RUBRIC:
+${criterion.rubric_prompt}
+
+TASK REQUIREMENTS:
+- Format: Fill in basic information using 1-5 words per question
+- Level: A1 level vocabulary and structures
+- Assessment focus: Task fulfilment and communicative competence
+- Maximum Score: ${maxScore} points
+
+STUDENT'S QUESTIONS AND ANSWERS:
+${question.content}
+
+Student's Response: ${answerText}
+
+SCORING INSTRUCTIONS:
+- Score directly from 0 to ${maxScore} points based on task achievement
+- Consider: intelligibility, task completion, appropriacy of responses
+- CEFR Reference: A0 (minimal) → A1.1 → A1.2 → above A1 (excellent)
+- Award proportional points based on quality (e.g., ${(maxScore * 0.25).toFixed(1)} for minimal, ${(maxScore * 0.5).toFixed(1)} for partial, ${(maxScore * 0.75).toFixed(1)} for good, ${maxScore} for excellent)
+
+For suggestions: Provide COMPLETE, COMPREHENSIVE improvement guidance for each answer with:
+- Specific phrase or word from student's text
+- Corrected version
+- Clear explanation of why the correction is needed (grammar rule, vocabulary, clarity, etc.)
+- Context of how it relates to the task requirement
+Example format: "For the email answer: change 'email is' to 'email address is' to be more specific and complete the required information format. This provides the exact email address as requested."
+
+Return assessment in this JSON format:
+{
+  "score": [0-${maxScore} based on task achievement - use decimal if needed],
+  "cefr_level": "[A0, A1.1, A1.2, or above A1 for reference]",
+  "comment": "[Brief assessment of task completion and intelligibility]",
+  "suggestions": "[Array of COMPREHENSIVE improvement suggestions with context and rationale]"
+}`;
+  }
+
+  /**
+   * APTIS Writing Task 2: Short text writing (0-5 scale)
+   */
+  buildWritingTask2Prompt(answerText, question, criterion, maxScore) {
+    const wordCount = answerText.trim().split(/\s+/).length;
+    
+    return `You are an official APTIS assessor scoring Writing Task 2 - Short text writing.
+
+OFFICIAL APTIS RUBRIC:
+${criterion.rubric_prompt}
+
+TASK REQUIREMENTS:
+- Word count: 20-30 words (Student wrote: ${wordCount} words)
+- Level: A2 level response
+- Assessment areas: Task fulfilment/topic relevance, grammatical range and accuracy, punctuation, vocabulary range and accuracy, cohesion
+- Maximum Score: ${maxScore} points
+
+QUESTION: ${question.content}
+STUDENT RESPONSE: ${answerText}
+
+SCORING INSTRUCTIONS:
+- Score directly from 0 to ${maxScore} points based on overall quality
+- CEFR Reference Levels (for assessment guidance only):
+  * A0 (0 points): No meaningful language or completely off-topic
+  * A1.1 (${(maxScore * 0.2).toFixed(1)} pts): Limited words/phrases, serious errors
+  * A1.2 (${(maxScore * 0.4).toFixed(1)} pts): Not fully on topic, limited grammar/vocabulary
+  * A2.1 (${(maxScore * 0.6).toFixed(1)} pts): On topic, simple structures, some errors
+  * A2.2 (${(maxScore * 0.8).toFixed(1)} pts): On topic, mostly accurate, sufficient vocabulary
+  * B1+ (${maxScore} pts): Above A2 level performance
+- Award proportional score based on quality across all assessment areas
+
+For suggestions: Provide COMPLETE, COMPREHENSIVE improvement guidance with:
+- Specific phrase/sentence from student's text
+- Corrected version with proper grammar/vocabulary
+- Clear explanation of WHY this correction is needed (grammar rule, verb tense, vocabulary choice, cohesion, etc.)
+- How this helps meet the task requirement (maintaining topic, improving clarity, better connecting ideas)
+Example: "Change 'I play football because is healthy' to 'I play football because it is healthy' to correct the missing subject pronoun 'it', making the sentence grammatically complete and clear. This shows proper subject-verb structure required at A2 level."
+
+Return assessment in this JSON format:
+{
+  "score": [0-${maxScore} based on overall quality - use decimal if needed],
+  "cefr_level": "[A0, A1.1, A1.2, A2.1, A2.2, or B1+ for reference]",
+  "comment": "[Assessment covering all areas: topic relevance, grammar, punctuation, vocabulary, cohesion]",
+  "suggestions": "[Array of COMPREHENSIVE improvement suggestions with context, explanation, and language learning rationale]"
+}`;
+  }
+
+  /**
+   * APTIS Writing Task 3: Three written responses (0-5 scale)
+   */
+  buildWritingTask3Prompt(answerText, question, criterion, maxScore) {
+    const responses = answerText.split('\n').filter(r => r.trim());
+    const responseCount = responses.length;
+    
+    return `You are an official APTIS assessor scoring Writing Task 3 - Three written responses.
+
+OFFICIAL APTIS RUBRIC (0-5 scale):
+${criterion.rubric_prompt}
+
+TASK REQUIREMENTS:
+- Format: 3 responses to chat questions, 30-40 words each
+- Level: B1 level responses expected
+- Student provided: ${responseCount} responses
+- Assessment areas: Task fulfilment/topic relevance, punctuation, grammatical range and accuracy, vocabulary range and accuracy, cohesion
+
+QUESTION: ${question.content}
+STUDENT RESPONSES: ${answerText}
+
+SCORING GUIDELINES:
+- 5 (B2+): Above B1 level
+- 4 (B1.2): ALL three questions on topic with B1 features: control of simple grammatical structures, errors when attempting complex structures, punctuation/spelling mostly accurate without impeding understanding, sufficient vocabulary, simple cohesive devices for linear sequence
+- 3 (B1.1): TWO questions on topic with same B1.2 language features
+- 2 (A2.2): At least two questions on topic with A2 features: simple grammatical structures at sentence level, errors common and sometimes impede understanding, noticeable punctuation/spelling mistakes, vocabulary insufficient with inappropriate choices impeding understanding, responses are lists not cohesive texts
+- 1 (A2.1): ONE question on topic with same A2.2 language features
+- 0: Below A2, no meaningful language, or completely off-topic
+
+For suggestions: Provide COMPLETE, COMPREHENSIVE improvement guidance for EACH response with:
+- Which response (Response 1, 2, or 3)
+- Specific phrase or sentence from the student's text
+- Corrected version
+- Clear explanation of why this correction improves the writing (grammar, vocabulary choice, naturalness, cohesion)
+- How it better addresses the original question
+Example format: "Response 1: Change 'watched a movie' to 'watched a movie together' to provide more specific context about the shared activity. This shows better vocabulary detail and makes the answer more complete in response to 'did you go out?'"
+
+Return assessment in this JSON format:
+{
+  "score": [0-5 based on number of on-topic responses and language level],
+  "cefr_level": "[A0, A2.1, A2.2, B1.1, B1.2, or B2+]",
+  "comment": "[Assessment of all responses covering task completion and language control]",
+  "suggestions": "[Array of COMPREHENSIVE improvement suggestions, one for each identified issue, with full context and explanation]"
+}`;
+  }
+
+  /**
+   * APTIS Writing Task 4: Formal and informal writing (0-6 scale)
+   */
+  buildWritingTask4Prompt(answerText, question, criterion, maxScore) {
+    return `You are an official APTIS assessor scoring Writing Task 4 - Formal and informal writing.
+
+OFFICIAL APTIS RUBRIC:
+${criterion.rubric_prompt}
+
+TASK REQUIREMENTS:
+- Format: Informal email (40-50 words) + Formal email (120-150 words)
+- Level: B2 level with register control
+- Key assessment: Register appropriacy between friend vs unknown person
+- Areas: Task achievement/register control, grammatical range/accuracy, vocabulary range/accuracy, punctuation, fluency and cohesion
+- Maximum Score: ${maxScore} points
+
+QUESTION: ${question.content}
+STUDENT RESPONSE: ${answerText}
+
+SCORING INSTRUCTIONS:
+- Score directly from 0 to ${maxScore} points based on register control and language proficiency
+- CEFR Reference Levels (for assessment guidance only):
+  * A1/A2 (0 pts): Below B1, no meaningful language
+  * B1.1 (${(maxScore * 0.17).toFixed(1)} pts): Not on topic, no register awareness
+  * B1.2 (${(maxScore * 0.33).toFixed(1)} pts): Partially on topic, register not consistent
+  * B2.1 (${(maxScore * 0.5).toFixed(1)} pts): Partially on topic, register in ONE response
+  * B2.2 (${(maxScore * 0.67).toFixed(1)} pts): On topic, TWO different registers, good grammar
+  * C1 (${(maxScore * 0.83).toFixed(1)} pts): Features as B2.2 but higher proficiency
+  * C2 (${maxScore} pts): Above C1 level
+- Award proportional score based on register control quality and language accuracy
+
+For suggestions: Provide COMPLETE, COMPREHENSIVE improvement guidance with:
+- Which email section (Friend Email / Manager Email / Formal Email)
+- Specific sentence or phrase from student's text
+- Corrected version with proper register and grammar
+- Clear explanation of WHY this change is needed:
+  * Register appropriacy (formal vs informal tone)
+  * Grammar and sentence structure
+  * Vocabulary choice and formality level
+  * How it better fulfills the task requirements
+Example format: "In the Manager Email: Change 'I want to come' to 'I would like to participate' to use appropriate formal register. 'Would like' is more polite and formal than 'want', which is essential for addressing a manager in a professional context. This shows proper register awareness between different audiences."
+
+Return assessment in this JSON format:
+{
+  "score": [0-${maxScore} based on register control and language proficiency - use decimal if needed],
+  "cefr_level": "[A1/A2, B1.1, B1.2, B2.1, B2.2, C1, or C2 for reference]", 
+  "comment": "[Assessment focusing on register control and language range/accuracy]",
+  "suggestions": "[Array of COMPREHENSIVE improvement suggestions addressing register, grammar, vocabulary, and task fulfillment with full explanation]"
+}`;
+  }
+
+  /**
+   * Generic scoring prompt for non-writing tasks
+   */
+  buildGenericScoringPrompt(answerText, question, criteria, taskType, maxScore) {
     const criteriaList = criteria.map(c => `- ${c.criteria_name}: ${c.description || c.rubric_prompt}`).join('\n');
-    const maxScore = question.max_score || 10;
     
     const isWritingTask = taskType.toLowerCase().includes('writing') || 
                           question.questionType?.code?.includes('WRITING');
@@ -577,11 +939,37 @@ class AiScoringService {
 - Give concrete fixes, not general advice
 - Example: 'Change "I go to school yesterday" to "I went to school yesterday"'` : '';
     
+    // Add visual context if question has images
+    let visualContext = '';
+    if (question.additional_media) {
+      try {
+        const media = typeof question.additional_media === 'string' 
+          ? JSON.parse(question.additional_media) 
+          : question.additional_media;
+        
+        const images = media.filter(m => m.type === 'image');
+        if (images.length > 0) {
+          visualContext = `\n\nVISUAL CONTEXT (Images provided to student):`;
+          images.forEach((img, idx) => {
+            const source = img.source === 'parent_question' ? ' [Reference image from main question]' : '';
+            visualContext += `\n${idx + 1}. ${img.description}${source} - URL: ${img.url}`;
+          });
+          visualContext += `\n\nIMPORTANT: The student's response should be evaluated based on how well they describe/discuss these images. Consider:
+- Did they accurately describe what's shown in the image(s)?
+- Did they respond appropriately to the visual prompts?
+- Did they use relevant vocabulary related to what's visible in the image(s)?
+- For comparison tasks: Did they identify similarities and differences between the images?`;
+        }
+      } catch (e) {
+        console.error('[buildGenericScoringPrompt] Error parsing additional_media:', e);
+      }
+    }
+    
     return `You are an expert language assessor. Score this ${taskType} response holistically using ALL the following criteria:
 
 ${criteriaList}
 
-Question: ${question.content}
+Question: ${question.content}${visualContext}
 Student Response: ${answerText}${specialInstructions}
 
 IMPORTANT SCORING GUIDELINES:
@@ -718,10 +1106,17 @@ Consider this objective audio data when assessing speaking fluency and delivery.
       let result;
       const hasAudio = includeAudio && answer.audio_url;
       
+      // CRITICAL: For speaking questions, MUST have transcribed_text before scoring
+      const isSpeaking = question.questionType.code.toLowerCase().includes('speaking');
+      if (isSpeaking && hasAudio && !answer.transcribed_text) {
+        console.error(`[scoreAnswerComprehensively] ❌ Cannot score speaking answer ${answerId} - transcription not completed yet`);
+        throw new BadRequestError('Cannot score speaking answer: transcription not completed. Please wait for speech-to-text processing to finish.');
+      }
+      
       // For speaking, prefer transcribed_text over text_answer
       const answerText = answer.transcribed_text || answer.text_answer || '';
       
-      console.log(`[scoreAnswerComprehensively] hasAudio=${hasAudio}, includeAudio=${includeAudio}, answerText length=${answerText.length}`);
+      console.log(`[scoreAnswerComprehensively] hasAudio=${hasAudio}, includeAudio=${includeAudio}, isSpeaking=${isSpeaking}, answerText length=${answerText.length}`);
       
       if (hasAudio) {
         console.log(`[scoreAnswerComprehensively] Using scoreEntireAnswerWithAudio`);
@@ -748,30 +1143,32 @@ Consider this objective audio data when assessing speaking fluency and delivery.
       
       // Validate and adjust score if needed
       const maxScore = answer.max_score || question.max_score || 10;
-      const finalScore = Math.min(Math.max(0, result.score || 0), maxScore);
-      
+      let aiScore = (typeof result.score === 'number' && !isNaN(result.score) && result.score > 0) ? result.score : 0;
+      let aiFeedback = result.overallFeedback || result.comment || 'Không có câu trả lời để chấm điểm.';
+      let aiCefr = result.cefrLevel || 'N/A';
+      if (aiScore === 0) {
+        aiFeedback = 'Không có câu trả lời để chấm điểm.';
+        aiCefr = 'N/A';
+      }
+      const finalScore = Math.min(Math.max(0, aiScore), maxScore);
       // Validate CEFR level against score percentage
-      const validatedCefrLevel = this.validateCefrLevel(finalScore, maxScore, result.cefrLevel);
-      
-      // Update result with validated CEFR level
+      const validatedCefrLevel = this.validateCefrLevel(finalScore, maxScore, aiCefr);
+      // Update result with validated CEFR level and safe values
       result.cefrLevel = validatedCefrLevel;
       result.score = finalScore;
-      
+      result.overallFeedback = aiFeedback;
+      // Log
       console.log(`[scoreAnswerComprehensively] Score validation: ${result.score}/${maxScore} (${((finalScore/maxScore)*100).toFixed(1)}%) -> CEFR: ${validatedCefrLevel}`);
-      
       // Update the answer with the score and AI feedback
       await answer.update({
         score: finalScore,
-        ai_feedback: result.comment || result.overallFeedback,
+        ai_feedback: aiFeedback,
         ai_graded_at: new Date(),
       });
-      
       console.log(`[scoreAnswerComprehensively] ✅ Updated answer score: ${finalScore}/${maxScore}`);
-      
       // Create comprehensive feedback record
       console.log(`[scoreAnswerComprehensively] Creating feedback record...`);
       await this.createComprehensiveFeedback(answerId, result);
-
       console.log(`[scoreAnswerComprehensively] ✅ Comprehensive scoring completed for answer ${answerId}`);
       return result;
       
@@ -815,22 +1212,35 @@ Consider this objective audio data when assessing speaking fluency and delivery.
       // Validate CEFR level based on actual score
       const validatedCefrLevel = this.validateCefrLevel(result.score, maxScore, result.cefrLevel);
       
-      // Handle suggestions - convert array to string if necessary
+      // Handle suggestions - keep as array for JSON storage
       let suggestions = result.suggestions;
-      if (Array.isArray(suggestions)) {
-        suggestions = suggestions.join('\n');
-      } else if (typeof suggestions === 'object') {
-        suggestions = JSON.stringify(suggestions);
-      } else if (!suggestions) {
-        suggestions = '';
+      if (!Array.isArray(suggestions)) {
+        if (typeof suggestions === 'string' && suggestions.trim()) {
+          // If it's a string, convert to array with single item
+          suggestions = [suggestions];
+        } else if (typeof suggestions === 'object' && suggestions !== null) {
+          // If it's an object, convert to array
+          suggestions = [suggestions];
+        } else {
+          // Otherwise empty array
+          suggestions = [];
+        }
       }
       
+      // Force score=0 and feedback if invalid
+      let safeScore = (typeof result.score === 'number' && !isNaN(result.score) && result.score > 0) ? result.score : 0;
+      let safeComment = result.comment || result.overallFeedback || 'Không có câu trả lời để chấm điểm.';
+      let safeCefr = validatedCefrLevel || 'N/A';
+      if (safeScore === 0) {
+        safeComment = 'Không có câu trả lời để chấm điểm.';
+        safeCefr = 'N/A';
+      }
       const feedbackData = {
         answer_id: answerId,
-        score: result.score,
-        comment: result.comment || result.overallFeedback,
-        suggestions: suggestions,
-        cefr_level: validatedCefrLevel // Use validated level
+        score: safeScore,
+        comment: safeComment,
+        suggestions: suggestions, // Store as array - JSON column will handle serialization
+        cefr_level: safeCefr // Use validated level
       };
       
       console.log(`[createComprehensiveFeedback] Feedback data to create:`, JSON.stringify(feedbackData, null, 2));

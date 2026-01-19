@@ -16,7 +16,6 @@ const QuestionType = require('./QuestionType');
 const Question = require('./Question');
 const QuestionItem = require('./QuestionItem');
 const QuestionOption = require('./QuestionOption');
-const QuestionSampleAnswer = require('./QuestionSampleAnswer');
 const AiScoringCriteria = require('./AiScoringCriteria');
 const Exam = require('./Exam');
 const ExamSection = require('./ExamSection');
@@ -95,15 +94,7 @@ QuestionItem.hasMany(QuestionOption, {
   as: 'options',
 });
 
-// QuestionSampleAnswer thuộc Question (một câu hỏi có một câu trả lời mẫu)
-QuestionSampleAnswer.belongsTo(Question, {
-  foreignKey: 'question_id',
-  as: 'question',
-});
-Question.hasOne(QuestionSampleAnswer, {
-  foreignKey: 'question_id',
-  as: 'sampleAnswer',
-});
+
 
 // AiScoringCriteria thuộc AptisType, QuestionType, và User
 // (tiêu chí chấm điểm cho kết hợp APTIS type + loại câu hỏi)
@@ -311,7 +302,6 @@ module.exports = {
   Question,
   QuestionItem,
   QuestionOption,
-  QuestionSampleAnswer,
   AiScoringCriteria,
   Exam,
   ExamSection,

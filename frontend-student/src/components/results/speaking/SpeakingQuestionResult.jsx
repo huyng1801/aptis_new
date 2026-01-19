@@ -28,10 +28,15 @@ export default function SpeakingQuestionResult({ answer, question, feedback = nu
   const [duration, setDuration] = useState(0);
   const audioRef = useRef(null);
 
-  const audioUrl = answer.audio_url;
-  const transcription = answer.transcription || '';
-  const score = feedback?.score || answer.score || 0;
-  const maxScore = question.score_points || 5;
+  // Build full URL for audio file
+  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://localhost:3000';
+  const audioUrl = answer.audio_url 
+    ? (answer.audio_url.startsWith('http') 
+        ? answer.audio_url 
+        : `${backendUrl}${answer.audio_url}`)
+    : null;
+    
+  const transcription = answer.transcribed_text || answer.transcription || '';
   
   // Get question type specific info
   const questionType = question.questionType?.type_name || '';
@@ -125,14 +130,6 @@ export default function SpeakingQuestionResult({ answer, question, feedback = nu
         </Stack>
       </Paper>
 
-      {/* Score */}
-      <Box sx={{ mb: 3 }}>
-        <Chip 
-          label={`Score: ${score}/${maxScore}`}
-          color={score >= maxScore * 0.7 ? 'success' : score >= maxScore * 0.4 ? 'warning' : 'error'}
-          size="large"
-        />
-      </Box>
 
       {/* Audio player */}
       {audioUrl && (

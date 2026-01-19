@@ -4,6 +4,39 @@
  */
 describe('Results and Progress Tracking', () => {
   beforeEach(() => {
+    // Mock auth check
+    cy.intercept('GET', '/api/auth/me', {
+      statusCode: 200,
+      body: {
+        user: {
+          id: 1,
+          email: 'student1@aptis.local',
+          first_name: 'Alice',
+          last_name: 'Student',
+          role: 'student'
+        }
+      }
+    });
+    
+    // Mock results list API
+    cy.intercept('GET', '/api/student/results*', {
+      statusCode: 200,
+      body: {
+        results: [
+          {
+            id: 1,
+            exam_title: 'APTIS Full Test 1',
+            total_score: 78,
+            date: '2026-01-10',
+            reading_score: 75,
+            listening_score: 82,
+            writing_score: 75,
+            speaking_score: 78
+          }
+        ]
+      }
+    });
+    
     // Login
     cy.login('student1@aptis.local', 'password123');
   });

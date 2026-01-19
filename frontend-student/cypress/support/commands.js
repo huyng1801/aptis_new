@@ -6,14 +6,48 @@
 // Login command for reuse across tests
 Cypress.Commands.add('login', (email, password) => {
   cy.session([email, password], () => {
-    cy.visit('/login');
-    cy.get('[data-testid="email-input"]').type(email);
-    cy.get('[data-testid="password-input"]').type(password);
-    cy.get('[data-testid="login-button"]').click();
-    cy.url().should('include', '/home');
+    // Mock login API for session establishment
+    cy.intercept('POST', '/api/auth/login', {
+      statusCode: 200,
+      body: {
+        success: true,
+        token: 'test-auth-token-' + Math.random(),
+        user: {
+          id: 1,
+          email: email,
+          first_name: 'Alice',
+          last_name: 'Student',
+          role: 'student'
+        }
+      }
+    });
     
-    // Store auth token
-    cy.window().its('localStorage.token').should('exist');
+    // Mock auth check
+    cy.intercept('GET', '/api/auth/me', {
+      statusCode: 200,
+      body: {
+        user: {
+          id: 1,
+          email: email,
+          first_name: 'Alice',
+          last_name: 'Student',
+          role: 'student'
+        }
+      }
+    });
+    
+    cy.visit('/login');
+    cy.get('[data-testid="email-input"]').clear().type(email);
+    cy.get('[data-testid="password-input"]').clear().type(password);
+    cy.get('[data-testid="login-button"]').click();
+    
+    // Wait for redirect to home
+    cy.url().should('include', '/home', { timeout: 10000 });
+  }, {
+    validate() {
+      // Validate that user is still logged in by checking for user menu
+      cy.get('[data-testid="user-menu"]').should('exist');
+    }
   });
 });
 

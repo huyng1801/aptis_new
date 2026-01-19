@@ -1,6 +1,8 @@
-
+const path = require('path');
 const SpeechToTextService = require('../services/SpeechToTextService');
 const { AttemptAnswer } = require('../models');
+const { STORAGE_CONFIG } = require('../config/storage');
+const AiScoringService = require('../services/AiScoringService');
 
 // Hàng đợi xử lý chuyển đổi giọng nói sang văn bản (lưu trong RAM)
 const queue = [];
@@ -43,13 +45,35 @@ async function processQueue() {
     try {
       // Thực hiện chuyển đổi giọng nói sang văn bản
       const transcription = await processJob(job);
+      const transcriptionText = transcription.text || transcription;
+      
+      console.log(`[speechQueue] ✅ Transcription completed for answer ${job.data.answerId}`);
+      console.log(`[speechQueue] Transcribed text: "${transcriptionText.substring(0, 100)}${transcriptionText.length > 100 ? '...' : ''}"`);
+      
       // Cập nhật kết quả vào bảng AttemptAnswer
       await AttemptAnswer.update(
-        { transcribed_text: transcription },
+        { transcribed_text: transcriptionText },
         { where: { id: job.data.answerId } },
       );
+      
+      console.log(`[speechQueue] 🎯 Triggering AI scoring for answer ${job.data.answerId}...`);
+      
+      // Tự động trigger AI scoring SAU KHI có transcribed_text
+      setImmediate(async () => {
+        try {
+          await AiScoringService.scoreAnswerComprehensively(job.data.answerId, true);
+          console.log(`[speechQueue] ✅ AI scoring completed for answer ${job.data.answerId}`);
+        } catch (scoringError) {
+          console.error(`[speechQueue] ❌ AI scoring failed for answer ${job.data.answerId}:`, scoringError.message);
+          // Đánh dấu cần review nếu scoring thất bại
+          await AttemptAnswer.update(
+            { needs_review: true },
+            { where: { id: job.data.answerId } }
+          );
+        }
+      });
+      
       queue.shift(); // Xoá job khỏi hàng đợi
-      // Có thể thông báo cho hàng đợi chấm điểm AI xử lý tiếp
     } catch (error) {
       job.attempts++;
       if (job.attempts >= job.maxAttempts) {
@@ -86,8 +110,33 @@ async function processQueue() {
  */
 async function processJob(job) {
   const { answerId, audioUrl, language = 'en' } = job.data;
+  
+  // Convert relative URL to absolute file path
+  // audioUrl is like: /uploads/audio-xxx.webm or /uploads/audio/audio-xxx.webm
+  let absolutePath = audioUrl;
+  
+  // If it's a relative URL (starts with /uploads), convert to absolute path
+  if (audioUrl.startsWith('/uploads/')) {
+    // Remove /uploads/ prefix and get filename
+    const relativePath = audioUrl.replace(/^\/uploads\//, '');
+    
+    // Build absolute path: backend directory + basePath + filename
+    // If basePath is relative, join with backend directory
+    if (path.isAbsolute(STORAGE_CONFIG.basePath)) {
+      absolutePath = path.join(STORAGE_CONFIG.basePath, relativePath);
+    } else {
+      // basePath is relative (e.g., 'uploads'), join with backend root
+      const backendRoot = path.resolve(__dirname, '../../'); // Go up to backend/
+      absolutePath = path.join(backendRoot, STORAGE_CONFIG.basePath, relativePath);
+    }
+    
+    console.log(`[speechQueue] Converted relative URL to absolute path:`);
+    console.log(`[speechQueue] - URL: ${audioUrl}`);
+    console.log(`[speechQueue] - Path: ${absolutePath}`);
+  }
+  
   // Gọi service chuyển đổi audio sang text
-  const transcription = await SpeechToTextService.convertAudioToText(audioUrl, language);
+  const transcription = await SpeechToTextService.convertAudioToText(absolutePath, language);
   return transcription;
 }
 

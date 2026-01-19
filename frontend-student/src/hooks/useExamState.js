@@ -247,11 +247,8 @@ export const useExamState = (examId, attemptId, attemptType, selectedSkill) => {
     // questions array now contains answer objects with nested question data
     const targetQuestionIndex = questions.findIndex(q => q.question_id === questionId);
     
-    // Special logic for speaking questions: mark all previous questions as completed
-    if (currentQuestion?.question?.questionType?.code?.includes('SPEAKING') && targetQuestionIndex < currentQuestionIndex) {
-      console.log(`[getQuestionStatus] Q${questionId}: FORCED COMPLETED (speaking navigation)`);
-      return 'answered';
-    }
+    // Remove FORCED COMPLETED logic - let speaking questions show their actual status
+    // This was causing all speaking questions to show as completed incorrectly
     
     if (!answer) {
       console.log(`[getQuestionStatus] Q${questionId}: NO ANSWER`);

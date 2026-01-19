@@ -4,6 +4,47 @@
  */
 describe('Practice Mode', () => {
   beforeEach(() => {
+    // Mock auth check
+    cy.intercept('GET', '/api/auth/me', {
+      statusCode: 200,
+      body: {
+        user: {
+          id: 1,
+          email: 'student1@aptis.local',
+          first_name: 'Alice',
+          last_name: 'Student',
+          role: 'student'
+        }
+      }
+    });
+    
+    // Mock practice stats API
+    cy.intercept('GET', '/api/student/practice/stats', {
+      statusCode: 200,
+      body: {
+        total_exams: 15,
+        completed_attempts: 12,
+        average_score: 75,
+        skills_count: 4
+      }
+    });
+    
+    // Mock skill-specific exams API
+    cy.intercept('GET', '/api/student/exams?skill_type=*', {
+      statusCode: 200,
+      body: {
+        exams: [
+          {
+            id: 1,
+            title: 'Practice Exam 1',
+            skill_type: 'Reading',
+            difficulty: 'Easy',
+            duration_minutes: 30
+          }
+        ]
+      }
+    });
+    
     // Login and navigate to practice page
     cy.login('student1@aptis.local', 'password123');
     cy.visit('/practice');

@@ -17,7 +17,7 @@ import { Check, Close } from '@mui/icons-material';
 export default function MCQQuestionResult({ answer, question, showCorrectAnswer = true }) {
   const options = question.options || [];
   const userAnswerId = answer.selected_option_id || 
-    (answer.answer_data ? JSON.parse(answer.answer_data)?.selected_option_id : null);
+    (answer.answer_json ? JSON.parse(answer.answer_json)?.selected_option_id : null);
   const correctOption = options.find(opt => opt.is_correct);
   const isCorrect = userAnswerId === correctOption?.id;
 

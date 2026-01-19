@@ -105,11 +105,13 @@ async function createFullExam(aptisType, teacher, skills) {
   await createListeningPartSection(exam.id, skills.listeningSkill, sectionOrder++, 3, 'LISTENING_STATEMENT_MATCHING', 'Part 3: Statement Matching', 10, 1, 8.0);
   await createListeningPartSection(exam.id, skills.listeningSkill, sectionOrder++, 4, 'LISTENING_MCQ', 'Part 4: Extended MCQ', 10, 2, 4.0);
 
-  // Section 10-13: Viết (4 task, tổng 50 phút, 50 điểm)
-  await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_SHORT', 'Part 1: Form Filling (A1)', 10, 5, 5); // 10 phút, 5 điểm, 5 câu
-  await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_FORM', 'Part 2: Short Response (A2)', 10, 10, 1); // 10 phút, 10 điểm
-  await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_LONG', 'Part 3: Chat Responses (B1)', 10, 15, 1); // 10 phút, 15 điểm
-  await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_EMAIL', 'Part 4: Email Writing (B2)', 20, 20, 1); // 20 phút, 20 điểm
+  // Section 10-13: Viết (4 task, tổng 50 điểm)
+  // APTIS Writing: 4 tasks × 12.5 điểm = 50 điểm tổng
+  // AI chấm dùng CEFR scale (0-3, 0-5, 0-5, 0-6) rồi convert sang 0-12.5
+  await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_SHORT', 'Part 1: Form Filling (A1)', 10, 12.5, 1); // scale 0-3 → 0-12.5
+  await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_FORM', 'Part 2: Short Response (A2)', 10, 12.5, 1); // scale 0-5 → 0-12.5
+  await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_LONG', 'Part 3: Chat Responses (B1)', 10, 12.5, 1); // scale 0-5 → 0-12.5
+  await createWritingSection(exam.id, skills.writingSkill, sectionOrder++, 'WRITING_EMAIL', 'Part 4: Email Writing (B2)', 20, 12.5, 1); // scale 0-6 → 0-12.5
 
   // Section 14-17: Nói (4 section, tổng 50 điểm)
   // Section 1: 3 questions x 4 điểm = 12 điểm
@@ -271,8 +273,8 @@ async function createSpeakingPartSection(examId, skillType, sectionOrder, partNu
 // PHẦN 3-6: VIẾT - 50 điểm (4 task x 12.5 điểm)
 // CEFR-based scoring: Vocabulary, Grammar, Task completion
 // ========================================
-// Tạo section Viết (mỗi task là 1 section với nhiều câu hỏi)
-async function createWritingSection(examId, skillType, sectionOrder, writingTypeCode, sectionTitle, durationMinutes, maxScore = 12, questionCount = 1) {
+// Tạo section Viết (mỗi task là 1 section - CEFR-based scoring converted to 0-12.5)
+async function createWritingSection(examId, skillType, sectionOrder, writingTypeCode, sectionTitle, durationMinutes, pointsPerTask = 12.5, questionCount = 1) {
   const section = await ExamSection.create({
     exam_id: examId,
     skill_type_id: skillType.id,
@@ -288,20 +290,19 @@ async function createWritingSection(examId, skillType, sectionOrder, writingType
     limit: questionCount, // Lấy số lượng câu theo yêu cầu
   });
 
-  // Tính điểm cho mỗi câu trong task
-  const scorePerQuestion = maxScore / questionCount;
-
+  // For Writing tasks: Store max_score as actual points (0-12.5)
+  // AI will score using CEFR scale (0-3, 0-5, 0-5, 0-6) then convert to this scale
   let questionOrder = 1;
   for (const question of questions) {
     await ExamSectionQuestion.create({
       exam_section_id: section.id,
       question_id: question.id,
       question_order: questionOrder++,
-      max_score: scorePerQuestion,
+      max_score: pointsPerTask, // Store as actual points (12.5 for each writing task = 50 total)
     });
   }
 
-  console.log(`[Seed]   - Viết: ${sectionTitle} (${questionCount} câu, ${durationMinutes} phút, ${maxScore} điểm tổng)`);
+  console.log(`[Seed]   - Viết: ${sectionTitle} (${pointsPerTask} điểm, ${durationMinutes} phút, 1 task, AI uses CEFR scale)`);
 }
 
 // ========================================

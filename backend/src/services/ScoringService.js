@@ -9,38 +9,37 @@ class ScoringService {
   }
 
 
-  async scoreMatching(answerJson, correctMapping) {
+  async scoreMatching(answerJson, correctMapping, options = null) {
     try {
       if (!answerJson) {
         console.log('[ScoringService] Matching: No answer provided');
         return { correct: 0, total: Object.keys(correctMapping).length, percentage: 0 };
       }
 
-
       const parsed = typeof answerJson === 'string' ? JSON.parse(answerJson) : answerJson;
       const answer = parsed.matches || parsed;
 
-
       let correct = 0;
       const total = Object.keys(correctMapping).length;
-
 
       if (total === 0) {
         console.log('[ScoringService] No correct mapping found for matching question');
         return { correct: 0, total: 1, percentage: 0 };
       }
 
-
       for (const [itemId, selectedOptionId] of Object.entries(answer)) {
         if (selectedOptionId && correctMapping[itemId]) {
+          const correctOptionId = correctMapping[itemId];
+          
+          // Direct ID comparison
           const selectedId = parseInt(selectedOptionId);
-          const correctId = parseInt(correctMapping[itemId]);
+          const correctId = parseInt(correctOptionId);
+          
           if (selectedId === correctId) {
             correct++;
           }
         }
       }
-
 
       console.log('[ScoringService] Matching scoring:', { answer, correctMapping, correct, total });
       return { correct, total, percentage: (correct / total) * 100 };
@@ -101,53 +100,55 @@ class ScoringService {
   }
 
 
-  async scoreOrdering(itemOrder, correctOrder) {
+  async scoreOrdering(itemOrder, correctOrderIds) {
     try {
       if (!itemOrder) {
         console.log('[ScoringService] Ordering: No answer provided');
-        return { correct: 0, total: correctOrder.length, percentage: 0 };
+        return { correct: 0, total: correctOrderIds.length, percentage: 0 };
       }
 
 
-      let order = [];
+      let userOrderIds = [];
       if (typeof itemOrder === 'string') {
         const parsed = JSON.parse(itemOrder);
         if (parsed.ordered_items) {
-          order = parsed.ordered_items.map(item => item.id || item.original_order);
+          // Frontend sends: {ordered_items: [{id, text, original_order}, ...]}
+          userOrderIds = parsed.ordered_items.map(item => item.id || item);
         } else if (parsed.order) {
-          order = Object.values(parsed.order);
+          userOrderIds = Array.isArray(parsed.order) ? parsed.order : Object.values(parsed.order);
         } else if (Array.isArray(parsed)) {
-          order = parsed;
+          userOrderIds = parsed;
         }
       } else if (Array.isArray(itemOrder)) {
-        order = itemOrder;
+        userOrderIds = itemOrder;
       } else if (typeof itemOrder === 'object') {
         if (itemOrder.ordered_items) {
-          order = itemOrder.ordered_items.map(item => item.id || item.original_order);
+          userOrderIds = itemOrder.ordered_items.map(item => item.id || item);
         } else if (itemOrder.order) {
-          order = Object.values(itemOrder.order);
+          userOrderIds = Array.isArray(itemOrder.order) ? itemOrder.order : Object.values(itemOrder.order);
         } else {
-          order = Object.values(itemOrder);
+          userOrderIds = Object.values(itemOrder);
         }
       }
 
 
       let correct = 0;
-      const total = correctOrder.length;
+      const total = correctOrderIds.length;
 
 
-      for (let i = 0; i < total && i < order.length; i++) {
-        if (order[i] === correctOrder[i]) {
+      // For ordering, we need exact sequence match of item IDs
+      for (let i = 0; i < total && i < userOrderIds.length; i++) {
+        if (userOrderIds[i] === correctOrderIds[i]) {
           correct++;
         }
       }
 
 
-      console.log('[ScoringService] Ordering scoring:', { order, correctOrder, correct, total });
+      console.log('[ScoringService] Ordering scoring:', { userOrderIds, correctOrderIds, correct, total });
       return { correct, total, percentage: (correct / total) * 100 };
     } catch (error) {
       console.error('[ScoringService] Ordering scoring error:', error);
-      return { correct: 0, total: correctOrder.length, percentage: 0 };
+      return { correct: 0, total: correctOrderIds.length, percentage: 0 };
     }
   }
 
@@ -167,21 +168,66 @@ class ScoringService {
       text_answer: answer.text_answer
     });
     if (questionTypeCode.includes('MCQ') || questionTypeCode.includes('TRUE_FALSE')) {
-      const correctOption = await QuestionOption.findOne({
-        where: {
-          question_id: question.id,
-          is_correct: true,
-        },
+      // Check if this is a Multi MCQ (has multiple items)
+      const items = await QuestionItem.findAll({
+        where: { question_id: question.id }
       });
-      const isCorrect = await this.scoreMultipleChoice(
-        answer.selected_option_id,
-        correctOption?.id,
-      );
-      score = isCorrect ? answer.max_score : 0;
+      
+      if (items.length > 1) {
+        // Multi MCQ scoring: each item has its own correct option
+        console.log('[ScoringService] Multi MCQ with', items.length, 'items');
+        
+        const options = await QuestionOption.findAll({
+          where: { question_id: question.id }
+        });
+        
+        // Parse user answers from answer_json
+        const userAnswers = answer.answer_json ? JSON.parse(answer.answer_json) : {};
+        
+        let correct = 0;
+        const total = items.length;
+        
+        // Group options by item (typically 3 options per item)
+        const optionsPerItem = Math.floor(options.length / items.length);
+        
+        items.forEach((item, itemIndex) => {
+          const userAnswerOptionId = userAnswers[item.id];
+          
+          // Find correct option for this item
+          const itemOptionsStart = itemIndex * optionsPerItem;
+          const itemOptions = options.slice(itemOptionsStart, itemOptionsStart + optionsPerItem);
+          const correctOption = itemOptions.find(opt => opt.is_correct);
+          
+          if (userAnswerOptionId === correctOption?.id) {
+            correct++;
+          }
+        });
+        
+        console.log('[ScoringService] Multi MCQ scoring:', { correct, total, userAnswers });
+        score = total > 0 ? (correct / total) * answer.max_score : 0;
+      } else {
+        // Single MCQ scoring
+        const correctOption = await QuestionOption.findOne({
+          where: {
+            question_id: question.id,
+            is_correct: true,
+          },
+        });
+        const isCorrect = await this.scoreMultipleChoice(
+          answer.selected_option_id,
+          correctOption?.id,
+        );
+        score = isCorrect ? answer.max_score : 0;
+      }
     } else if (questionTypeCode.includes('MATCHING')) {
       const items = await QuestionItem.findAll({
         where: { question_id: question.id }
       });
+      const options = await QuestionOption.findAll({
+        where: { question_id: question.id }
+      });
+      
+      // Create a mapping from item_id to correct option_id
       const correctMapping = {};
       items.forEach((item) => {
         if (item.correct_option_id) {
@@ -189,7 +235,7 @@ class ScoringService {
         }
       });
       console.log('[ScoringService] Matching question', question.id, 'correct mapping:', correctMapping);
-      const result = await this.scoreMatching(answer.answer_json, correctMapping);
+      const result = await this.scoreMatching(answer.answer_json, correctMapping, options);
       score = result.total > 0 ? (result.correct / result.total) * answer.max_score : 0;
     } else if (questionTypeCode.includes('GAP_FILL') || questionTypeCode.includes('FILL')) {
       const items = await QuestionItem.findAll({
@@ -198,19 +244,26 @@ class ScoringService {
       });
       const correctAnswers = items.map((item) => item.answer_text);
       console.log('[ScoringService] Gap filling correct answers:', correctAnswers);
-      const result = await this.scoreGapFilling(answer.answer_json, correctAnswers);
+      const result = await this.scoreGapFilling(answer.answer_json, correctAnswers, items);
       score = (result.correct / result.total) * answer.max_score;
     } else if (questionTypeCode.includes('ORDERING')) {
       const items = await QuestionItem.findAll({
         where: { question_id: question.id },
         order: [['item_order', 'ASC']],
       });
-      const correctOrder = items.map((item, index) => {
-        const position = parseInt(item.answer_text);
-        return isNaN(position) ? (index + 1) : position;
-      });
-      console.log('[ScoringService] Ordering correct order:', correctOrder);
-      const result = await this.scoreOrdering(answer.answer_json, correctOrder);
+      
+      // Build correct order as array of item IDs sorted by their correct position
+      const correctOrderIds = items
+        .filter(item => parseInt(item.answer_text) > 0) // Filter out instruction items
+        .sort((a, b) => {
+          const aPos = parseInt(a.answer_text) || a.item_order;
+          const bPos = parseInt(b.answer_text) || b.item_order;
+          return aPos - bPos;
+        })
+        .map(item => item.id);
+      
+      console.log('[ScoringService] Ordering correct order (IDs):', correctOrderIds);
+      const result = await this.scoreOrdering(answer.answer_json, correctOrderIds);
       score = (result.correct / result.total) * answer.max_score;
     }
     const finalScore = Math.min(score, answer.max_score);

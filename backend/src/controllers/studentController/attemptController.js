@@ -338,18 +338,22 @@ exports.submitAttempt = async (req, res, next) => {
           }
         } else if (questionCode.includes('speaking')) {
           if (answer.audio_url) {
-            aiAnswersToScore.push({
-              answerId: answer.id,
-              type: 'speaking',
-              audioUrl: answer.audio_url
-            });
-            
             // If transcribed_text is not available, queue for transcription
+            // AI scoring will be triggered automatically AFTER transcription completes
             if (!answer.transcribed_text) {
               speakingAnswersNeedTranscription.push({
                 answerId: answer.id,
                 audioUrl: answer.audio_url
               });
+              console.log(`[submitAttempt] Speaking answer ${answer.id} queued for transcription (will auto-score after)`);
+            } else {
+              // Only score speaking if already transcribed
+              aiAnswersToScore.push({
+                answerId: answer.id,
+                type: 'speaking',
+                audioUrl: answer.audio_url
+              });
+              console.log(`[submitAttempt] Speaking answer ${answer.id} already transcribed, will score now`);
             }
           }
         }
@@ -357,12 +361,13 @@ exports.submitAttempt = async (req, res, next) => {
     }
 
     const hasAiScoring = aiAnswersToScore.length > 0;
+    const hasSpeakingTranscription = speakingAnswersNeedTranscription.length > 0;
     console.log(`[submitAttempt] Found ${aiAnswersToScore.length} answers needing AI scoring`);
     console.log(`[submitAttempt] Found ${speakingAnswersNeedTranscription.length} speaking answers needing transcription`);
 
-    // ⏳ IMPORTANT: If AI scoring is needed, use async approach to prevent timeout
-    if (hasAiScoring) {
-      console.log(`[submitAttempt] ⚠️  AI scoring needed - will score asynchronously`);
+    // ⏳ IMPORTANT: If AI scoring OR transcription is needed, use async approach
+    if (hasAiScoring || hasSpeakingTranscription) {
+      console.log(`[submitAttempt] ⚠️  Background processing needed - will handle asynchronously`);
 
       // Queue AI scoring in the background (don't await!)
       // Using setImmediate to prevent blocking the response
@@ -371,9 +376,11 @@ exports.submitAttempt = async (req, res, next) => {
           console.log(`[submitAttempt-Background] Starting async processing for attempt ${attemptId}`);
           const backgroundStartTime = Date.now();
 
-          // Step 1: Transcribe speaking answers first
+          // Step 1: Queue speaking answers for transcription
+          // They will be automatically scored AFTER transcription completes
           if (speakingAnswersNeedTranscription.length > 0) {
             console.log(`[submitAttempt-Background] Adding ${speakingAnswersNeedTranscription.length} speaking answers to transcription queue...`);
+            console.log(`[submitAttempt-Background] ⚠️ These will be scored automatically after transcription completes`);
             for (const speechAnswer of speakingAnswersNeedTranscription) {
               addSpeechJob({
                 answerId: speechAnswer.answerId,
@@ -381,15 +388,16 @@ exports.submitAttempt = async (req, res, next) => {
                 language: 'en'  // Default to English - could be made configurable based on exam language
               });
             }
-            
-            // Wait a bit for transcription to start processing
-            // Note: We don't wait for full completion, scoring will check if transcribed_text is available
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // NO WAIT - transcription queue will handle scoring automatically
           }
+          
 
-          // Step 2: Score all answers (writing and speaking)
+          // Step 2: Score writing answers and already-transcribed speaking answers
+          // Speaking answers queued for transcription will be scored automatically after transcription
           let successCount = 0;
           let errorCount = 0;
+
+          console.log(`[submitAttempt-Background] Scoring ${aiAnswersToScore.length} answers immediately (writing + already-transcribed speaking)`);
 
           for (const answerItem of aiAnswersToScore) {
             try {
@@ -422,9 +430,10 @@ exports.submitAttempt = async (req, res, next) => {
 
           const backgroundDuration = Date.now() - backgroundStartTime;
           console.log(`[submitAttempt-Background] ✅ Async processing completed for attempt ${attemptId}`);
-          console.log(`[submitAttempt-Background]    - Transcribed: ${speakingAnswersNeedTranscription.length} speaking answers`);
-          console.log(`[submitAttempt-Background]    - Scored: ${successCount}/${aiAnswersToScore.length} answers`);
+          console.log(`[submitAttempt-Background]    - Queued for transcription: ${speakingAnswersNeedTranscription.length} speaking answers`);
+          console.log(`[submitAttempt-Background]    - Scored immediately: ${successCount}/${aiAnswersToScore.length} answers (writing + already-transcribed speaking)`);
           console.log(`[submitAttempt-Background]    - Errors: ${errorCount}`);
+          console.log(`[submitAttempt-Background]    - Note: Speaking answers will be scored automatically after transcription completes`);
           console.log(`[submitAttempt-Background]    - Total time: ${backgroundDuration}ms`);
 
         } catch (error) {
@@ -432,9 +441,9 @@ exports.submitAttempt = async (req, res, next) => {
         }
       });
 
-      // Return 202 Accepted immediately (DON'T WAIT FOR AI SCORING)
+      // Return 202 Accepted immediately (DON'T WAIT FOR AI SCORING/TRANSCRIPTION)
       const submitDuration = Date.now() - submitStartTime;
-      console.log(`[submitAttempt] ✅ Returning 202 Accepted after ${submitDuration}ms (AI scoring in background)`);
+      console.log(`[submitAttempt] ✅ Returning 202 Accepted after ${submitDuration}ms (background processing active)`);
 
       return res.status(202).json({
         success: true,
@@ -446,7 +455,8 @@ exports.submitAttempt = async (req, res, next) => {
           aiScoringInfo: {
             status: 'scoring_in_progress',
             answers_to_score: aiAnswersToScore.length,
-            estimated_time: `${aiAnswersToScore.length * 30}s`,
+            speaking_to_transcribe: speakingAnswersNeedTranscription.length,
+            estimated_time: `${(aiAnswersToScore.length * 30) + (speakingAnswersNeedTranscription.length * 45)}s`,
             check_status_url: `/student/attempts/${attemptId}/status`,
             note: 'Điểm Writing và Speaking sẽ được cập nhật trong vài phút. Vui lòng kiểm tra lại kết quả sau ít phút.'
           }
@@ -605,7 +615,7 @@ exports.getAttemptQuestions = async (req, res, next) => {
         {
           model: Question,
           as: 'question',
-          attributes: ['id', 'question_type_id', 'aptis_type_id', 'difficulty', 'content', 'media_url', 'duration_seconds', 'status'],
+          attributes: ['id', 'question_type_id', 'aptis_type_id', 'difficulty', 'content', 'media_url', 'additional_media', 'parent_question_id', 'duration_seconds', 'status'],
           include: [
             { 
               model: QuestionItem, 

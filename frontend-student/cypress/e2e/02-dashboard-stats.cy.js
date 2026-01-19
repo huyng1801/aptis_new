@@ -4,6 +4,32 @@
  */
 describe('Dashboard and Stats', () => {
   beforeEach(() => {
+    // Mock auth check
+    cy.intercept('GET', '/api/auth/me', {
+      statusCode: 200,
+      body: {
+        user: {
+          id: 1,
+          email: 'student1@aptis.local',
+          first_name: 'Alice',
+          last_name: 'Student',
+          role: 'student'
+        }
+      }
+    });
+    
+    // Mock dashboard stats API
+    cy.intercept('GET', '/api/student/dashboard/stats', {
+      statusCode: 200,
+      body: {
+        total_exams: 5,
+        average_score: 78.5,
+        current_streak: 3,
+        total_study_time: 45,
+        recent_activities: []
+      }
+    });
+    
     // Login before each test
     cy.login('student1@aptis.local', 'password123');
     cy.visit('/home');

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { getAssetUrl } from '@/services/api';
-import { scoringUtils } from '@/utils/scoringUtils';
 import QuestionResultDisplayNew from './QuestionResultDisplay';
 import {
   Box,
@@ -19,6 +18,7 @@ import {
   LinearProgress,
   Paper,
   List,
+  Stack,
   ListItem,
   ListItemText,
   ListItemIcon
@@ -61,20 +61,21 @@ export default function QuestionFeedback({ questionResults, attemptId, showDetai
           };
         }
         
-        // Calculate accurate score for this question
-        const questionScore = scoringUtils.autoScoreQuestion(
-          question, 
-          answer, 
-          answer.max_score || question.max_score || 1
-        );
-        
         grouped[sectionName].push({
           answer,
-          calculatedScore: questionScore
+          // Use scores directly from the API - no need to calculate
+          calculatedScore: {
+            score: answer.final_score !== null ? answer.final_score : (answer.score || 0),
+            percentage: (() => {
+              const actualScore = answer.final_score !== null ? answer.final_score : (answer.score || 0);
+              const maxScore = answer.max_score || question.max_score || 1;
+              return maxScore > 0 ? (actualScore / maxScore) * 100 : 0;
+            })()
+          }
         });
         
         // Use actual answer score (final_score if available, else score from AI/auto)
-        const actualScore = answer.final_score !== null ? answer.final_score : (answer.score || questionScore.score);
+        const actualScore = answer.final_score !== null ? answer.final_score : (answer.score || 0);
         const maxScore = answer.max_score || question.max_score || 1;
         
         sectionStats[sectionName].totalQuestions++;
@@ -214,27 +215,74 @@ export default function QuestionFeedback({ questionResults, attemptId, showDetai
                                     )}
 
                                     {/* Suggestions - Specific Text Corrections */}
-                                    {feedback.suggestions && !feedback.suggestions.includes('Unable to extract') && !feedback.suggestions.includes('Please review') && (
+                                    {feedback.suggestions && !isParsingError && (
                                       <Box sx={{ mb: 2 }}>
                                         <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.dark', mb: 1 }}>
                                           💡 Suggestions for Improvement:
                                         </Typography>
-                                        <Typography variant="body2" sx={{ 
-                                          whiteSpace: 'pre-wrap', 
-                                          wordBreak: 'break-word', 
-                                          ml: 1,
-                                          p: 1.5,
-                                          bgcolor: 'warning.50',
-                                          borderRadius: 1,
-                                          border: '1px solid',
-                                          borderColor: 'warning.200',
-                                          borderLeft: '4px solid',
-                                          borderLeftColor: 'warning.main',
-                                          fontFamily: 'monospace',
-                                          fontSize: '0.875rem'
-                                        }}>
-                                          {feedback.suggestions}
-                                        </Typography>
+                                        
+                                        {/* Handle array of suggestion objects */}
+                                        {Array.isArray(feedback.suggestions) ? (
+                                          <Stack spacing={1.5}>
+                                            {feedback.suggestions.map((suggestion, idx) => (
+                                              <Box key={idx} sx={{
+                                                p: 1.5,
+                                                bgcolor: 'warning.50',
+                                                borderRadius: 1,
+                                                border: '1px solid',
+                                                borderColor: 'warning.200',
+                                                borderLeft: '4px solid',
+                                                borderLeftColor: 'warning.main'
+                                              }}>
+                                                {typeof suggestion === 'string' ? (
+                                                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                                    {suggestion}
+                                                  </Typography>
+                                                ) : (
+                                                  <Box>
+                                                    {(suggestion.context || suggestion.original || suggestion.incorrect_phrase) && (
+                                                      <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                                        <strong>Original:</strong> "{suggestion.context || suggestion.original || suggestion.incorrect_phrase}"
+                                                      </Typography>
+                                                    )}
+                                                    {(suggestion.corrected || suggestion.corrected_version) && (
+                                                      <Typography variant="body2" sx={{ mb: 0.5, color: 'success.main' }}>
+                                                        <strong>✓ Corrected:</strong> "{suggestion.corrected || suggestion.corrected_version}"
+                                                      </Typography>
+                                                    )}
+                                                    {suggestion.explanation && (
+                                                      <Typography variant="body2" sx={{ mb: 0.5, fontStyle: 'italic', fontSize: '0.85rem' }}>
+                                                        <strong>Why:</strong> {suggestion.explanation}
+                                                      </Typography>
+                                                    )}
+                                                    {suggestion.rationale && (
+                                                      <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+                                                        <strong>Impact:</strong> {suggestion.rationale}
+                                                      </Typography>
+                                                    )}
+                                                  </Box>
+                                                )}
+                                              </Box>
+                                            ))}
+                                          </Stack>
+                                        ) : (
+                                          <Typography variant="body2" sx={{ 
+                                            whiteSpace: 'pre-wrap', 
+                                            wordBreak: 'break-word', 
+                                            ml: 1,
+                                            p: 1.5,
+                                            bgcolor: 'warning.50',
+                                            borderRadius: 1,
+                                            border: '1px solid',
+                                            borderColor: 'warning.200',
+                                            borderLeft: '4px solid',
+                                            borderLeftColor: 'warning.main',
+                                            fontFamily: 'monospace',
+                                            fontSize: '0.875rem'
+                                          }}>
+                                            {feedback.suggestions}
+                                          </Typography>
+                                        )}
                                       </Box>
                                     )}
 

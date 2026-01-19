@@ -56,6 +56,16 @@ const Question = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    parent_question_id: {
+      // ID của câu hỏi chính (cho các câu hỏi liên quan trong cùng section)
+      // VD: SPEAKING_DESCRIPTION Q1 là primary, Q2-Q3 là follow-up liên quan
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'questions',
+        key: 'id',
+      },
+    },
     created_by: {
       // ID của admin/teacher người tạo câu hỏi
       type: DataTypes.INTEGER,
