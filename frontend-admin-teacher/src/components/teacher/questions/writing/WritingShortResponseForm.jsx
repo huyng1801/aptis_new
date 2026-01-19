@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
+  Button,
   TextField,
   Typography,
   Alert,
@@ -13,16 +14,13 @@ import {
 import { CheckCircle, Warning, Edit } from '@mui/icons-material';
 
 /**
- * Writing Short Response Form - Task 1 của Writing skill
- * Dựa trên seed data: A1 level, 0-4 scale
- * Basic information/form filling
+ * APTIS Writing Task 1: Form Filling (A1 Level)
+ * Seed structure: Simple content string with multiple questions
+ * Example: "What is your name?\nHow old are you?\nWhat city do you live in?"
  */
 export default function WritingShortResponseForm({ content, onChange }) {
-  const [prompt, setPrompt] = useState('');
-  const [instructions, setInstructions] = useState('');
-  const [formFields, setFormFields] = useState('');
-  const [minWords, setMinWords] = useState(5);
-  const [maxWords, setMaxWords] = useState(15);
+  const [questionContent, setQuestionContent] = useState('');
+  const [instructions, setInstructions] = useState('Fill in the form with basic information. Answer each question with a few words.');
   const [timeLimit, setTimeLimit] = useState(10);
   
   // Error handling states
@@ -32,18 +30,8 @@ export default function WritingShortResponseForm({ content, onChange }) {
   // Parse existing content if available
   useEffect(() => {
     if (content) {
-      try {
-        const parsed = typeof content === 'string' ? JSON.parse(content) : content;
-        setPrompt(parsed.prompt || '');
-        setInstructions(parsed.instructions || '');
-        setFormFields(parsed.form_fields || '');
-        setMinWords(parsed.min_words || 5);
-        setMaxWords(parsed.max_words || 15);
-        setTimeLimit(parsed.time_limit || 10);
-      } catch (error) {
-        // If content is not JSON, treat as prompt
-        setPrompt(content || '');
-      }
+      // Seed stores as simple content string
+      setQuestionContent(content || '');
     }
   }, [content]);
 
@@ -51,9 +39,15 @@ export default function WritingShortResponseForm({ content, onChange }) {
   const validateData = useCallback(() => {
     const newErrors = {};
     
-    // Check prompt
-    if (!prompt.trim()) {
-      newErrors.prompt = 'Yêu cầu viết không được để trống';
+    // Check question content
+    if (!questionContent.trim()) {
+      newErrors.questionContent = 'Nội dung câu hỏi không được để trống';
+    } else {
+      // Check if contains at least one question
+      const lines = questionContent.trim().split('\n').filter(line => line.trim());
+      if (lines.length < 3) {
+        newErrors.questionContent = 'Nên có ít nhất 3 câu hỏi cơ bản (tên, tuổi, địa chỉ, nghề nghiệp, email...)';
+      }
     }
     
     // Check instructions
@@ -61,173 +55,99 @@ export default function WritingShortResponseForm({ content, onChange }) {
       newErrors.instructions = 'Hướng dẫn không được để trống';
     }
     
-    // Check word limits
-    if (minWords < 1 || minWords > 50) {
-      newErrors.minWords = 'Số từ tối thiểu nên từ 1-50';
-    }
-    
-    if (maxWords < minWords || maxWords > 100) {
-      newErrors.maxWords = `Số từ tối đa phải >= ${minWords} và <= 100`;
-    }
-    
     // Check time limit
-    if (timeLimit < 5 || timeLimit > 60) {
-      newErrors.timeLimit = 'Thời gian nên từ 5-60 phút';
+    if (timeLimit < 5 || timeLimit > 20) {
+      newErrors.timeLimit = 'Thời gian nên từ 5-20 phút';
     }
     
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     setIsValidated(isValid);
+    
+    // Send data to parent when valid
+    if (isValid && onChange) {
+      const formData = {
+        content: questionContent.trim(),
+        instructions: instructions.trim(),
+        timeLimit: timeLimit,
+        type: 'writing_form_filling'
+      };
+      onChange(JSON.stringify(formData));
+    }
+    
     return isValid;
-  }, [prompt, instructions, minWords, maxWords, timeLimit]);
+  }, [questionContent, instructions, timeLimit, onChange]);
 
   // Remove auto-validation useEffect - causes infinite loops
   // Data is sent to parent on every change (via onChange)
   // Validation is only called on demand via button click
 
-  // Update parent component
-  useEffect(() => {
-    const questionData = {
-      prompt: prompt.trim(),
-      instructions: instructions.trim(),
-      form_fields: formFields.trim(),
-      min_words: parseInt(minWords) || 5,
-      max_words: parseInt(maxWords) || 15,
-      time_limit: parseInt(timeLimit) || 10,
-      level: 'A1',
-      scale: '0-4'
-    };
-    
-    if (onChange) {
-      onChange(JSON.stringify(questionData));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompt, instructions, formFields, minWords, maxWords, timeLimit]);
+  // Remove auto-validation useEffect - causes infinite loops
+  // Data will be sent via manual save button only
 
   return (
     <Box>
       <Typography variant="h6" gutterBottom color="primary">
-        Writing - Short Response (Task 1)
+        Writing Task 1 - Form Filling (A1)
       </Typography>
       
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="subtitle2" gutterBottom>Hướng dẫn:</Typography>
         <Typography variant="body2">
-          • Task 1: Basic information/form filling, A1 level<br/>
-          • Chấm điểm: 0-4 scale bởi AI<br/>
-          • Tập trung: Basic personal information, simple responses
+          • Tạo các câu hỏi thông tin cơ bản (tên, tuổi, địa chỉ, nghề nghiệp...)<br/>
+          • Mỗi câu hỏi trên 1 dòng riêng biệt<br/>
+          • Cấp độ: A1, Scale: 0-4 (AI chấm)
         </Typography>
       </Alert>
 
-      {/* Level and Scale Info */}
-      <Box sx={{ mb: 3 }}>
-        <Chip label="Level: A1" color="primary" variant="outlined" sx={{ mr: 1 }} />
-        <Chip label="Scale: 0-4" color="secondary" variant="outlined" />
-      </Box>
-
-      {/* Prompt */}
+      {/* Question Content */}
       <TextField
         fullWidth
-        label="Yêu cầu viết"
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
         multiline
-        rows={3}
-        error={!!errors.prompt}
-        helperText={errors.prompt}
-        sx={{ mb: 3 }}
-        placeholder="Complete the form with your personal information. Write 5-15 words for each field."
+        rows={8}
+        label="Nội dung câu hỏi (mỗi câu 1 dòng)"
+        value={questionContent}
+        onChange={(e) => setQuestionContent(e.target.value)}
+        error={!!errors.questionContent}
+        helperText={errors.questionContent || 'Ví dụ: What is your name?\\nHow old are you?\\nWhat city do you live in?'}
+        sx={{ mb: 2 }}
+        placeholder="What is your name?&#10;How old are you?&#10;What city do you live in?&#10;What is your job?&#10;What is your email address?"
       />
 
       {/* Instructions */}
       <TextField
         fullWidth
-        label="Hướng dẫn chi tiết"
-        value={instructions}
-        onChange={(e) => setInstructions(e.target.value)}
         multiline
         rows={2}
+        label="Hướng dẫn"
+        value={instructions}
+        onChange={(e) => setInstructions(e.target.value)}
         error={!!errors.instructions}
         helperText={errors.instructions}
-        sx={{ mb: 3 }}
-        placeholder="Fill in the form with basic information about yourself. Use simple sentences."
+        sx={{ mb: 2 }}
       />
 
-      {/* Form Fields */}
+      {/* Time Limit */}
       <TextField
-        fullWidth
-        label="Các trường thông tin cần điền"
-        value={formFields}
-        onChange={(e) => setFormFields(e.target.value)}
-        multiline
-        rows={4}
-        sx={{ mb: 3 }}
-        placeholder="• Name: ___________&#10;• Age: ___________&#10;• Hometown: ___________&#10;• Hobby: ___________&#10;• Favorite food: ___________"
+        type="number"
+        label="Thời gian (phút)"
+        value={timeLimit}
+        onChange={(e) => setTimeLimit(parseInt(e.target.value) || 10)}
+        error={!!errors.timeLimit}
+        helperText={errors.timeLimit}
+        inputProps={{ min: 5, max: 20 }}
+        sx={{ mb: 2, width: '200px' }}
       />
-
-      {/* Settings */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
-          <TextField
-            fullWidth
-            label="Số từ tối thiểu"
-            type="number"
-            value={minWords}
-            onChange={(e) => setMinWords(e.target.value)}
-            error={!!errors.minWords}
-            helperText={errors.minWords}
-            inputProps={{ min: 1, max: 50 }}
-          />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <TextField
-            fullWidth
-            label="Số từ tối đa"
-            type="number"
-            value={maxWords}
-            onChange={(e) => setMaxWords(e.target.value)}
-            error={!!errors.maxWords}
-            helperText={errors.maxWords}
-            inputProps={{ min: minWords, max: 100 }}
-          />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <TextField
-            fullWidth
-            label="Thời gian (phút)"
-            type="number"
-            value={timeLimit}
-            onChange={(e) => setTimeLimit(e.target.value)}
-            error={!!errors.timeLimit}
-            helperText={errors.timeLimit}
-            inputProps={{ min: 5, max: 60 }}
-          />
-        </Grid>
-      </Grid>
 
       {/* Preview */}
       <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
         <Box display="flex" alignItems="center" mb={2}>
           <Edit color="primary" sx={{ mr: 1 }} />
-          <Typography variant="subtitle2">Xem trước bài thi:</Typography>
+          <Typography variant="subtitle2">Xem trước (Format như seed):</Typography>
         </Box>
-        <Typography variant="body2" gutterBottom>
-          <strong>Time Limit:</strong> {timeLimit} minutes
+        <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+          {questionContent || 'Chưa có nội dung...'}
         </Typography>
-        <Typography variant="body2" gutterBottom>
-          <strong>Word Count:</strong> {minWords}-{maxWords} words per field
-        </Typography>
-        <Typography variant="body2" gutterBottom>
-          <strong>Task:</strong> {prompt || 'Chưa có nội dung'}
-        </Typography>
-        {formFields && (
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'white', borderRadius: 1 }}>
-            <Typography variant="body2" fontWeight="bold" gutterBottom>Form to complete:</Typography>
-            <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-              {formFields}
-            </Typography>
-          </Box>
-        )}
       </Paper>
 
       {/* Manual Validation Button */}
@@ -244,7 +164,7 @@ export default function WritingShortResponseForm({ content, onChange }) {
       {/* Validation Status */}
       {isValidated && (
         <Alert severity="success" icon={<CheckCircle />}>
-          Câu hỏi Writing Short Response hợp lệ!
+          Câu hỏi Writing Form Filling hợp lệ!
         </Alert>
       )}
 

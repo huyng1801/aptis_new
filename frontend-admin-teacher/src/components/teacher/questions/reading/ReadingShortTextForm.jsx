@@ -57,9 +57,8 @@ const ReadingShortTextForm = ({ questionData, onChange, onValidate }) => {
 
   const [errors, setErrors] = React.useState({});
 
-  React.useEffect(() => {
-    validateForm();
-  }, [formData]);
+  // Remove auto-validation useEffect - causes infinite loops
+  // Validation is only called on demand via button click
 
   const validateForm = () => {
     const newErrors = {};
@@ -99,7 +98,6 @@ const ReadingShortTextForm = ({ questionData, onChange, onValidate }) => {
     setErrors(newErrors);
     
     const isValid = Object.keys(newErrors).length === 0;
-    if (onValidate) onValidate(isValid);
     
     return isValid;
   };

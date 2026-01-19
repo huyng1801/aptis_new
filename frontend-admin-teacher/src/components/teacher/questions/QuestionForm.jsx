@@ -138,12 +138,6 @@ export default function QuestionForm({
   const selectedSkill = skillData;
   const selectedQuestionType = questionTypeData;
 
-  // Get current validation state (memoized to prevent infinite loops)
-  const validationResult = useMemo(() => {
-    return validateQuestionContent(questionContent);
-  }, [questionContent]);
-  const isValidQuestionContent = validationResult.isValid;
-
   const formik = useFormik({
     initialValues: {
       content: initialData.content || '',
@@ -155,11 +149,6 @@ export default function QuestionForm({
     validationSchema: questionSchema,
     enableReinitialize: false, // Disable to prevent infinite loops
     onSubmit: async (values) => {
-      if (!isValidQuestionContent) {
-        console.error('Question content validation failed:', validationResult.error);
-        return;
-      }
-      
       const submissionData = {
         ...values,
         content: questionContent,
@@ -391,25 +380,11 @@ export default function QuestionForm({
         </Button>
         
         <Box display="flex" flexDirection="column" alignItems="flex-end">
-          {!isValidQuestionContent && validationResult.error && (
-            <Typography 
-              variant="caption" 
-              color="error" 
-              sx={{ mb: 1 }}
-            >
-              {validationResult.error}
-            </Typography>
-          )}
-          
           <Button
             type="submit"
             variant="contained"
             startIcon={<Save />}
-            disabled={
-              formik.isSubmitting || 
-              !isValidQuestionContent || 
-              Object.keys(formik.errors).length > 0
-            }
+            disabled={formik.isSubmitting || Object.keys(formik.errors).length > 0}
             size="large"
           >
             {isEditing ? 'Cập nhật câu hỏi' : 'Tiếp tục'}

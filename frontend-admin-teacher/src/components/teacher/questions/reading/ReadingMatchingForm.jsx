@@ -62,20 +62,23 @@ export default function ReadingMatchingForm({ content, onChange }) {
       newErrors.passage = 'Đoạn văn giới thiệu không được để trống';
     }
     
-    // Check persons
-    const validPersons = persons.filter(person => person.name.trim() && person.text.trim());
+    // Check persons - filter by text content only
+    const validPersons = persons.filter(person => person.text && person.text.trim());
     if (validPersons.length < 2) {
       newErrors.persons = 'Phải có ít nhất 2 người với nội dung';
     }
     
     // Check questions
-    const validQuestions = questions.filter(q => q.text.trim() && q.correct);
+    const validQuestions = questions.filter(q => q.text && q.text.trim() && q.correct);
     if (validQuestions.length < 2) {
       newErrors.questions = 'Phải có ít nhất 2 câu hỏi với đáp án';
     }
     
     // Check if all correct answers refer to valid persons
-    const personLetters = validPersons.map(p => p.name.slice(-1));
+    const personLetters = persons
+      .filter(p => p.text && p.text.trim())
+      .map((p, idx) => String.fromCharCode(65 + idx)); // A, B, C, D...
+    
     for (const question of validQuestions) {
       if (!personLetters.includes(question.correct)) {
         newErrors.questions = 'Có đáp án không hợp lệ (không tương ứng với người nào)';
@@ -86,6 +89,19 @@ export default function ReadingMatchingForm({ content, onChange }) {
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     setIsValidated(isValid);
+    
+    // Send data to parent when valid
+    if (isValid && onChange) {
+      const formData = {
+        instructions: instructions.trim(),
+        passage: passage.trim(),
+        persons: persons.filter(p => p.text && p.text.trim()),
+        questions: questions.filter(q => q.text && q.text.trim()),
+        type: 'reading_matching'
+      };
+      onChange(JSON.stringify(formData));
+    }
+    
     return isValid;
   }, [instructions, passage, persons, questions]);
 
@@ -93,20 +109,8 @@ export default function ReadingMatchingForm({ content, onChange }) {
   // Data is sent to parent on every change (via onChange)
   // Validation is only called on demand via button click
 
-  // Update parent component
-  useEffect(() => {
-    const questionData = {
-      instructions: instructions.trim(),
-      passage: passage.trim(),
-      persons: persons.filter(p => p.name.trim() && p.text.trim()),
-      questions: questions.filter(q => q.text.trim() && q.correct)
-    };
-    
-    if (onChange) {
-      onChange(JSON.stringify(questionData));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instructions, passage, persons, questions]);
+  // Remove auto-update useEffect - causes infinite loops
+  // Data will be sent via manual save button only
 
   // Handle adding new person
   const handleAddPerson = () => {

@@ -104,28 +104,14 @@ export default function ListeningGapFillingForm({ content, onChange }) {
     const isValid = Object.keys(newErrors).length === 0;
     setIsValidated(isValid);
     return isValid;
-  }, [title, audioScript, passage, options, correctAnswers]);
+  }, []);
 
   // Remove auto-validation useEffect - causes infinite loops
   // Data is sent to parent on every change (via onChange)
   // Validation is only called on demand via button click
 
-  // Update parent component
-  useEffect(() => {
-    const questionData = {
-      title: title.trim(),
-      audioScript: audioScript.trim(),
-      passage: passage.trim(),
-      options: options.filter(opt => opt.trim()),
-      correctAnswers: correctAnswers.filter(ans => ans.trim()),
-      instructions: instructions.trim()
-    };
-    
-    if (onChange) {
-      onChange(JSON.stringify(questionData));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, audioScript, passage, options, correctAnswers, instructions]);
+  // Remove auto-update useEffect - causes infinite loops
+  // Data will be sent via manual save button only
 
   // Handle adding new option
   const handleAddOption = () => {

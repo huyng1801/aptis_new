@@ -83,27 +83,29 @@ export default function ReadingOrderingForm({ content, onChange }) {
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     setIsValidated(isValid);
+    
+    // Send data to parent when valid
+    if (isValid && onChange) {
+      const validSentences = sentences.filter(sent => sent.trim());
+      const formData = {
+        title: title.trim(),
+        passage: passage.trim(),
+        sentences: validSentences,
+        correctOrder: correctOrder,
+        type: 'reading_ordering'
+      };
+      onChange(JSON.stringify(formData));
+    }
+    
     return isValid;
-  }, [title, passage, sentences, correctOrder]);
+  }, [title, passage, sentences, correctOrder, onChange]);
 
   // Remove auto-validation useEffect - causes infinite loops
   // Data is sent to parent on every change (via onChange)
   // Validation is only called on demand via button click
 
-  // Update parent component
-  useEffect(() => {
-    const questionData = {
-      title: title.trim(),
-      passage: passage.trim(),
-      sentences: sentences.filter(sent => sent.trim()),
-      correctOrder: correctOrder.slice(0, sentences.filter(sent => sent.trim()).length)
-    };
-    
-    if (onChange) {
-      onChange(JSON.stringify(questionData));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, passage, sentences, correctOrder]);
+  // Remove auto-update useEffect - causes infinite loops
+  // Data will be sent via manual save button only
 
   // Handle adding new sentence
   const handleAddSentence = () => {

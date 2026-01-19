@@ -89,27 +89,24 @@ export default function ReadingGapFillingForm({ content, onChange }) {
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     setIsValidated(isValid);
-    return isValid;
-  }, [passage, options, correctAnswers]);
-
-  // Update parent component với debounce  
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const questionData = {
-        passage: passage,
-        options: options.filter(opt => opt.trim()),
-        correctAnswers: correctAnswers.filter(ans => ans.trim()),
-        prompt: prompt.trim()
-      };
-      
-      if (onChange) {
-        onChange(JSON.stringify(questionData));
-      }
-    }, 300); // Debounce 300ms
     
-    return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [passage, options, correctAnswers, prompt]);
+    // Send data to parent when valid
+    if (isValid && onChange) {
+      const formData = {
+        passage: passage.trim(),
+        options: validOptions,
+        correctAnswers: validAnswers,
+        prompt: prompt.trim(),
+        type: 'reading_gap_filling'
+      };
+      onChange(JSON.stringify(formData));
+    }
+    
+    return isValid;
+  }, [passage, options, correctAnswers, prompt, onChange]);
+
+  // Remove auto-update useEffect - causes infinite loops
+  // Data will be sent via manual save button only
 
   // Handle adding new option
   const handleAddOption = () => {

@@ -199,11 +199,7 @@ export default function NewQuestionPage() {
           throw new Error(parentResult.payload || 'Không thể tạo câu hỏi chính');
         }
       } else {
-        // Xử lý câu hỏi bình thường
-        if (!questionData.content || !questionData.content.trim()) {
-          throw new Error('Nội dung câu hỏi không được để trống');
-        }
-        
+
         if (!questionData.aptis_type_id || !questionData.skill_type_id || !questionData.question_type_id) {
           throw new Error('Vui lòng chọn đầy đủ loại APTIS, kỹ năng và loại câu hỏi');
         }

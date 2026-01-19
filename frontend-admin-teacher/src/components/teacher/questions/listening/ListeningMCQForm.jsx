@@ -17,14 +17,20 @@ import {
 import { Add, Delete, CheckCircle, Warning, VolumeUp } from '@mui/icons-material';
 
 /**
- * Listening MCQ Form - Part 1 của Listening skill
- * Dựa trên seed data: 13 câu, 26 điểm (2 điểm/câu)
- * Multiple Choice Questions với audio script
+ * Listening MCQ Form - Part 1 & 4 của Listening skill
+ * Dựa trên seed data: 
+ * - Part 1: 13 single MCQ (13 câu riêng biệt)
+ * - Part 4: 2 multi-question MCQ (mỗi audio có 2 sub-questions)
  */
 export default function ListeningMCQForm({ content, onChange }) {
   const [title, setTitle] = useState('');
   const [audioScript, setAudioScript] = useState('');
+  const [isMultiQuestion, setIsMultiQuestion] = useState(false); // New: support multi-question
   const [questions, setQuestions] = useState([
+    { question: '', options: ['', '', ''], correctAnswer: 0 }
+  ]);
+  const [subQuestions, setSubQuestions] = useState([ // New: for multi-question format
+    { question: '', options: ['', '', ''], correctAnswer: 0 },
     { question: '', options: ['', '', ''], correctAnswer: 0 }
   ]);
   
@@ -39,7 +45,16 @@ export default function ListeningMCQForm({ content, onChange }) {
         const parsed = typeof content === 'string' ? JSON.parse(content) : content;
         setTitle(parsed.title || '');
         setAudioScript(parsed.audioScript || parsed.script || '');
-        setQuestions(parsed.questions || [{ question: '', options: ['', '', ''], correctAnswer: 0 }]);
+        setIsMultiQuestion(parsed.isMultiQuestion || false);
+        
+        if (parsed.isMultiQuestion) {
+          setSubQuestions(parsed.subQuestions || [
+            { question: '', options: ['', '', ''], correctAnswer: 0 },
+            { question: '', options: ['', '', ''], correctAnswer: 0 }
+          ]);
+        } else {
+          setQuestions(parsed.questions || [{ question: '', options: ['', '', ''], correctAnswer: 0 }]);
+        }
       } catch (error) {
         // If content is not JSON, treat as title
         setTitle(content || '');
@@ -61,8 +76,9 @@ export default function ListeningMCQForm({ content, onChange }) {
       newErrors.audioScript = 'Script âm thanh không được để trống';
     }
     
-    // Check questions
-    const validQuestions = questions.filter(q => {
+    // Check questions based on format
+    const questionsToCheck = isMultiQuestion ? subQuestions : questions;
+    const validQuestions = questionsToCheck.filter(q => {
       const hasQuestion = q.question.trim();
       const hasOptions = q.options.filter(opt => opt.trim()).length >= 2;
       const hasValidAnswer = q.correctAnswer >= 0 && q.correctAnswer < q.options.length && q.options[q.correctAnswer].trim();
@@ -73,9 +89,14 @@ export default function ListeningMCQForm({ content, onChange }) {
       newErrors.questions = 'Phải có ít nhất 1 câu hỏi hợp lệ';
     }
     
+    // Check multi-question format (must have exactly 2 sub-questions)
+    if (isMultiQuestion && validQuestions.length < 2) {
+      newErrors.questions = 'Multi-question format cần đúng 2 câu hỏi phụ';
+    }
+    
     // Check individual questions
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i];
+    for (let i = 0; i < questionsToCheck.length; i++) {
+      const q = questionsToCheck[i];
       if (q.question.trim()) { // Only validate if question has content
         const validOptions = q.options.filter(opt => opt.trim());
         if (validOptions.length < 2) {
@@ -93,29 +114,14 @@ export default function ListeningMCQForm({ content, onChange }) {
     const isValid = Object.keys(newErrors).length === 0;
     setIsValidated(isValid);
     return isValid;
-  }, [title, audioScript, questions]);
+  }, []);
 
   // Remove auto-validation useEffect - causes infinite loops
   // Data is sent to parent on every change (via onChange)
   // Validation is only called on demand via button click
 
-  // Update parent component
-  useEffect(() => {
-    const questionData = {
-      title: title.trim(),
-      audioScript: audioScript.trim(),
-      questions: questions.filter(q => 
-        q.question.trim() && 
-        q.options.filter(opt => opt.trim()).length >= 2 &&
-        q.options[q.correctAnswer]?.trim()
-      )
-    };
-    
-    if (onChange) {
-      onChange(JSON.stringify(questionData));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, audioScript, questions]);
+  // Update parent component - removed auto-update to prevent infinite loops
+  // Data is sent to parent via manual validation only
 
   // Handle adding new question
   const handleAddQuestion = () => {
@@ -170,17 +176,38 @@ export default function ListeningMCQForm({ content, onChange }) {
   return (
     <Box>
       <Typography variant="h6" gutterBottom color="primary">
-        Listening - Multiple Choice (Part 1)
+        Listening - Multiple Choice (Part 1 & 4)
       </Typography>
       
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="subtitle2" gutterBottom>Hướng dẫn:</Typography>
         <Typography variant="body2">
-          • Tạo script âm thanh cho giáo viên đọc hoặc phát<br/>
-          • Tạo tối đa 13 câu hỏi trắc nghiệm<br/>
-          • Điểm: 2 điểm/câu đúng, tối đa 13 câu (26 điểm)
+          • <strong>Part 1:</strong> 13 single MCQ questions (2 điểm/câu)<br/>
+          • <strong>Part 4:</strong> 2 multi-question MCQ (2 sub-questions per audio)<br/>
+          • Chọn format phù hợp với loại bài nghe
         </Typography>
       </Alert>
+
+      {/* Format Toggle */}
+      <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
+        <Typography variant="subtitle2" gutterBottom>Format:</Typography>
+        <RadioGroup 
+          row 
+          value={isMultiQuestion ? 'multi' : 'single'} 
+          onChange={(e) => setIsMultiQuestion(e.target.value === 'multi')}
+        >
+          <FormControlLabel 
+            value="single" 
+            control={<Radio />} 
+            label="Single MCQ (Part 1)" 
+          />
+          <FormControlLabel 
+            value="multi" 
+            control={<Radio />} 
+            label="Multi-Question MCQ (Part 4)" 
+          />
+        </RadioGroup>
+      </Paper>
 
       {/* Title */}
       <TextField

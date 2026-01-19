@@ -62,36 +62,54 @@ export default function ReadingMatchingHeadingsForm({ content, onChange }) {
       newErrors.instructions = 'Hướng dẫn làm bài không được để trống';
     }
     
-    // Check passages
-    const validPassages = passages.filter(p => p.text.trim());
+    // Check passages - only count passages with content
+    const validPassages = passages.filter(p => p.text && p.text.trim());
     if (validPassages.length < 2) {
       newErrors.passages = 'Phải có ít nhất 2 đoạn văn';
     }
     
-    // Check heading options
-    const validHeadings = headingOptions.filter(h => h.trim());
-    if (validHeadings.length < validPassages.length) {
-      newErrors.headingOptions = 'Số lượng tiêu đề phải ít nhất bằng số đoạn văn';
+    // Check heading options - only count headings with content
+    const validHeadings = headingOptions.filter(h => h && h.trim());
+    if (validHeadings.length < 2) {
+      newErrors.headingOptions = 'Phải có ít nhất 2 tiêu đề';
     }
     
-    // Check if all passages have correct headings assigned
-    for (const passage of validPassages) {
-      if (!passage.heading || !validHeadings.includes(passage.heading)) {
-        newErrors.passages = 'Tất cả đoạn văn phải có tiêu đề hợp lệ';
-        break;
+    // Only check heading assignments if we have valid passages
+    if (validPassages.length >= 2) {
+      // Check if all passages have headings assigned
+      for (const passage of validPassages) {
+        if (!passage.heading || !passage.heading.trim()) {
+          newErrors.passages = 'Tất cả đoạn văn phải có tiêu đề';
+          break;
+        }
       }
-    }
-    
-    // Check for duplicate heading assignments
-    const assignedHeadings = validPassages.map(p => p.heading).filter(h => h);
-    const uniqueAssignedHeadings = [...new Set(assignedHeadings)];
-    if (assignedHeadings.length !== uniqueAssignedHeadings.length) {
-      newErrors.passages = 'Mỗi tiêu đề chỉ được sử dụng cho một đoạn văn';
+      
+      // Check for duplicate heading assignments
+      const assignedHeadings = validPassages.map(p => p.heading).filter(h => h && h.trim());
+      const uniqueAssignedHeadings = [...new Set(assignedHeadings)];
+      if (assignedHeadings.length !== uniqueAssignedHeadings.length) {
+        newErrors.passages = 'Mỗi tiêu đề chỉ được sử dụng cho một đoạn văn';
+      }
     }
     
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     setIsValidated(isValid);
+    
+    // Send data to parent when valid
+    if (isValid && onChange) {
+      const validPassages = passages.filter(p => p.text && p.text.trim());
+      const validHeadings = headingOptions.filter(h => h && h.trim());
+      const formData = {
+        title: title.trim(),
+        instructions: instructions.trim(),
+        passages: validPassages,
+        headingOptions: validHeadings,
+        type: 'reading_matching_headings'
+      };
+      onChange(JSON.stringify(formData));
+    }
+    
     return isValid;
   }, [title, instructions, passages, headingOptions]);
 
@@ -99,20 +117,8 @@ export default function ReadingMatchingHeadingsForm({ content, onChange }) {
   // Data is sent to parent on every change (via onChange)
   // Validation is only called on demand via button click
 
-  // Update parent component
-  useEffect(() => {
-    const questionData = {
-      title: title.trim(),
-      instructions: instructions.trim(),
-      passages: passages.filter(p => p.text.trim()),
-      headingOptions: headingOptions.filter(h => h.trim())
-    };
-    
-    if (onChange) {
-      onChange(JSON.stringify(questionData));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, instructions, passages, headingOptions]);
+  // Remove auto-update useEffect - causes infinite loops
+  // Data will be sent via manual save button only
 
   // Handle adding new passage
   const handleAddPassage = () => {
