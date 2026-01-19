@@ -5,10 +5,11 @@
 describe('Practice Mode', () => {
   beforeEach(() => {
     // Mock auth check
-    cy.intercept('GET', '/api/auth/me', {
+    cy.intercept('GET', '**/users/profile', {
       statusCode: 200,
       body: {
-        user: {
+        success: true,
+        data: {
           id: 1,
           email: 'student1@aptis.local',
           first_name: 'Alice',
@@ -19,21 +20,25 @@ describe('Practice Mode', () => {
     });
     
     // Mock practice stats API
-    cy.intercept('GET', '/api/student/practice/stats', {
+    cy.intercept('GET', '**/students/practice/stats', {
       statusCode: 200,
       body: {
-        total_exams: 15,
-        completed_attempts: 12,
-        average_score: 75,
-        skills_count: 4
+        success: true,
+        data: {
+          total_exams: 15,
+          completed_attempts: 12,
+          average_score: 75,
+          skills_count: 4
+        }
       }
     });
     
     // Mock skill-specific exams API
-    cy.intercept('GET', '/api/student/exams?skill_type=*', {
+    cy.intercept('GET', '**/students/exams?skill_type=*', {
       statusCode: 200,
       body: {
-        exams: [
+        success: true,
+        data: [
           {
             id: 1,
             title: 'Practice Exam 1',
@@ -158,7 +163,7 @@ describe('Practice Mode', () => {
 
   it('should handle API errors gracefully', () => {
     // Mock skill selection API error
-    cy.intercept('GET', '/api/student/exams?skill_type=*', {
+    cy.intercept('GET', '**/students/exams?skill_type=*', {
       statusCode: 500,
       body: { message: 'Server Error' }
     }).as('skillExamsError');

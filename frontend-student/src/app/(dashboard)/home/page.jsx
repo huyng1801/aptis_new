@@ -138,6 +138,7 @@ export default function HomePage() {
                 mb: 2,
                 fontSize: { xs: '2rem', md: '3rem' }
               }}
+              data-testid="user-greeting"
             >
               {getGreeting()}, {user?.full_name?.split(' ')[0] || 'Bạn'}!
             </Typography>
@@ -176,7 +177,7 @@ export default function HomePage() {
         </Box>
 
         {/* Quick Actions */}
-        <Box sx={{ mb: 5 }}>
+        <Box sx={{ mb: 5 }} data-testid="quick-actions">
           <Typography variant="h5" sx={{ fontWeight: 600, mb: 3, textAlign: 'center' }}>
             Bắt đầu luyện tập ngay
           </Typography>
@@ -196,6 +197,7 @@ export default function HomePage() {
                     }
                   }}
                   onClick={action.action}
+                  data-testid={index === 0 ? "quick-action-exam" : "quick-action-practice"}
                 >
                   <CardContent sx={{ p: 3, textAlign: 'center' }}>
                     <Box sx={{ 
@@ -227,7 +229,7 @@ export default function HomePage() {
             Tiến độ học tập của bạn
           </Typography>
           {isLoading ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Box sx={{ textAlign: 'center', py: 4 }} data-testid="stats-loading">
               <Typography color="text.secondary">Đang tải dữ liệu...</Typography>
             </Box>
           ) : (
@@ -241,9 +243,10 @@ export default function HomePage() {
                     border: '1px solid #e0e0e0',
                     backgroundColor: '#fff'
                   }}
+                  data-testid="total-exams-stat"
                 >
                   <Assessment sx={{ fontSize: 40, color: '#1976d2', mb: 1 }} />
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#1976d2' }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#1976d2' }} data-testid="total-exams-value">
                     {stats?.totalExams ?? 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -264,9 +267,10 @@ export default function HomePage() {
                     border: '1px solid #e0e0e0',
                     backgroundColor: '#fff'
                   }}
+                  data-testid="average-score-stat"
                 >
                   <TrendingUp sx={{ fontSize: 40, color: '#2e7d32', mb: 1 }} />
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#2e7d32' }} data-testid="average-score-value">
                     {getAverageScore().toFixed(1)}%
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -287,9 +291,10 @@ export default function HomePage() {
                     border: '1px solid #e0e0e0',
                     backgroundColor: '#fff'
                   }}
+                  data-testid="streak-stat"
                 >
                   <LocalFireDepartment sx={{ fontSize: 40, color: '#ed6c02', mb: 1 }} />
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#ed6c02' }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#ed6c02' }} data-testid="streak-value">
                     {getStreak() ?? 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -310,9 +315,10 @@ export default function HomePage() {
                     border: '1px solid #e0e0e0',
                     backgroundColor: '#fff'
                   }}
+                  data-testid="total-time-stat"
                 >
                   <Schedule sx={{ fontSize: 40, color: '#9c27b0', mb: 1 }} />
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#9c27b0' }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#9c27b0' }} data-testid="total-time-value">
                     {stats?.totalTime || '0h'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">

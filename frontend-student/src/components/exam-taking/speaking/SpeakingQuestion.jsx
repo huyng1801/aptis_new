@@ -95,10 +95,10 @@ export default function SpeakingQuestion({
   // Use question type to determine timing
   const getTimingByQuestionType = () => {
     // Nếu là câu cuối cùng (ví dụ câu 10/10) thì tăng thời gian
-    if (questionNumber === totalQuestions) {
+    if (question.questionType.code === 'SPEAKING_DISCUSSION') {
       return { prep: 30, recording: 60 };     // Câu cuối: 30s prep, 60s record
     }
-    
+
     // Các câu khác giữ thời gian bình thường
     return { prep: 10, recording: 30 };       // Các câu khác: 10s prep, 30s record
   };

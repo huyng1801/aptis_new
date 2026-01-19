@@ -286,18 +286,7 @@ export default function QuestionFeedback({ questionResults, attemptId, showDetai
                                       </Box>
                                     )}
 
-                                    {/* CEFR Level */}
-                                    {feedback.cefr_level && (
-                                      <Box sx={{ mb: 2 }}>
-                                        <Chip
-                                          label={`CEFR Level: ${feedback.cefr_level}`}
-                                          color="primary"
-                                          variant="outlined"
-                                          sx={{ fontWeight: 600 }}
-                                        />
-                                      </Box>
-                                    )}
-
+                                   
                                     {/* Parsing Error Alert */}
                                     {isParsingError && (
                                       <Alert severity="warning" sx={{ mt: 2 }}>

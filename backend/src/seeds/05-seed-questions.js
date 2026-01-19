@@ -57,7 +57,6 @@ async function seedGrammarQuestions(aptisType, teacher) {
 // Part 2: Ordering - 5 câu = 5 điểm (1 điểm/câu)
 // Part 3: Matching - 5 câu = 5 điểm (1 điểm/câu)
 // Part 4: Matching Headings - 7 câu = 16 điểm (~2.29 điểm/câu)
-// Part 5: Short Text Matching - 7 câu = 14 điểm (2 điểm/câu)
 // ========================================
 async function seedReadingQuestions(aptisType, teacher) {
   console.log('[Seed] Seeding 25 Reading questions in 5 parts...');
@@ -389,7 +388,7 @@ Of course, one cannot discuss the benefits of vegetarianism without understandin
   console.log(`[Seed]   - Part 4: 7 Matching Headings questions (16 điểm - ~2.29 điểm/câu)`);
 
   // Part 5: Short Text Matching (7 câu) - Ghép văn bản ngắn với mô tả  
-  await createShortTextMatchingQuestions(aptisType, teacher);
+  //await createShortTextMatchingQuestions(aptisType, teacher);
   
   console.log(`[Seed]   - Part 5: 7 Short Text Matching questions (14 điểm - 2 điểm/câu)`);
   console.log(`[Seed] ✓ 29 Reading questions created (5+5+5+7+7 = 29 câu = 50 điểm)`);

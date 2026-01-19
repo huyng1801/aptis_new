@@ -140,7 +140,7 @@ export default function StudentLayout({ children }) {
         <Typography variant="body2">Trang cá nhân</Typography>
       </MenuItem>
 
-      <MenuItem onClick={handleLogout} sx={{ py: 1 }}>
+      <MenuItem onClick={handleLogout} sx={{ py: 1 }} data-testid="logout-button">
         <ListItemIcon>
           <Logout fontSize="small" sx={{ color: '#6B7280' }} />
         </ListItemIcon>
@@ -333,6 +333,7 @@ export default function StudentLayout({ children }) {
               <IconButton
                 onClick={handleProfileMenuOpen}
                 color="inherit"
+                data-testid="user-menu"
                 sx={{
                   p: 0.5,
                   '&:hover': {

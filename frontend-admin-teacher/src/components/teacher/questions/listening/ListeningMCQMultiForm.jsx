@@ -94,19 +94,21 @@ export default function ListeningMCQMultiForm({ content, onChange }) {
     if (isValid && onChange) {
       const questionsToSend = questions.filter(q => q.question.trim());
       
-      const formData = {
-        title: title.trim(),
+      // Prepare data for backend helper function
+      const structuredData = {
+        questions: questionsToSend.map(q => ({
+          question: q.question.trim(),
+          options: q.options.filter(opt => opt.trim()).map(opt => ({ text: opt, correct: false })), // Multiple choice format
+          correctAnswer: q.correctAnswer
+        })),
+        isMultiple: true, // Multiple choice MCQ
         audioUrl: audioUrl,
-        audioFile: audioFile, // ✅ Direct File object - clean and simple
-        questions: questionsToSend,
         instructions: instructions.trim(),
-        type: 'listening_mcq_multi',
-        // Create summary content for database
-        summary: `Listening MCQ Multi: ${title.trim()}. Audio questions: ${questionsToSend.length} questions`
+        title: title.trim()
       };
       
-      // Send content as JSON string for backend - MUST have meaningful content
-      onChange(JSON.stringify(formData));
+      // Send content as JSON string for backend auto-generation
+      onChange(JSON.stringify(structuredData));
     }
     
     return isValid;

@@ -5,10 +5,11 @@
 describe('Results and Progress Tracking', () => {
   beforeEach(() => {
     // Mock auth check
-    cy.intercept('GET', '/api/auth/me', {
+    cy.intercept('GET', '**/users/profile', {
       statusCode: 200,
       body: {
-        user: {
+        success: true,
+        data: {
           id: 1,
           email: 'student1@aptis.local',
           first_name: 'Alice',
@@ -19,10 +20,11 @@ describe('Results and Progress Tracking', () => {
     });
     
     // Mock results list API
-    cy.intercept('GET', '/api/student/results*', {
+    cy.intercept('GET', '**/students/results*', {
       statusCode: 200,
       body: {
-        results: [
+        success: true,
+        data: [
           {
             id: 1,
             exam_title: 'APTIS Full Test 1',
@@ -68,8 +70,19 @@ describe('Results and Progress Tracking', () => {
 
   it('should show detailed result breakdown when viewing specific result', () => {
     // Mock result data for testing
-    cy.intercept('GET', '/api/student/attempts/*/results', {
-      fixture: 'exam-result-detail.json'
+    cy.intercept('GET', '**/students/attempts/*/results', {
+      statusCode: 200,
+      body: {
+        success: true,
+        data: {
+          total_score: 85,
+          reading_score: 80,
+          listening_score: 90,
+          writing_score: 82,
+          speaking_score: 88,
+          cefr_level: 'B2'
+        }
+      }
     }).as('resultDetails');
     
     // Navigate to results and click on first result
@@ -158,8 +171,27 @@ describe('Results and Progress Tracking', () => {
 
   it('should show AI feedback and recommendations', () => {
     // Mock detailed result with AI feedback
-    cy.intercept('GET', '/api/student/attempts/*/results', {
-      fixture: 'result-with-ai-feedback.json'
+    cy.intercept('GET', '**/students/attempts/*/results', {
+      statusCode: 200,
+      body: {
+        success: true,
+        data: {
+          total_score: 85,
+          ai_feedback: {
+            writing: {
+              grammar_score: 80,
+              vocabulary_score: 85,
+              coherence_score: 90,
+              comment: 'Good overall performance'
+            },
+            speaking: {
+              pronunciation_score: 75,
+              fluency_score: 80,
+              content_score: 85
+            }
+          }
+        }
+      }
     }).as('aiResult');
     
     cy.visit('/results');

@@ -5,10 +5,11 @@
 describe('Exam Taking Flow', () => {
   beforeEach(() => {
     // Mock auth check
-    cy.intercept('GET', '/api/auth/me', {
+    cy.intercept('GET', '**/users/profile', {
       statusCode: 200,
       body: {
-        user: {
+        success: true,
+        data: {
           id: 1,
           email: 'student1@aptis.local',
           first_name: 'Alice',
@@ -19,10 +20,11 @@ describe('Exam Taking Flow', () => {
     });
     
     // Mock exams list API
-    cy.intercept('GET', '/api/student/exams*', {
+    cy.intercept('GET', '**/students/exams*', {
       statusCode: 200,
       body: {
-        exams: [
+        success: true,
+        data: [
           {
             id: 1,
             title: 'APTIS Full Test 1',
@@ -32,7 +34,7 @@ describe('Exam Taking Flow', () => {
           },
           {
             id: 2,
-            title: 'APTIS Full Test 2',
+            title: 'APTIS Full Test 2', 
             description: 'Complete APTIS exam',
             duration_minutes: 120,
             total_questions: 50
@@ -43,20 +45,6 @@ describe('Exam Taking Flow', () => {
             description: 'Reading skill practice',
             duration_minutes: 30,
             total_questions: 20
-          },
-          {
-            id: 4,
-            title: 'APTIS Writing Practice',
-            description: 'Writing skill practice',
-            duration_minutes: 40,
-            total_questions: 15
-          },
-          {
-            id: 5,
-            title: 'APTIS Speaking Practice',
-            description: 'Speaking skill practice',
-            duration_minutes: 30,
-            total_questions: 12
           }
         ]
       }
@@ -156,9 +144,12 @@ describe('Exam Taking Flow', () => {
       .find('[data-testid="start-exam-btn"]').click();
     
     // Mock API calls
-    cy.intercept('POST', '/api/student/attempts/*/submit', {
+    cy.intercept('POST', '**/students/attempts/*/submit', {
       statusCode: 200,
-      body: { success: true, message: 'Exam submitted successfully' }
+      body: { 
+        success: true, 
+        message: 'Exam submitted successfully' 
+      }
     }).as('submitExam');
     
     // Navigate to last question
@@ -201,12 +192,15 @@ describe('Exam Taking Flow', () => {
 
   it('should handle time warnings and auto-submission', () => {
     // Mock short timer for testing
-    cy.intercept('GET', '/api/student/exams/*/take', {
+    cy.intercept('GET', '**/students/exams/*/take', {
       statusCode: 200,
-      body: { 
-        exam: { duration_minutes: 1 }, // 1 minute exam
-        sections: [],
-        questions: []
+      body: {
+        success: true,
+        data: {
+          exam: { duration_minutes: 1 }, // 1 minute exam
+          sections: [],
+          questions: []
+        }
       }
     }).as('shortExam');
     

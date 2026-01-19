@@ -126,7 +126,7 @@ export default function LoginPage() {
 
             {/* Error Alert */}
             {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
+              <Alert severity="error" sx={{ mb: 3 }} data-testid="error-message">
                 {error}
               </Alert>
             )}
@@ -146,12 +146,20 @@ export default function LoginPage() {
                 InputProps={{
                   startAdornment: <Email sx={{ color: 'action.active', mr: 1 }} />,
                 }}
+                inputProps={{ 'data-testid': 'email-input' }}
                 sx={{ mb: 2 }}
                 disabled={isLoading}
                 required
                 autoComplete="email"
                 autoFocus
               />
+
+              {/* Email validation error */}
+              {validationErrors.email && (
+                <Typography variant="body2" color="error" data-testid="email-error">
+                  {validationErrors.email}
+                </Typography>
+              )}
 
               <TextField
                 fullWidth
@@ -166,11 +174,19 @@ export default function LoginPage() {
                 InputProps={{
                   startAdornment: <Lock sx={{ color: 'action.active', mr: 1 }} />,
                 }}
+                inputProps={{ 'data-testid': 'password-input' }}
                 sx={{ mb: 3 }}
                 disabled={isLoading}
                 required
                 autoComplete="current-password"
               />
+
+              {/* Password validation error */}
+              {validationErrors.password && (
+                <Typography variant="body2" color="error" data-testid="password-error">
+                  {validationErrors.password}
+                </Typography>
+              )}
 
               <Button
                 type="submit"
@@ -179,6 +195,7 @@ export default function LoginPage() {
                 size="large"
                 disabled={isLoading}
                 sx={{ mb: 2, py: 1.5 }}
+                data-testid="login-button"
               >
                 {isLoading ? (
                   <>

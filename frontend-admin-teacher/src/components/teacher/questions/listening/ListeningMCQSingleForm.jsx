@@ -79,21 +79,21 @@ export default function ListeningMCQSingleForm({ content, onChange }) {
     
     // Send data to parent when valid
     if (isValid && onChange) {
-      const formData = {
-        title: title.trim(),
+      // Prepare data for backend helper function
+      const structuredData = {
+        questions: [{
+          question: question.trim(),
+          options: options.filter(opt => opt.trim()).map(opt => ({ text: opt })),
+          correctAnswer: correctAnswer
+        }],
+        isMultiple: false, // Single choice MCQ
         audioUrl: audioUrl,
-        audioFile: audioFile, // ✅ Direct File object - no wrapping
-        question: question.trim(),
-        options: options.filter(opt => opt.trim()),
-        correctAnswer,
         instructions: instructions.trim(),
-        type: 'listening_mcq_single',
-        // Create summary content for database
-        summary: `Listening MCQ Single: ${title.trim()}. Question: ${question.trim().substring(0, 100)}... Options: ${validOptions.length}`
+        title: title.trim()
       };
       
-      // Send content as JSON string for backend - MUST have meaningful content
-      onChange(JSON.stringify(formData));
+      // Send content as JSON string for backend auto-generation
+      onChange(JSON.stringify(structuredData));
     }
     
     return isValid;

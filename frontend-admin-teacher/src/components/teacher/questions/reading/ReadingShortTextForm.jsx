@@ -105,7 +105,8 @@ const ReadingShortTextForm = ({ questionData, onChange, onValidate }) => {
   const handleChange = (field, value) => {
     const newFormData = { ...formData, [field]: value };
     setFormData(newFormData);
-    if (onChange) onChange(newFormData);
+    // Send JSON string to match other Reading forms
+    if (onChange) onChange(JSON.stringify(newFormData));
   };
 
   const handleShortTextChange = (index, field, value) => {

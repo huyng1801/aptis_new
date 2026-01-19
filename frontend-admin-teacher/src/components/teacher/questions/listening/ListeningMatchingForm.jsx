@@ -113,28 +113,20 @@ const ListeningMatchingForm = ({ questionData, onChange, onValidate }) => {
     setIsValidated(isValid);
     
     if (isValid && onChange) {
-      const sendData = {
-        title: formData.title.trim(),
-        audioUrl: formData.audioUrl,
-        audioFile: formData.audioFile, // ✅ Direct main audio File object
-        speakers: validSpeakers.map(speaker => ({
-          ...speaker,
-          audioFile: speaker.audioFile // ✅ Direct speaker audio File objects  
+      // Prepare data for backend helper function
+      const structuredData = {
+        speakers: validSpeakers.map(speaker => speaker.name),
+        statements: validStatements.map(statement => ({
+          text: statement.statement,
+          speaker: validSpeakers.find(s => s.id === statement.speaker_id)?.name || ''
         })),
-        statements: validStatements,
+        audioUrl: formData.audioUrl,
         instructions: formData.instructions.trim(),
-        type: 'listening_matching'
+        title: formData.title.trim()
       };
       
-      // Create summary content for database
-      const summary = `Listening Speaker Matching: ${validSpeakers.length} speakers, ${validStatements.length} statements. Main audio with individual speaker samples.`;
-      
-      // Send content as JSON string for backend - MUST have meaningful content
-      const finalData = {
-        ...sendData,
-        summary: summary
-      };
-      onChange(JSON.stringify(finalData));
+      // Send content as JSON string for backend auto-generation
+      onChange(JSON.stringify(structuredData));
     }
     
     return isValid;

@@ -13,6 +13,283 @@ const { DIFFICULTY_LEVELS, QUESTION_STATUS } = require('../../utils/constants');
 const { Op } = require('sequelize');
 const StorageService = require('../../services/StorageService');
 
+/**
+ * Create items and options from parsed JSON content based on question type
+ */
+async function createItemsAndOptionsFromContent(questionId, questionTypeCode, parsedContent) {
+  switch (questionTypeCode) {
+    // Reading question types
+    case 'READING_GAP_FILL':
+      await createGapFillingItemsAndOptions(questionId, parsedContent);
+      break;
+    case 'READING_ORDERING':
+      await createOrderingItems(questionId, parsedContent);
+      break;
+    case 'READING_MATCHING':
+      await createMatchingItemsAndOptions(questionId, parsedContent);
+      break;
+    case 'READING_MATCHING_HEADINGS':
+      await createMatchingHeadingsItemsAndOptions(questionId, parsedContent);
+      break;
+    case 'READING_SHORT_TEXT':
+      await createShortTextMatchingItemsAndOptions(questionId, parsedContent);
+      break;
+    
+    // Listening question types
+    case 'LISTENING_MCQ':
+      await createListeningMCQItemsAndOptions(questionId, parsedContent);
+      break;
+    case 'LISTENING_MATCHING':
+      await createListeningMatchingItemsAndOptions(questionId, parsedContent);
+      break;
+    case 'LISTENING_STATEMENT_MATCHING':
+      await createListeningStatementMatchingItemsAndOptions(questionId, parsedContent);
+      break;
+    
+    default:
+      console.log(`No auto-generation logic for question type: ${questionTypeCode}`);
+      break;
+  }
+}
+
+/**
+ * Gap Filling: Create options and items with correct answers
+ */
+async function createGapFillingItemsAndOptions(questionId, data) {
+  const { options = [], correctAnswers = [] } = data;
+  
+  // Create options
+  for (let i = 0; i < options.length; i++) {
+    await QuestionOption.create({
+      question_id: questionId,
+      item_id: null,
+      option_text: options[i],
+      option_order: i + 1,
+      is_correct: false,
+    });
+  }
+  
+  // Create gap items with correct answers
+  for (let i = 0; i < correctAnswers.length; i++) {
+    await QuestionItem.create({
+      question_id: questionId,
+      item_text: `[GAP${i + 1}]`,
+      item_number: i + 1,
+      item_order: i + 1,
+      answer_text: correctAnswers[i],
+    });
+  }
+}
+
+/**
+ * Ordering: Create items with correct order
+ */
+async function createOrderingItems(questionId, data) {
+  const { sentences = [], correctOrder = [] } = data;
+  
+  // Shuffle sentences for random display order
+  const shuffled = sentences
+    .map((s, idx) => ({ text: s, originalIdx: idx + 1 }))
+    .sort(() => Math.random() - 0.5);
+  
+  for (let i = 0; i < shuffled.length; i++) {
+    const correctPosition = correctOrder[shuffled[i].originalIdx - 1];
+    
+    await QuestionItem.create({
+      question_id: questionId,
+      item_text: `${shuffled[i].originalIdx}. ${shuffled[i].text}`,
+      item_order: i + 1, // Display order (random)
+      answer_text: `${correctPosition}`, // Correct position
+    });
+  }
+}
+
+/**
+ * Matching: Create options and items for person-question matching
+ */
+async function createMatchingItemsAndOptions(questionId, data) {
+  const { questions = [], persons = [] } = data;
+  
+  // Create person options
+  const optionMap = {};
+  for (let i = 0; i < persons.length; i++) {
+    const person = persons[i];
+    const option = await QuestionOption.create({
+      question_id: questionId,
+      item_id: null,
+      option_text: person.name || `Person ${String.fromCharCode(65 + i)}`,
+      option_order: i + 1,
+      is_correct: false,
+    });
+    optionMap[person.name || `Person ${String.fromCharCode(65 + i)}`] = option.id;
+  }
+  
+  // Create question items
+  for (let i = 0; i < questions.length; i++) {
+    const questionItem = questions[i];
+    await QuestionItem.create({
+      question_id: questionId,
+      item_text: questionItem.text,
+      item_order: i + 1,
+      answer_text: questionItem.correct,
+      correct_option_id: optionMap[questionItem.correct],
+    });
+  }
+}
+
+/**
+ * Matching Headings: Create heading options and paragraph items
+ */
+async function createMatchingHeadingsItemsAndOptions(questionId, data) {
+  const { headingOptions = [], passages = [] } = data;
+  
+  // Create heading options
+  const headingOptionMap = {};
+  for (let i = 0; i < headingOptions.length; i++) {
+    const option = await QuestionOption.create({
+      question_id: questionId,
+      item_id: null,
+      option_text: headingOptions[i],
+      option_order: i + 1,
+      is_correct: false,
+    });
+    headingOptionMap[headingOptions[i]] = option.id;
+  }
+  
+  // Create paragraph items
+  for (let i = 0; i < passages.length; i++) {
+    const passage = passages[i];
+    await QuestionItem.create({
+      question_id: questionId,
+      item_text: `Paragraph ${i + 1}`,
+      item_order: i + 1,
+      answer_text: passage.heading,
+      correct_option_id: headingOptionMap[passage.heading],
+    });
+  }
+}
+
+/**
+ * Short Text Matching: Create description options and text items
+ */
+async function createShortTextMatchingItemsAndOptions(questionId, data) {
+  const { descriptions = [], short_texts = [], correct_matches = {} } = data;
+  
+  // Create description options
+  const descriptionOptionMap = {};
+  for (let i = 0; i < descriptions.length; i++) {
+    const desc = descriptions[i];
+    const option = await QuestionOption.create({
+      question_id: questionId,
+      item_id: null,
+      option_text: desc.description,
+      option_order: i + 1,
+      is_correct: false,
+    });
+    descriptionOptionMap[desc.letter] = option.id;
+  }
+  
+  // Create short text items
+  for (let i = 0; i < short_texts.length; i++) {
+    const text = short_texts[i];
+    const correctLetter = correct_matches[text.id] || correct_matches[i + 1];
+    
+    await QuestionItem.create({
+      question_id: questionId,
+      item_text: text.text,
+      item_order: i + 1,
+      answer_text: correctLetter,
+      correct_option_id: descriptionOptionMap[correctLetter],
+    });
+  }
+}
+
+/**
+ * Listening MCQ: Create questions and options (can be single or multiple choice)
+ */
+async function createListeningMCQItemsAndOptions(questionId, data) {
+  const { questions = [], isMultiple = false } = data;
+  
+  for (let i = 0; i < questions.length; i++) {
+    const question = questions[i];
+    
+    // Create question item
+    const item = await QuestionItem.create({
+      question_id: questionId,
+      item_text: question.question,
+      item_order: i + 1,
+      answer_text: null,
+      correct_option_id: null,
+    });
+    
+    // Create options for this question
+    for (let j = 0; j < question.options.length; j++) {
+      const option = question.options[j];
+      const isCorrect = isMultiple ? option.correct : (j === question.correctAnswer);
+      
+      await QuestionOption.create({
+        question_id: questionId,
+        item_id: item.id,
+        option_text: option.text,
+        option_order: j + 1,
+        is_correct: isCorrect,
+      });
+    }
+  }
+}
+
+/**
+ * Listening Matching: Create speaker-statement pairs 
+ */
+async function createListeningMatchingItemsAndOptions(questionId, data) {
+  const { speakers = [], statements = [] } = data;
+  
+  // Create speaker options
+  const speakerOptionMap = {};
+  for (let i = 0; i < speakers.length; i++) {
+    const speaker = speakers[i];
+    const option = await QuestionOption.create({
+      question_id: questionId,
+      item_id: null,
+      option_text: speaker,
+      option_order: i + 1,
+      is_correct: false,
+    });
+    speakerOptionMap[speaker] = option.id;
+  }
+  
+  // Create statement items
+  for (let i = 0; i < statements.length; i++) {
+    const statement = statements[i];
+    const correctSpeaker = statement.speaker;
+    
+    await QuestionItem.create({
+      question_id: questionId,
+      item_text: statement.text,
+      item_order: i + 1,
+      answer_text: correctSpeaker,
+      correct_option_id: speakerOptionMap[correctSpeaker],
+    });
+  }
+}
+
+/**
+ * Listening Statement Matching: Create statements with correct speakers
+ */
+async function createListeningStatementMatchingItemsAndOptions(questionId, data) {
+  const { statements = [], correctSpeakers = [] } = data;
+  
+  for (let i = 0; i < statements.length; i++) {
+    await QuestionItem.create({
+      question_id: questionId,
+      item_text: statements[i],
+      item_order: i + 1,
+      answer_text: correctSpeakers[i] || null,
+      correct_option_id: null,
+    });
+  }
+}
+
 exports.createQuestion = async (req, res, next) => {
   try {
     const {
@@ -44,16 +321,36 @@ exports.createQuestion = async (req, res, next) => {
       status: 'draft',
     });
 
+    // Parse JSON content to create items and options for Reading questions
+    let parsedContent = null;
+    if (content && typeof content === 'string') {
+      try {
+        parsedContent = JSON.parse(content);
+      } catch (error) {
+        console.warn('Content is not valid JSON, treating as plain text');
+      }
+    }
+
+    // Auto-generate items and options based on question type and content
+    if (parsedContent) {
+      const questionType = await QuestionType.findByPk(question_type_id);
+      await createItemsAndOptionsFromContent(question.id, questionType?.code, parsedContent);
+    }
+
+    // Create manual items if provided
     if (items && items.length > 0) {
       for (const item of items) {
         await QuestionItem.create({
           question_id: question.id,
           item_text: item.item_text,
           item_order: item.item_order,
+          answer_text: item.answer_text || null,
+          correct_option_id: item.correct_option_id || null,
         });
       }
     }
 
+    // Create manual options if provided
     if (options && options.length > 0) {
       for (const option of options) {
         await QuestionOption.create({
