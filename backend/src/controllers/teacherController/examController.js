@@ -334,9 +334,24 @@ exports.removeQuestionFromSection = async (req, res, next) => {
   try {
     const { examId, sectionId, questionId } = req.params;
 
+    console.log('[removeQuestionFromSection] Params:', { examId, sectionId, questionId });
+
     const exam = await Exam.findByPk(examId);
     if (!exam || exam.status !== 'draft') {
       throw new BadRequestError('Cannot modify published exam');
+    }
+
+    // Verify that the section belongs to this exam
+    const section = await ExamSection.findOne({
+      where: {
+        id: sectionId,
+        exam_id: examId,
+      },
+    });
+
+    if (!section) {
+      console.log('[removeQuestionFromSection] Section not found for exam:', { sectionId, examId });
+      throw new NotFoundError('Section not found in this exam');
     }
 
     const esq = await ExamSectionQuestion.findOne({
@@ -347,6 +362,7 @@ exports.removeQuestionFromSection = async (req, res, next) => {
     });
 
     if (!esq) {
+      console.log('[removeQuestionFromSection] Question not found in section:', { sectionId, questionId });
       throw new NotFoundError('Question not found in section');
     }
 

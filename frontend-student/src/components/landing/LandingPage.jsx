@@ -8,122 +8,225 @@ import {
   Grid,
   Card,
   CardContent,
-  Avatar,
-  TextField,
   AppBar,
   Toolbar,
-  IconButton,
-  Chip,
 } from '@mui/material';
-import { Rating } from '@mui/material';
 import {
-  PlayArrow,
   School,
   WorkspacePremium,
   Group,
-  Star,
-  Phone,
-  Email,
-  LocationOn,
-  Menu,
+  MenuBook,
+  TrendingUp,
+  Security,
 } from '@mui/icons-material';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function LandingPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
 
   const handleLoginClick = () => {
     router.push('/login');
   };
 
-  const handleRegisterClick = () => {
+  const handleGetStartedClick = () => {
     router.push('/register');
   };
 
   return (
-    <Box sx={{ minHeight: '100vh' }}>
-      {/* Header */}
-      <AppBar position="static" sx={{ backgroundColor: 'white', color: '#333', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+    <Box sx={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
+      {/* Navigation Header */}
+      <AppBar 
+        position="static" 
+        elevation={0}
+        sx={{ 
+          backgroundColor: '#FFFFFF', 
+          borderBottom: '1px solid #E0E0E0'
+        }}
+      >
         <Container maxWidth="lg">
-          <Toolbar sx={{ justifyContent: 'space-between' }}>
-            <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#5865F2' }}>
+          <Toolbar sx={{ py: 1 }}>
+            {/* Logo */}
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                flexGrow: 1,
+                fontWeight: 'bold', 
+                color: '#1976D2',
+                letterSpacing: '0.5px'
+              }}
+            >
               APTIS
             </Typography>
-            
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 4 }}>
-              <Button color="inherit">Home</Button>
-              <Button color="inherit">Courses</Button>
-              <Button color="inherit">Teachers</Button>
-              <Button color="inherit">Pages</Button>
-              <Button color="inherit">News</Button>
-              <Button color="inherit">Contact</Button>
-            </Box>
 
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#666' }}>
-                📞 664 888 222
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#666' }}>
-                ✉️ contact@aptis.com
-              </Typography>
-              <Button variant="outlined" onClick={handleLoginClick} sx={{ ml: 2 }}>
-                Sign in / Register
+            {/* Navigation Links */}
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, mr: 4 }}>
+              <Button 
+                color="inherit" 
+                sx={{ 
+                  color: '#666666',
+                  '&:hover': { color: '#1976D2' },
+                  textTransform: 'none',
+                  fontSize: '16px'
+                }}
+              >
+                Home
+              </Button>
+              <Button 
+                color="inherit" 
+                sx={{ 
+                  color: '#666666',
+                  '&:hover': { color: '#1976D2' },
+                  textTransform: 'none',
+                  fontSize: '16px'
+                }}
+              >
+                About
+              </Button>
+              <Button 
+                color="inherit" 
+                sx={{ 
+                  color: '#666666',
+                  '&:hover': { color: '#1976D2' },
+                  textTransform: 'none',
+                  fontSize: '16px'
+                }}
+              >
+                Courses
+              </Button>
+              <Button 
+                color="inherit" 
+                sx={{ 
+                  color: '#666666',
+                  '&:hover': { color: '#1976D2' },
+                  textTransform: 'none',
+                  fontSize: '16px'
+                }}
+              >
+                Contact
               </Button>
             </Box>
+
+            {/* Login Button */}
+            <Button 
+              variant="contained" 
+              onClick={handleLoginClick}
+              sx={{ 
+                backgroundColor: '#1976D2',
+                color: 'white',
+                textTransform: 'none',
+                px: 3,
+                py: 1,
+                borderRadius: 2,
+                fontWeight: '500',
+                '&:hover': { 
+                  backgroundColor: '#1565C0',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)'
+                },
+                transition: 'all 0.2s ease-in-out'
+              }}
+            >
+              Sign In
+            </Button>
           </Toolbar>
         </Container>
       </AppBar>
 
       {/* Hero Section */}
-      <Box 
-        sx={{ 
-          background: 'linear-gradient(135deg, #5865F2 0%, #7C3AED 100%)',
-          color: 'white',
-          py: 10,
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
+      <Box sx={{ backgroundColor: '#FFFFFF', py: { xs: 6, md: 10 } }}>
         <Container maxWidth="lg">
           <Grid container spacing={6} alignItems="center">
             <Grid item xs={12} md={6}>
-              <Typography variant="h6" sx={{ color: '#FFD700', mb: 2, fontStyle: 'italic' }}>
-                Ready to learn!
-              </Typography>
-              <Typography variant="h2" sx={{ fontWeight: 'bold', mb: 3, lineHeight: 1.2 }}>
-                Learn new things daily
-              </Typography>
-              <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
-                Get access to 6800+ courses from 680 professional teachers
-              </Typography>
-              <Button 
-                variant="contained" 
-                size="large" 
+              <Typography 
+                variant="h2" 
                 sx={{ 
-                  backgroundColor: '#FF6B35',
-                  color: 'white',
-                  px: 4,
-                  py: 1.5,
-                  fontSize: '1.1rem',
-                  '&:hover': { backgroundColor: '#E55B2B' }
+                  fontWeight: 'bold', 
+                  mb: 3, 
+                  lineHeight: 1.2,
+                  color: '#333333',
+                  fontSize: { xs: '2.5rem', md: '3.5rem' }
                 }}
-                onClick={handleLoginClick}
               >
-                DISCOVER MORE
-              </Button>
+                Master English with
+                <Box component="span" sx={{ color: '#1976D2', display: 'block' }}>
+                  APTIS Training
+                </Box>
+              </Typography>
+              
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  mb: 4, 
+                  color: '#666666',
+                  lineHeight: 1.6,
+                  fontSize: '1.2rem',
+                  fontWeight: 400
+                }}
+              >
+                Professional English language learning platform designed to help you achieve your certification goals with expert guidance.
+              </Typography>
+              
+              <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                <Button 
+                  variant="contained" 
+                  size="large" 
+                  onClick={handleGetStartedClick}
+                  sx={{ 
+                    backgroundColor: '#1976D2',
+                    color: 'white',
+                    px: 4,
+                    py: 1.5,
+                    fontSize: '1.1rem',
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    fontWeight: '600',
+                    '&:hover': { 
+                      backgroundColor: '#1565C0',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 20px rgba(25, 118, 210, 0.4)'
+                    },
+                    transition: 'all 0.3s ease-in-out'
+                  }}
+                >
+                  Get Started
+                </Button>
+                
+                <Button 
+                  variant="outlined" 
+                  size="large" 
+                  onClick={handleLoginClick}
+                  sx={{ 
+                    borderColor: '#1976D2',
+                    color: '#1976D2',
+                    px: 4,
+                    py: 1.5,
+                    fontSize: '1.1rem',
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    fontWeight: '600',
+                    '&:hover': { 
+                      backgroundColor: '#1976D2', 
+                      color: 'white',
+                      transform: 'translateY(-2px)'
+                    },
+                    transition: 'all 0.3s ease-in-out'
+                  }}
+                >
+                  Learn More
+                </Button>
+              </Box>
             </Grid>
+            
             <Grid item xs={12} md={6}>
               <Box sx={{ textAlign: 'center', position: 'relative' }}>
                 <img 
-                  src="https://images.unsplash.com/photo-1494790108755-2616c04ac1cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" 
-                  alt="Student learning"
+                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                  alt="English learning"
                   style={{ 
                     width: '100%', 
-                    maxWidth: '400px', 
-                    borderRadius: '20px',
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+                    maxWidth: '500px', 
+                    borderRadius: '16px',
+                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)'
                   }}
                 />
               </Box>
@@ -133,260 +236,234 @@ export default function LandingPage() {
       </Box>
 
       {/* Features Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={4}>
-            <Card sx={{ textAlign: 'center', p: 3, height: '100%', border: '2px solid #5865F2' }}>
-              <School sx={{ fontSize: 60, color: '#5865F2', mb: 2 }} />
-              <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
-                Learn Skills
-              </Typography>
-              <Typography variant="body1" sx={{ color: '#666' }}>
-                with unlimited courses
-              </Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card sx={{ textAlign: 'center', p: 3, height: '100%', backgroundColor: '#5865F2', color: 'white' }}>
-              <Group sx={{ fontSize: 60, color: 'white', mb: 2 }} />
-              <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
-                Expert Teachers
-              </Typography>
-              <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                Best & highly qualified
-              </Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card sx={{ textAlign: 'center', p: 3, height: '100%', border: '2px solid #5865F2' }}>
-              <WorkspacePremium sx={{ fontSize: 60, color: '#5865F2', mb: 2 }} />
-              <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
-                Certificates
-              </Typography>
-              <Typography variant="body1" sx={{ color: '#666' }}>
-                value all over the world
-              </Typography>
-            </Card>
-          </Grid>
-        </Grid>
-      </Container>
-
-      {/* About Section */}
-      <Box sx={{ backgroundColor: '#F8F9FA', py: 8 }}>
+      <Box sx={{ py: { xs: 6, md: 10 }, backgroundColor: '#F8F9FA' }}>
         <Container maxWidth="lg">
-          <Grid container spacing={6} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Box sx={{ position: 'relative' }}>
-                <img 
-                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                  alt="Team learning"
-                  style={{ 
-                    width: '100%', 
-                    borderRadius: '15px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
-                  }}
-                />
-                <Box 
-                  sx={{ 
-                    position: 'absolute',
-                    bottom: 20,
-                    left: 20,
-                    backgroundColor: 'white',
-                    p: 2,
-                    borderRadius: 2,
-                    boxShadow: 3
-                  }}
-                >
-                  <Typography variant="h6" sx={{ color: '#5865F2', fontWeight: 'bold' }}>
-                    Trusted by 8800 customers
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography variant="body2" sx={{ color: '#5865F2', mb: 2, fontWeight: 'bold' }}>
-                About APTIS Company
-              </Typography>
-              <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 3 }}>
-                Welcome to the Online Learning Center
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 4, color: '#666', lineHeight: 1.8 }}>
-                There are many variations of passages of Lorem Ipsum available, but the majority have 
-                suffered alteration in some form. Simply free text by injected humour.
-              </Typography>
-              <Box sx={{ mb: 4 }}>
-                {[
-                  'Get unlimited access to 6800+ of our top courses',
-                  'Explore a variety of fresh educational topics',
-                  'Find the best qualified teacher for you',
-                  'Transform access to education'
-                ].map((item, idx) => (
-                  <Box key={idx} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#5865F2', mr: 2 }} />
-                    <Typography variant="body1" sx={{ color: '#666' }}>{item}</Typography>
-                  </Box>
-                ))}
-              </Box>
-              <Button 
-                variant="contained" 
-                size="large"
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                fontWeight: 'bold', 
+                mb: 2, 
+                color: '#333333',
+                fontSize: { xs: '2rem', md: '2.5rem' }
+              }}
+            >
+              Why Choose APTIS?
+            </Typography>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: '#666666', 
+                maxWidth: '600px', 
+                mx: 'auto',
+                fontSize: '1.1rem',
+                fontWeight: 400
+              }}
+            >
+              Experience comprehensive English training with our proven methodology and expert instructors.
+            </Typography>
+          </Box>
+
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={4}>
+              <Card 
                 sx={{ 
-                  backgroundColor: '#5865F2',
-                  px: 4,
-                  py: 1.5,
-                  '&:hover': { backgroundColor: '#4752C4' }
+                  textAlign: 'center', 
+                  p: 4, 
+                  height: '100%', 
+                  borderRadius: 3,
+                  border: '1px solid #E0E0E0',
+                  transition: 'all 0.3s ease-in-out',
+                  '&:hover': { 
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.1)'
+                  }
                 }}
-                onClick={handleLoginClick}
               >
-                VIEW ALL COURSES
-              </Button>
+                <School sx={{ fontSize: 64, color: '#1976D2', mb: 3 }} />
+                <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2, color: '#333333' }}>
+                  Expert Training
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#666666', lineHeight: 1.6 }}>
+                  Learn from certified instructors with years of APTIS teaching experience
+                </Typography>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={4}>
+              <Card 
+                sx={{ 
+                  textAlign: 'center', 
+                  p: 4, 
+                  height: '100%', 
+                  borderRadius: 3,
+                  border: '1px solid #E0E0E0',
+                  transition: 'all 0.3s ease-in-out',
+                  '&:hover': { 
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.1)'
+                  }
+                }}
+              >
+                <MenuBook sx={{ fontSize: 64, color: '#1976D2', mb: 3 }} />
+                <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2, color: '#333333' }}>
+                  Comprehensive Curriculum
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#666666', lineHeight: 1.6 }}>
+                  Complete course material covering all APTIS test components and skills
+                </Typography>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} md={4}>
+              <Card 
+                sx={{ 
+                  textAlign: 'center', 
+                  p: 4, 
+                  height: '100%', 
+                  borderRadius: 3,
+                  border: '1px solid #E0E0E0',
+                  transition: 'all 0.3s ease-in-out',
+                  '&:hover': { 
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.1)'
+                  }
+                }}
+              >
+                <TrendingUp sx={{ fontSize: 64, color: '#1976D2', mb: 3 }} />
+                <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2, color: '#333333' }}>
+                  Progress Tracking
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#666666', lineHeight: 1.6 }}>
+                  Monitor your improvement with detailed analytics and performance reports
+                </Typography>
+              </Card>
             </Grid>
           </Grid>
         </Container>
       </Box>
 
-      {/* Featured Courses */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Typography variant="body2" sx={{ textAlign: 'center', color: '#5865F2', mb: 2 }}>
-          Popular Courses
-        </Typography>
-        <Typography variant="h3" sx={{ textAlign: 'center', fontWeight: 'bold', mb: 6 }}>
-          Featured Courses
-        </Typography>
-        
-        <Grid container spacing={4}>
-          {[
-            {
-              title: 'The Complete APTIS Preparation Course',
-              instructor: 'Kevin Martin',
-              students: 35,
-              rating: 4.5,
-              image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-              featured: true
-            },
-            {
-              title: 'IELTS Training Practical Techniques',
-              instructor: 'Jessica Smith',
-              students: 26,
-              rating: 4.8,
-              image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-              featured: true
-            },
-            {
-              title: 'English Communication Skills',
-              instructor: 'Kevin Martin',
-              students: 45,
-              rating: 4.7,
-              image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-              featured: true
-            }
-          ].map((course, idx) => (
-            <Grid item xs={12} md={4} key={idx}>
-              <Card sx={{ height: '100%', position: 'relative' }}>
-                {course.featured && (
-                  <Chip 
-                    label="FEATURED"
-                    sx={{ 
-                      position: 'absolute', 
-                      top: 15, 
-                      left: 15, 
-                      backgroundColor: '#5865F2', 
-                      color: 'white',
-                      fontWeight: 'bold',
-                      zIndex: 1
-                    }}
-                  />
-                )}
-                <Box sx={{ position: 'relative', overflow: 'hidden', height: 200 }}>
-                  <img 
-                    src={course.image}
-                    alt={course.title}
-                    style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      objectFit: 'cover'
-                    }}
-                  />
-                </Box>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar sx={{ width: 32, height: 32, mr: 1 }} />
-                    <Typography variant="body2" sx={{ color: '#666' }}>
-                      {course.instructor}
-                    </Typography>
-                    <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center' }}>
-                      <Group sx={{ fontSize: 16, color: '#666', mr: 0.5 }} />
-                      <Typography variant="body2" sx={{ color: '#666' }}>
-                        {course.students}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                    {course.title}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Rating value={course.rating} size="small" readOnly />
-                    <Typography variant="h6" sx={{ color: '#5865F2', fontWeight: 'bold' }}>
-                      Free
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
-
       {/* Statistics Section */}
-      <Box sx={{ backgroundColor: '#2C3E50', color: 'white', py: 8 }}>
+      <Box sx={{ py: { xs: 6, md: 10 }, backgroundColor: '#FFFFFF' }}>
         <Container maxWidth="lg">
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" sx={{ color: '#3498DB', mb: 1 }}>
-                  Fun Facts
-                </Typography>
-                <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 3 }}>
-                  APTIS Mission is to Polish your skill
-                </Typography>
-                <Typography variant="body1" sx={{ opacity: 0.8 }}>
-                  There are many variations of passages of lorem ipsum 
-                  available but the majority have suffered.
-                </Typography>
-              </Box>
+          <Grid container spacing={6} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Typography 
+                variant="h3" 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  mb: 3, 
+                  color: '#333333',
+                  fontSize: { xs: '2rem', md: '2.5rem' }
+                }}
+              >
+                Trusted by Students Worldwide
+              </Typography>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  mb: 4, 
+                  color: '#666666', 
+                  lineHeight: 1.6,
+                  fontSize: '1.1rem',
+                  fontWeight: 400
+                }}
+              >
+                Join thousands of successful students who have achieved their English proficiency goals through our platform.
+              </Typography>
+              <Button 
+                variant="contained" 
+                onClick={handleLoginClick}
+                sx={{ 
+                  backgroundColor: '#1976D2',
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  textTransform: 'none',
+                  borderRadius: 2,
+                  fontWeight: '600',
+                  '&:hover': { 
+                    backgroundColor: '#1565C0',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 20px rgba(25, 118, 210, 0.4)'
+                  },
+                  transition: 'all 0.3s ease-in-out'
+                }}
+              >
+                Start Your Journey
+              </Button>
             </Grid>
-            <Grid item xs={12} md={8}>
+            
+            <Grid item xs={12} md={6}>
               <Grid container spacing={4}>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={6}>
                   <Box sx={{ textAlign: 'center' }}>
-                    <School sx={{ fontSize: 50, color: '#3498DB', mb: 2 }} />
-                    <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
-                      6,800
+                    <Typography 
+                      variant="h3" 
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        color: '#1976D2',
+                        fontSize: { xs: '2.5rem', md: '3rem' }
+                      }}
+                    >
+                      1,200+
                     </Typography>
-                    <Typography variant="body1">
-                      Pro Teachers
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Group sx={{ fontSize: 50, color: '#3498DB', mb: 2 }} />
-                    <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
-                      9,800
-                    </Typography>
-                    <Typography variant="body1">
-                      Skill Courses
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Group sx={{ fontSize: 50, color: '#3498DB', mb: 2 }} />
-                    <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
-                      8,800
-                    </Typography>
-                    <Typography variant="body1">
+                    <Typography variant="h6" sx={{ color: '#666666', fontWeight: '500' }}>
                       Students Enrolled
+                    </Typography>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={6}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography 
+                      variant="h3" 
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        color: '#1976D2',
+                        fontSize: { xs: '2.5rem', md: '3rem' }
+                      }}
+                    >
+                      95%
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: '#666666', fontWeight: '500' }}>
+                      Success Rate
+                    </Typography>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={6}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography 
+                      variant="h3" 
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        color: '#1976D2',
+                        fontSize: { xs: '2.5rem', md: '3rem' }
+                      }}
+                    >
+                      50+
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: '#666666', fontWeight: '500' }}>
+                      Expert Instructors
+                    </Typography>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={6}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography 
+                      variant="h3" 
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        color: '#1976D2',
+                        fontSize: { xs: '2.5rem', md: '3rem' }
+                      }}
+                    >
+                      5★
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: '#666666', fontWeight: '500' }}>
+                      Average Rating
                     </Typography>
                   </Box>
                 </Grid>
@@ -396,209 +473,157 @@ export default function LandingPage() {
         </Container>
       </Box>
 
-      {/* Categories Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Typography variant="body2" sx={{ textAlign: 'center', color: '#5865F2', mb: 2 }}>
-          Checkout New List
-        </Typography>
-        <Typography variant="h3" sx={{ textAlign: 'center', fontWeight: 'bold', mb: 6 }}>
-          Top Categories
-        </Typography>
-        
-        <Grid container spacing={4}>
-          {[
-            { title: 'Art & Design', courses: '3 Full Courses', color: '#FF6B35' },
-            { title: 'Lifestyle', courses: '1 Full Courses', color: '#3498DB' },
-            { title: 'Photography', courses: '4 Full Courses', color: '#9B59B6' },
-            { title: 'Marketing', courses: '2 Full Courses', color: '#5865F2' }
-          ].map((category, idx) => (
-            <Grid item xs={12} md={3} key={idx}>
-              <Card sx={{ height: 200, position: 'relative', overflow: 'hidden' }}>
-                <Box 
-                  sx={{ 
-                    height: '100%',
-                    background: `linear-gradient(135deg, ${category.color}66 0%, ${category.color} 100%)`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'flex-end',
-                    p: 3,
-                    color: 'white'
-                  }}
-                >
-                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-                    {category.courses}
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                    {category.title}
-                  </Typography>
-                </Box>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-        
-        <Box sx={{ textAlign: 'center', mt: 6 }}>
-          <Button 
-            variant="outlined" 
-            size="large"
-            onClick={handleLoginClick}
-            sx={{ 
-              borderColor: '#5865F2',
-              color: '#5865F2',
-              px: 4,
-              py: 1.5,
-              '&:hover': { backgroundColor: '#5865F2', color: 'white' }
-            }}
-          >
-            VIEW ALL COURSES
-          </Button>
-        </Box>
-      </Container>
-
-      {/* Newsletter Section */}
-      <Box sx={{ backgroundColor: '#5865F2', color: 'white', py: 8 }}>
+      {/* Call to Action Section */}
+      <Box 
+        sx={{ 
+          py: { xs: 6, md: 10 }, 
+          background: 'linear-gradient(135deg, #1976D2 0%, #1565C0 100%)',
+          color: 'white'
+        }}
+      >
         <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 3 }}>
-                Subscribe to Our Newsletter to Get Daily Content!
-              </Typography>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField
-                  fullWidth
-                  placeholder="Enter your email"
-                  variant="outlined"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: 'white',
-                      '& input': {
-                        color: '#333'
-                      }
-                    }
-                  }}
-                />
-                <Button 
-                  variant="contained" 
-                  sx={{ 
-                    backgroundColor: '#FF6B35',
-                    px: 3,
-                    '&:hover': { backgroundColor: '#E55B2B' }
-                  }}
-                >
-                  ➤
-                </Button>
-              </Box>
-              <Typography variant="body2" sx={{ mt: 2, opacity: 0.8 }}>
-                📧 Sign up now for weekly news and updates
-              </Typography>
-            </Grid>
-          </Grid>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                fontWeight: 'bold', 
+                mb: 3,
+                fontSize: { xs: '2rem', md: '2.5rem' }
+              }}
+            >
+              Ready to Start Your English Journey?
+            </Typography>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                mb: 5, 
+                opacity: 0.9,
+                maxWidth: '600px',
+                mx: 'auto',
+                fontSize: '1.2rem',
+                fontWeight: 400
+              }}
+            >
+              Join our community of learners and take the first step towards achieving your English proficiency goals.
+            </Typography>
+            
+            <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', flexDirection: { xs: 'column', sm: 'row' } }}>
+              <Button 
+                variant="contained" 
+                size="large" 
+                onClick={handleGetStartedClick}
+                sx={{ 
+                  backgroundColor: 'white',
+                  color: '#1976D2',
+                  px: 5,
+                  py: 2,
+                  fontSize: '1.2rem',
+                  textTransform: 'none',
+                  borderRadius: 2,
+                  fontWeight: '600',
+                  '&:hover': { 
+                    backgroundColor: '#F5F5F5',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.2)'
+                  },
+                  transition: 'all 0.3s ease-in-out'
+                }}
+              >
+                Get Started Now
+              </Button>
+              
+              <Button 
+                variant="outlined" 
+                size="large" 
+                onClick={handleLoginClick}
+                sx={{ 
+                  borderColor: 'white',
+                  color: 'white',
+                  px: 5,
+                  py: 2,
+                  fontSize: '1.2rem',
+                  textTransform: 'none',
+                  borderRadius: 2,
+                  fontWeight: '600',
+                  '&:hover': { 
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    transform: 'translateY(-2px)',
+                    borderColor: 'white'
+                  },
+                  transition: 'all 0.3s ease-in-out'
+                }}
+              >
+                Sign In
+              </Button>
+            </Box>
+          </Box>
         </Container>
       </Box>
 
       {/* Footer */}
-      <Box sx={{ backgroundColor: '#2C3E50', color: 'white', py: 6 }}>
+      <Box sx={{ backgroundColor: '#333333', color: 'white', py: 6 }}>
         <Container maxWidth="lg">
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={3}>
-              <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3, color: '#3498DB' }}>
+          <Grid container spacing={4} justifyContent="center">
+            <Grid item xs={12} md={4} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+              <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3, color: '#1976D2' }}>
                 APTIS
               </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.8, mb: 3 }}>
-                Start learning from our experts and enhance your skills
+              <Typography variant="body1" sx={{ opacity: 0.8, mb: 3, lineHeight: 1.6 }}>
+                Your trusted partner for English language learning and APTIS test preparation.
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.6 }}>
+                contact@aptis.com • +1 (555) 123-4567
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={12} md={4} sx={{ textAlign: 'center' }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
+                Quick Links
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Button color="inherit" sx={{ textTransform: 'none', justifyContent: 'center' }}>
+                  About Us
+                </Button>
+                <Button color="inherit" sx={{ textTransform: 'none', justifyContent: 'center' }}>
+                  Courses
+                </Button>
+                <Button color="inherit" sx={{ textTransform: 'none', justifyContent: 'center' }}>
+                  Contact
+                </Button>
+                <Button color="inherit" sx={{ textTransform: 'none', justifyContent: 'center' }}>
+                  Support
+                </Button>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} md={4} sx={{ textAlign: { xs: 'center', md: 'right' } }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
+                Follow Us
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.8, mb: 2 }}>
+                Stay connected for updates and tips
               </Typography>
               <Button 
                 variant="outlined" 
+                onClick={handleLoginClick}
                 sx={{ 
                   borderColor: 'white',
                   color: 'white',
-                  '&:hover': { backgroundColor: 'white', color: '#2C3E50' }
+                  textTransform: 'none',
+                  '&:hover': { 
+                    backgroundColor: 'white', 
+                    color: '#333333' 
+                  }
                 }}
               >
-                READ MORE
+                Join Our Community
               </Button>
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
-                Contact
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Phone sx={{ fontSize: 16, mr: 1 }} />
-                <Typography variant="body2">664 888 0000</Typography>
-              </Box>
-              <Box sx={{ mb: 2 }}>
-                <Email sx={{ fontSize: 16, mr: 1 }} />
-                <Typography variant="body2">contact@aptis.com</Typography>
-              </Box>
-              <Box>
-                <LocationOn sx={{ fontSize: 16, mr: 1 }} />
-                <Typography variant="body2">80 Brooklyn Street</Typography>
-              </Box>
-            </Grid>
-
-            <Grid item xs={12} md={2}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
-                Links
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Typography variant="body2" sx={{ cursor: 'pointer', '&:hover': { color: '#3498DB' } }}>About</Typography>
-                <Typography variant="body2" sx={{ cursor: 'pointer', '&:hover': { color: '#3498DB' } }}>Overview</Typography>
-                <Typography variant="body2" sx={{ cursor: 'pointer', '&:hover': { color: '#3498DB' } }}>Teachers</Typography>
-                <Typography variant="body2" sx={{ cursor: 'pointer', '&:hover': { color: '#3498DB' } }}>Join Us</Typography>
-                <Typography variant="body2" sx={{ cursor: 'pointer', '&:hover': { color: '#3498DB' } }}>Our News</Typography>
-              </Box>
-            </Grid>
-
-            <Grid item xs={12} md={2}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
-                Courses
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Typography variant="body2" sx={{ cursor: 'pointer', '&:hover': { color: '#3498DB' } }}>UX/UX Design</Typography>
-                <Typography variant="body2" sx={{ cursor: 'pointer', '&:hover': { color: '#3498DB' } }}>WordPress Development</Typography>
-                <Typography variant="body2" sx={{ cursor: 'pointer', '&:hover': { color: '#3498DB' } }}>Business Strategy</Typography>
-                <Typography variant="body2" sx={{ cursor: 'pointer', '&:hover': { color: '#3498DB' } }}>Software Development</Typography>
-                <Typography variant="body2" sx={{ cursor: 'pointer', '&:hover': { color: '#3498DB' } }}>Business English</Typography>
-              </Box>
-            </Grid>
-
-            <Grid item xs={12} md={3}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
-                Featured Posts
-              </Typography>
-              <Box sx={{ display: 'flex', mb: 2 }}>
-                <Box sx={{ width: 50, height: 50, backgroundColor: '#3498DB', borderRadius: 1, mr: 2 }} />
-                <Box>
-                  <Typography variant="body2" sx={{ color: '#3498DB', fontSize: '0.8rem' }}>
-                    📅 8 Dec. 2020
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                    APTIS Certifications for Your Career
-                  </Typography>
-                </Box>
-              </Box>
-              <Box sx={{ display: 'flex' }}>
-                <Box sx={{ width: 50, height: 50, backgroundColor: '#3498DB', borderRadius: 1, mr: 2 }} />
-                <Box>
-                  <Typography variant="body2" sx={{ color: '#3498DB', fontSize: '0.8rem' }}>
-                    📅 8 Dec. 2020
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                    Entry Level Networking Certification
-                  </Typography>
-                </Box>
-              </Box>
             </Grid>
           </Grid>
           
-          <Box sx={{ borderTop: '1px solid #34495E', mt: 6, pt: 4, textAlign: 'center' }}>
+          <Box sx={{ borderTop: '1px solid #555555', mt: 6, pt: 4, textAlign: 'center' }}>
             <Typography variant="body2" sx={{ opacity: 0.6 }}>
-              © Copyright 2024 by APTIS Learning Platform
+              © 2024 APTIS Learning Platform. All rights reserved.
             </Typography>
           </Box>
         </Container>

@@ -546,4 +546,31 @@ router.post('/speech/generate', authMiddleware, isTeacherOrAdmin, async (req, re
   }
 });
 
+// DEBUG ROUTE - Kiểm tra data
+router.get('/debug/exams/:examId/sections/:sectionId/questions/:questionId', authMiddleware, isTeacherOrAdmin, async (req, res) => {
+  try {
+    const { Exam, ExamSection, ExamSectionQuestion, Question } = require('../models');
+    const { examId, sectionId, questionId } = req.params;
+
+    const exam = await Exam.findByPk(examId);
+    const section = await ExamSection.findByPk(sectionId);
+    const question = await Question.findByPk(questionId);
+    const esq = await ExamSectionQuestion.findOne({
+      where: {
+        exam_section_id: sectionId,
+        question_id: questionId,
+      },
+    });
+
+    res.json({
+      exam: exam ? { id: exam.id, title: exam.title } : null,
+      section: section ? { id: section.id, exam_id: section.exam_id } : null,
+      question: question ? { id: question.id, title: question.title } : null,
+      examSectionQuestion: esq ? { id: esq.id, exam_section_id: esq.exam_section_id, question_id: esq.question_id } : null,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
