@@ -15,6 +15,7 @@ import {
   Grid
 } from '@mui/material';
 import { Add, Delete, Info, Warning, CheckCircle } from '@mui/icons-material';
+import { Select, MenuItem } from '@mui/material';
 
 /**
  * Reading Gap Filling Form - Part 1 của Reading skill
@@ -48,12 +49,12 @@ export default function ReadingGapFillingForm({ content, onChange }) {
     }
   }, [content]);
 
-  // Validation function
+  // Validation function - chỉ validate khi cần
   const validateData = useCallback(() => {
     const newErrors = {};
     
     // Check if passage has content
-    if (!passage.trim()) {
+    if (!passage || !passage.trim()) {
       newErrors.passage = 'Đoạn văn không được để trống';
     } else {
       // Check if passage contains [GAP] placeholders
@@ -91,30 +92,24 @@ export default function ReadingGapFillingForm({ content, onChange }) {
     return isValid;
   }, [passage, options, correctAnswers]);
 
-  // Auto-validate when data changes
+  // Update parent component với debounce  
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (passage.trim() || options.some(opt => opt.trim()) || prompt.trim()) {
-        validateData();
+      const questionData = {
+        passage: passage,
+        options: options.filter(opt => opt.trim()),
+        correctAnswers: correctAnswers.filter(ans => ans.trim()),
+        prompt: prompt.trim()
+      };
+      
+      if (onChange) {
+        onChange(JSON.stringify(questionData));
       }
-    }, 500);
+    }, 300); // Debounce 300ms
     
     return () => clearTimeout(timeoutId);
-  }, [passage, options, correctAnswers, prompt, validateData]);
-
-  // Update parent component
-  useEffect(() => {
-    const questionData = {
-      passage: passage.trim(),
-      options: options.filter(opt => opt.trim()),
-      correctAnswers: correctAnswers.filter(ans => ans.trim()),
-      prompt: prompt.trim()
-    };
-    
-    if (onChange) {
-      onChange(JSON.stringify(questionData));
-    }
-  }, [passage, options, correctAnswers, prompt, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [passage, options, correctAnswers, prompt]);
 
   // Handle adding new option
   const handleAddOption = () => {
@@ -237,35 +232,41 @@ export default function ReadingGapFillingForm({ content, onChange }) {
         Thêm từ
       </Button>
 
+      {/* Manual Validation Button */}
+      <Button
+        onClick={validateData}
+        variant="contained"
+        color="info"
+        size="small"
+        sx={{ mb: 3, ml: 1 }}
+      >
+        Kiểm tra câu hỏi
+      </Button>
+
       {/* Correct Answers */}
       <Typography variant="subtitle1" gutterBottom>
         Đáp án đúng theo thứ tự:
       </Typography>
       {correctAnswers.map((answer, index) => (
-        <Box key={index} display="flex" alignItems="center" mb={2}>
-          <FormControl fullWidth sx={{ mr: 1 }} size="small">
+        <Box key={index} display="flex" alignItems="center" mb={2} gap={1}>
+          <FormControl sx={{ flexGrow: 1, minWidth: 200 }} size="small">
             <InputLabel>GAP{index + 1}</InputLabel>
-            <select
+            <Select
               value={answer}
               onChange={(e) => handleCorrectAnswerChange(index, e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '14px'
-              }}
+              label={`GAP${index + 1}`}
             >
-              <option value="">Chọn từ...</option>
+              <MenuItem value="">Chọn từ...</MenuItem>
               {options.filter(opt => opt.trim()).map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <MenuItem key={opt} value={opt}>{opt}</MenuItem>
               ))}
-            </select>
+            </Select>
           </FormControl>
           <IconButton
             onClick={() => handleRemoveCorrectAnswer(index)}
             disabled={correctAnswers.length <= 1}
             color="error"
+            size="small"
           >
             <Delete />
           </IconButton>
@@ -281,6 +282,17 @@ export default function ReadingGapFillingForm({ content, onChange }) {
       >
         Thêm đáp án
       </Button>
+
+      {/* Validate Button */}
+      <Box mb={3}>
+        <Button
+          onClick={validateData}
+          variant="contained"
+          color="info"
+        >
+          Kiểm tra câu hỏi
+        </Button>
+      </Box>
 
       {/* Validation Status */}
       {isValidated && (

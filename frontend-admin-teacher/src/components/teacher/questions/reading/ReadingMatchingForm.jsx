@@ -89,16 +89,9 @@ export default function ReadingMatchingForm({ content, onChange }) {
     return isValid;
   }, [instructions, passage, persons, questions]);
 
-  // Auto-validate when data changes
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (instructions.trim() || passage.trim() || persons.some(p => p.name.trim() || p.text.trim())) {
-        validateData();
-      }
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  }, [instructions, passage, persons, questions, validateData]);
+  // Remove auto-validation useEffect - causes infinite loops
+  // Data is sent to parent on every change (via onChange)
+  // Validation is only called on demand via button click
 
   // Update parent component
   useEffect(() => {
@@ -112,7 +105,8 @@ export default function ReadingMatchingForm({ content, onChange }) {
     if (onChange) {
       onChange(JSON.stringify(questionData));
     }
-  }, [instructions, passage, persons, questions, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instructions, passage, persons, questions]);
 
   // Handle adding new person
   const handleAddPerson = () => {
@@ -329,6 +323,17 @@ export default function ReadingMatchingForm({ content, onChange }) {
         disabled={questions.length >= 10 || getPersonOptions().length === 0}
       >
         Thêm câu hỏi
+      </Button>
+
+      {/* Manual Validation Button */}
+      <Button
+        onClick={validateData}
+        variant="contained"
+        color="info"
+        size="small"
+        sx={{ mb: 3, ml: 1 }}
+      >
+        Kiểm tra câu hỏi
       </Button>
 
       {/* Validation Status */}

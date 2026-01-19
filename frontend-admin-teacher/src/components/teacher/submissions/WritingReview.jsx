@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -34,40 +34,38 @@ export default function WritingReview({
   answer,
   question,
   reviewData,
-  onReviewChange,
   onSubmitReview,
   readonly = false,
   saving = false
 }) {
   const maxScore = answer?.max_score || 5;
-  const [score, setScore] = useState(reviewData?.final_score || 0);
-  const [feedback, setFeedback] = useState(reviewData?.feedback || '');
+  const [score, setScore] = useState(reviewData?.final_score || answer?.final_score || answer?.score || 0);
+  const [feedback, setFeedback] = useState(reviewData?.feedback || answer?.manual_feedback || answer?.ai_feedback || '');
   const [highlights, setHighlights] = useState([]);
   const textRef = useRef();
 
+  // Update state when props change
+  useEffect(() => {
+    setScore(reviewData?.final_score || answer?.final_score || answer?.score || 0);
+    setFeedback(reviewData?.feedback || answer?.manual_feedback || answer?.ai_feedback || '');
+  }, [reviewData, answer]);
+
   const handleScoreChange = (newScore) => {
     setScore(newScore);
-    onReviewChange?.({
-      ...reviewData,
-      final_score: newScore
-    });
   };
 
   const handleFeedbackChange = (event) => {
     const newFeedback = event.target.value;
     setFeedback(newFeedback);
-    onReviewChange?.({
-      ...reviewData,
-      feedback: newFeedback
-    });
   };
 
   const handleSave = () => {
     if (onSubmitReview && answer?.id) {
       onSubmitReview(answer.id, {
         final_score: score,
-        feedback,
-        highlights
+        feedback: feedback,
+        // Match backend expectations
+        manual_feedback: feedback
       });
     }
   };

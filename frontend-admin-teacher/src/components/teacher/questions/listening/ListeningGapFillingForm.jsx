@@ -106,16 +106,9 @@ export default function ListeningGapFillingForm({ content, onChange }) {
     return isValid;
   }, [title, audioScript, passage, options, correctAnswers]);
 
-  // Auto-validate when data changes
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (title.trim() || audioScript.trim() || passage.trim()) {
-        validateData();
-      }
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  }, [title, audioScript, passage, options, correctAnswers, validateData]);
+  // Remove auto-validation useEffect - causes infinite loops
+  // Data is sent to parent on every change (via onChange)
+  // Validation is only called on demand via button click
 
   // Update parent component
   useEffect(() => {
@@ -131,7 +124,8 @@ export default function ListeningGapFillingForm({ content, onChange }) {
     if (onChange) {
       onChange(JSON.stringify(questionData));
     }
-  }, [title, audioScript, passage, options, correctAnswers, instructions, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, audioScript, passage, options, correctAnswers, instructions]);
 
   // Handle adding new option
   const handleAddOption = () => {
@@ -286,6 +280,17 @@ export default function ListeningGapFillingForm({ content, onChange }) {
         sx={{ mb: 3 }}
       >
         Thêm từ
+      </Button>
+
+      {/* Manual Validation Button */}
+      <Button
+        onClick={validateData}
+        variant="contained"
+        color="info"
+        size="small"
+        sx={{ mb: 3, ml: 1 }}
+      >
+        Kiểm tra câu hỏi
       </Button>
 
       {/* Correct Answers */}

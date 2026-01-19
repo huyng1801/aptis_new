@@ -93,16 +93,9 @@ export default function WritingEmailForm({ content, onChange }) {
     return isValid;
   }, [scenario, friendEmailPrompt, authorityEmailPrompt, instructions, minWords, maxWords, timeLimit]);
 
-  // Auto-validate when data changes
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (scenario.trim() || friendEmailPrompt.trim() || authorityEmailPrompt.trim()) {
-        validateData();
-      }
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  }, [scenario, friendEmailPrompt, authorityEmailPrompt, instructions, minWords, maxWords, timeLimit, validateData]);
+  // Remove auto-validation useEffect - causes infinite loops
+  // Data is sent to parent on every change (via onChange)
+  // Validation is only called on demand via button click
 
   // Update parent component
   useEffect(() => {
@@ -121,7 +114,8 @@ export default function WritingEmailForm({ content, onChange }) {
     if (onChange) {
       onChange(JSON.stringify(questionData));
     }
-  }, [scenario, friendEmailPrompt, authorityEmailPrompt, instructions, minWords, maxWords, timeLimit, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenario, friendEmailPrompt, authorityEmailPrompt, instructions, minWords, maxWords, timeLimit]);
 
   return (
     <Box>
@@ -281,6 +275,17 @@ export default function WritingEmailForm({ content, onChange }) {
           </Box>
         )}
       </Paper>
+
+      {/* Manual Validation Button */}
+      <Button
+        onClick={validateData}
+        variant="contained"
+        color="info"
+        size="small"
+        sx={{ mb: 3 }}
+      >
+        Kiểm tra câu hỏi
+      </Button>
 
       {/* Validation Status */}
       {isValidated && (

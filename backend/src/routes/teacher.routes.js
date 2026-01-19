@@ -101,6 +101,15 @@ router.get(
   questionController.getQuestionDetails,
 );
 
+// POST /teacher/questions/:questionId/upload-images - Upload ảnh cho câu hỏi
+router.post(
+  '/questions/:questionId/upload-images',
+  authMiddleware,
+  isTeacherOrAdmin,
+  require('../config/storage').upload.array('images', 5),
+  questionController.uploadQuestionImages,
+);
+
 // PUT /teacher/questions/:questionId - Cập nhật câu hỏi
 router.put(
   '/questions/:questionId',

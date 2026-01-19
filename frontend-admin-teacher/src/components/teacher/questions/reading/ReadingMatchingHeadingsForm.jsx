@@ -48,7 +48,7 @@ export default function ReadingMatchingHeadingsForm({ content, onChange }) {
     }
   }, [content]);
 
-  // Validation function
+  // Validation function - called manually, not auto
   const validateData = useCallback(() => {
     const newErrors = {};
     
@@ -95,16 +95,9 @@ export default function ReadingMatchingHeadingsForm({ content, onChange }) {
     return isValid;
   }, [title, instructions, passages, headingOptions]);
 
-  // Auto-validate when data changes
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (title.trim() || passages.some(p => p.text.trim()) || headingOptions.some(h => h.trim())) {
-        validateData();
-      }
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  }, [title, instructions, passages, headingOptions, validateData]);
+  // Remove auto-validation useEffect - causes infinite loops
+  // Data is sent to parent on every change (via onChange)
+  // Validation is only called on demand via button click
 
   // Update parent component
   useEffect(() => {
@@ -118,7 +111,8 @@ export default function ReadingMatchingHeadingsForm({ content, onChange }) {
     if (onChange) {
       onChange(JSON.stringify(questionData));
     }
-  }, [title, instructions, passages, headingOptions, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, instructions, passages, headingOptions]);
 
   // Handle adding new passage
   const handleAddPassage = () => {
@@ -320,6 +314,17 @@ export default function ReadingMatchingHeadingsForm({ content, onChange }) {
         sx={{ mb: 3 }}
       >
         Thêm đoạn văn
+      </Button>
+
+      {/* Manual Validation Button */}
+      <Button
+        onClick={validateData}
+        variant="contained"
+        color="info"
+        size="small"
+        sx={{ mb: 3, ml: 1 }}
+      >
+        Kiểm tra câu hỏi
       </Button>
 
       {/* Preview */}

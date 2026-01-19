@@ -39,42 +39,40 @@ export default function SpeakingReview({
   answer,
   question,
   reviewData,
-  onReviewChange,
   onSubmitReview,
   readonly = false,
   saving = false
 }) {
   const maxScore = answer?.max_score || 5;
-  const [score, setScore] = useState(reviewData?.final_score || 0);
-  const [feedback, setFeedback] = useState(reviewData?.feedback || '');
+  const [score, setScore] = useState(reviewData?.final_score || answer?.final_score || answer?.score || 0);
+  const [feedback, setFeedback] = useState(reviewData?.feedback || answer?.manual_feedback || answer?.ai_feedback || '');
   const [timeComments, setTimeComments] = useState([]);
   const [currentTime, setCurrentTime] = useState(0);
   const [newComment, setNewComment] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
 
+  // Update state when props change
+  useEffect(() => {
+    setScore(reviewData?.final_score || answer?.final_score || answer?.score || 0);
+    setFeedback(reviewData?.feedback || answer?.manual_feedback || answer?.ai_feedback || '');
+  }, [reviewData, answer]);
+
   const handleScoreChange = (newScore) => {
     setScore(newScore);
-    onReviewChange?.({
-      ...reviewData,
-      final_score: newScore
-    });
   };
 
   const handleFeedbackChange = (event) => {
     const newFeedback = event.target.value;
     setFeedback(newFeedback);
-    onReviewChange?.({
-      ...reviewData,
-      feedback: newFeedback
-    });
   };
 
   const handleSave = () => {
     if (onSubmitReview && answer?.id) {
       onSubmitReview(answer.id, {
         final_score: score,
-        feedback,
-        timeComments
+        feedback: feedback,
+        // Match backend expectations
+        manual_feedback: feedback
       });
     }
   };
@@ -98,9 +96,9 @@ export default function SpeakingReview({
   };
 
   const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
+    const minutes = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
   const getScoreColor = (score) => {

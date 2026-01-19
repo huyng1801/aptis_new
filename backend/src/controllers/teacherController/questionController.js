@@ -22,6 +22,8 @@ exports.createQuestion = async (req, res, next) => {
       content,
       media_url,
       duration_seconds,
+      parent_question_id,
+      additional_media,
       items,
       options,
       sample_answer,
@@ -36,6 +38,8 @@ exports.createQuestion = async (req, res, next) => {
       content,
       media_url: media_url || null,
       duration_seconds: duration_seconds || null,
+      parent_question_id: parent_question_id || null,
+      additional_media: additional_media || null,
       created_by: teacherId,
       status: 'draft',
     });
@@ -74,8 +78,64 @@ exports.createQuestion = async (req, res, next) => {
     res.status(201).json({
       success: true,
       data: fullQuestion,
+      questionId: question.id, // Trả về question ID
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+exports.uploadQuestionImages = async (req, res, next) => {
+  try {
+    console.log('📸 Upload images endpoint called');
+    console.log('Question ID:', req.params.questionId);
+    console.log('Files received:', req.files ? req.files.length : 0);
+    
+    const { questionId } = req.params;
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      console.error('❌ No files in request');
+      throw new BadRequestError('No images provided');
+    }
+
+    // Find question
+    const question = await Question.findByPk(questionId);
+    if (!question) {
+      console.error('❌ Question not found:', questionId);
+      throw new NotFoundError('Question not found');
+    }
+
+    console.log('📁 Files to process:', files.map(f => ({ 
+      filename: f.filename, 
+      size: f.size,
+      mimetype: f.mimetype 
+    })));
+
+    // Build additional_media array
+    const additionalMedia = files.map((file, index) => ({
+      type: 'image',
+      description: files.length > 1 ? `Image ${String.fromCharCode(65 + index)}` : 'Main image',
+      url: `/uploads/questions/${file.filename}`,
+    }));
+
+    // Update question with additional_media
+    await question.update({
+      additional_media: JSON.stringify(additionalMedia),
+    });
+
+    console.log('✅ Images uploaded and saved:', additionalMedia);
+
+    res.status(200).json({
+      success: true,
+      message: 'Images uploaded successfully',
+      data: {
+        questionId: question.id,
+        additional_media: additionalMedia,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Upload error:', error);
     next(error);
   }
 };

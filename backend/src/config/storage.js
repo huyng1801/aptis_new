@@ -45,6 +45,25 @@ const ensureUploadDirs = () => {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let uploadDir = STORAGE_CONFIG.basePath;
+    
+    // Dynamic subfolder based on route or field
+    if (req.route && (req.route.path.includes('/questions/upload-image') || 
+                      req.route.path.includes('/questions/:questionId/upload-images'))) {
+      uploadDir = path.join(STORAGE_CONFIG.basePath, 'questions');
+    } else if (file.fieldname === 'avatar') {
+      uploadDir = path.join(STORAGE_CONFIG.basePath, 'avatars');
+    } else if (file.fieldname === 'audio') {
+      uploadDir = path.join(STORAGE_CONFIG.basePath, 'answers');
+    } else if (file.fieldname === 'images') {
+      // For question images
+      uploadDir = path.join(STORAGE_CONFIG.basePath, 'questions');
+    }
+    
+    // Ensure directory exists
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {

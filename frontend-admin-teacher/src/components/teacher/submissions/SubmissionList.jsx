@@ -311,16 +311,7 @@ export default function SubmissionList({
                 </TableCell>
                 <TableCell align="center">
                   <Box display="flex" gap={0.5} justifyContent="center">
-                    <Tooltip title="Xem bài làm">
-                      <IconButton 
-                        size="small"
-                        onClick={() => onViewSubmission(submission)}
-                        color="primary"
-                      >
-                        <Visibility />
-                      </IconButton>
-                    </Tooltip>
-                    
+       
                     <Tooltip title="Chấm điểm">
                       <IconButton 
                         size="small"

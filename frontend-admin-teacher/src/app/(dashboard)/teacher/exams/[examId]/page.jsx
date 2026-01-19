@@ -173,7 +173,7 @@ export default function ExamDetailPage() {
               startIcon={currentExam?.status === 'published' ? <UnpublishedOutlined /> : <Publish />}
               onClick={handlePublishToggle}
               disabled={publishLoading}
-              color={currentExam?.status === 'published' ? 'default' : 'primary'}
+              color={currentExam?.status === 'published' ? 'inherit' : 'primary'}
             >
               {publishLoading ? 'Đang xử lý...' : 
                currentExam?.status === 'published' ? 'Hủy xuất bản' : 'Xuất bản'}

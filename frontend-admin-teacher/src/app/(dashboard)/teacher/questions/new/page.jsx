@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 import { Save, Preview, ArrowBack, School, Psychology, AutoAwesome } from '@mui/icons-material';
 import QuestionForm from '@/components/teacher/questions/QuestionForm';
+import SpeakingImageBasedForm from '@/components/teacher/questions/SpeakingImageBasedForm';
 import { QuestionPreview } from '@/components/teacher/questions/common';
 import { createQuestion } from '@/store/slices/questionSlice';
 import { showNotification } from '@/store/slices/uiSlice';
@@ -99,56 +100,155 @@ export default function NewQuestionPage() {
   const handleSave = async (shouldContinue = false) => {
     setLoading(true);
     try {
-      // Validate question data before submitting
-      if (!questionData.content || !questionData.content.trim()) {
-        throw new Error('Nội dung câu hỏi không được để trống');
-      }
+      console.log('🔍 Current questionData:', questionData);
       
-      if (!questionData.aptis_type_id || !questionData.skill_type_id || !questionData.question_type_id) {
-        throw new Error('Vui lòng chọn đầy đủ loại APTIS, kỹ năng và loại câu hỏi');
-      }
+      const isSpeakingImageBased = selectedQuestionType?.code === 'SPEAKING_DESCRIPTION' || 
+                                    selectedQuestionType?.code === 'SPEAKING_COMPARISON';
       
-      // Build complete question data with codes for API
-      const completeQuestionData = {
-        ...questionData,
-        aptis_type_code: aptisTypes.find(a => a.id == selectedAptis)?.aptis_type_code,
-        skill_type_code: skillTypes.find(s => s.id == selectedSkill)?.skill_type_code,
-        question_type_code: selectedQuestionType?.code
-      };
-      
-      console.log('Submitting question data:', completeQuestionData);
-      const result = await dispatch(createQuestion(completeQuestionData));
-      
-      if (createQuestion.fulfilled.match(result)) {
-        dispatch(showNotification({
-          message: 'Tạo câu hỏi thành công!',
-          type: 'success'
-        }));
+      if (isSpeakingImageBased && questionData.mainQuestion && questionData.childQuestions) {
+        // Xử lý đặc biệt cho Speaking image-based questions
+        // BƯỚC 1: Tạo câu hỏi chính TRƯỚC (không có ảnh)
+        const mainQuestionData = {
+          ...questionData.mainQuestion,
+          aptis_type_id: selectedAptis,
+          skill_type_id: selectedSkill,
+          question_type_id: selectedQuestionType.id,
+          aptis_type_code: aptisTypes.find(a => a.id == selectedAptis)?.aptis_type_code,
+          skill_type_code: skillTypes.find(s => s.id == selectedSkill)?.skill_type_code,
+          question_type_code: selectedQuestionType?.code,
+          status: 'draft'
+        };
         
-        if (shouldContinue) {
-          // Reset form để tạo câu hỏi mới
-          setActiveStep(0);
-          setSelectedAptis('');
-          setSelectedSkill('');
-          setSelectedQuestionType('');
-          setFilteredQuestionTypes([]);
-          setQuestionData({
-            aptis_type_id: '',
-            skill_type_id: '',
-            question_type_id: '',
-            difficulty: 'medium',
-            title: '',
-            content: '',
-            media_url: '',
-            duration_seconds: null,
-            status: 'draft'
-          });
+        console.log('STEP 1: Creating parent question (without images):', mainQuestionData);
+        const parentResult = await dispatch(createQuestion(mainQuestionData));
+        
+        if (createQuestion.fulfilled.match(parentResult)) {
+          const parentQuestionId = parentResult.payload.id;
+          console.log('✅ Parent question created with ID:', parentQuestionId);
+          
+          // BƯỚC 2: Upload ảnh và update additional_media
+          console.log('🔍 Checking imageFiles:', questionData.imageFiles);
+          if (questionData.imageFiles && questionData.imageFiles.length > 0) {
+            console.log('STEP 2: Uploading', questionData.imageFiles.length, 'images for parent question...');
+            const { questionApi } = await import('@/services/questionService');
+            
+            try {
+              const uploadResult = await questionApi.uploadQuestionImages(
+                parentQuestionId,
+                questionData.imageFiles
+              );
+              console.log('✅ Images uploaded successfully:', uploadResult);
+            } catch (uploadError) {
+              console.error('❌ Failed to upload images:', uploadError);
+              dispatch(showNotification({
+                message: 'Tạo câu hỏi thành công nhưng upload ảnh thất bại. Vui lòng thêm ảnh sau.',
+                type: 'warning'
+              }));
+            }
+          } else {
+            console.warn('⚠️ No imageFiles found in questionData!');
+          }
+          
+          // BƯỚC 3: Tạo 2 câu hỏi con
+          console.log('STEP 3: Creating child questions...');
+          for (let i = 0; i < questionData.childQuestions.length; i++) {
+            const childQuestionData = {
+              ...questionData.childQuestions[i],
+              aptis_type_id: selectedAptis,
+              skill_type_id: selectedSkill,
+              question_type_id: selectedQuestionType.id,
+              parent_question_id: parentQuestionId,
+              difficulty: mainQuestionData.difficulty,
+              aptis_type_code: aptisTypes.find(a => a.id == selectedAptis)?.aptis_type_code,
+              skill_type_code: skillTypes.find(s => s.id == selectedSkill)?.skill_type_code,
+              question_type_code: selectedQuestionType?.code,
+              status: 'draft'
+            };
+            
+            console.log(`Creating child question ${i + 1}:`, childQuestionData);
+            await dispatch(createQuestion(childQuestionData));
+          }
+          
+          dispatch(showNotification({
+            message: 'Tạo câu hỏi Speaking thành công! (1 câu chính + 2 câu phụ + ảnh)',
+            type: 'success'
+          }));
+          
+          if (shouldContinue) {
+            // Reset form
+            setActiveStep(0);
+            setSelectedAptis('');
+            setSelectedSkill('');
+            setSelectedQuestionType('');
+            setFilteredQuestionTypes([]);
+            setQuestionData({
+              aptis_type_id: '',
+              skill_type_id: '',
+              question_type_id: '',
+              difficulty: 'medium',
+              title: '',
+              content: '',
+              media_url: '',
+              duration_seconds: null,
+              status: 'draft'
+            });
+          } else {
+            router.push('/teacher/questions');
+          }
         } else {
-          router.push('/teacher/questions');
+          throw new Error(parentResult.payload || 'Không thể tạo câu hỏi chính');
         }
-      } else if (createQuestion.rejected.match(result)) {
-        const errorMessage = result.payload || 'Không thể tạo câu hỏi';
-        throw new Error(errorMessage);
+      } else {
+        // Xử lý câu hỏi bình thường
+        if (!questionData.content || !questionData.content.trim()) {
+          throw new Error('Nội dung câu hỏi không được để trống');
+        }
+        
+        if (!questionData.aptis_type_id || !questionData.skill_type_id || !questionData.question_type_id) {
+          throw new Error('Vui lòng chọn đầy đủ loại APTIS, kỹ năng và loại câu hỏi');
+        }
+        
+        const completeQuestionData = {
+          ...questionData,
+          aptis_type_code: aptisTypes.find(a => a.id == selectedAptis)?.aptis_type_code,
+          skill_type_code: skillTypes.find(s => s.id == selectedSkill)?.skill_type_code,
+          question_type_code: selectedQuestionType?.code
+        };
+        
+        console.log('Submitting question data:', completeQuestionData);
+        const result = await dispatch(createQuestion(completeQuestionData));
+        
+        if (createQuestion.fulfilled.match(result)) {
+          dispatch(showNotification({
+            message: 'Tạo câu hỏi thành công!',
+            type: 'success'
+          }));
+          
+          if (shouldContinue) {
+            // Reset form
+            setActiveStep(0);
+            setSelectedAptis('');
+            setSelectedSkill('');
+            setSelectedQuestionType('');
+            setFilteredQuestionTypes([]);
+            setQuestionData({
+              aptis_type_id: '',
+              skill_type_id: '',
+              question_type_id: '',
+              difficulty: 'medium',
+              title: '',
+              content: '',
+              media_url: '',
+              duration_seconds: null,
+              status: 'draft'
+            });
+          } else {
+            router.push('/teacher/questions');
+          }
+        } else if (createQuestion.rejected.match(result)) {
+          const errorMessage = result.payload || 'Không thể tạo câu hỏi';
+          throw new Error(errorMessage);
+        }
       }
     } catch (error) {
       console.error('Error creating question:', error);
@@ -315,6 +415,22 @@ export default function NewQuestionPage() {
         );
         
       case 2:
+        // Kiểm tra nếu là SPEAKING_DESCRIPTION hoặc SPEAKING_COMPARISON
+        const isSpeakingImageBased = selectedQuestionType?.code === 'SPEAKING_DESCRIPTION' || 
+                                      selectedQuestionType?.code === 'SPEAKING_COMPARISON';
+        
+        if (isSpeakingImageBased) {
+          return (
+            <SpeakingImageBasedForm
+              key={`speaking-form-${selectedAptis}-${selectedSkill}-${selectedQuestionType?.id}`}
+              questionType={selectedQuestionType}
+              initialData={questionData}
+              onSubmit={handleFormSubmit}
+              onBack={handleBack}
+            />
+          );
+        }
+        
         return (
           <QuestionForm
             key={`question-form-${selectedAptis}-${selectedSkill}-${selectedQuestionType?.id}`}

@@ -39,10 +39,9 @@ import {
 
 // Speaking components
 import { 
-  SpeakingPersonalIntroForm, 
+  SpeakingSimpleForm,
   SpeakingDescriptionForm,
-  SpeakingComparisonForm,
-  SpeakingTopicDiscussionForm
+  SpeakingComparisonForm
 } from './speaking';
 
 // Writing components
@@ -200,7 +199,18 @@ export default function QuestionForm({
       questionType: selectedQuestionType,
       aptisData,
       skillData,
-      questionTypeData
+      questionTypeData,
+      onSubmit: (data) => {
+        // Merge form data with question metadata
+        const mergedData = {
+          ...data,
+          aptis_type_id: aptisData?.id,
+          skill_type_id: skillData?.id,
+          question_type_id: selectedQuestionType?.id
+        };
+        onSubmit(mergedData);
+      },
+      onBack: onBack
     };
 
     // Use the code from questionTypeData (from database)
@@ -230,13 +240,12 @@ export default function QuestionForm({
       
       // === SPEAKING COMPONENTS ===
       case 'SPEAKING_INTRO':
-        return <SpeakingPersonalIntroForm {...props} />;
+      case 'SPEAKING_DISCUSSION':
+        return <SpeakingSimpleForm {...props} />;
       case 'SPEAKING_DESCRIPTION': 
         return <SpeakingDescriptionForm {...props} />;
       case 'SPEAKING_COMPARISON':
         return <SpeakingComparisonForm {...props} />;
-      case 'SPEAKING_DISCUSSION':
-        return <SpeakingTopicDiscussionForm {...props} />;
       
       // === WRITING COMPONENTS ===
       case 'WRITING_SHORT':
@@ -322,20 +331,7 @@ export default function QuestionForm({
             </FormControl>
           </Grid>
 
-          {/* Media URL (for listening/speaking) */}
-          {(selectedSkill?.code === 'LISTENING' || selectedSkill?.code === 'SPEAKING') && (
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="URL Media (Audio/Video)"
-                name="media_url"
-                value={mediaUrl}
-                onChange={(e) => setMediaUrl(e.target.value)}
-                placeholder="https://example.com/audio.mp3"
-                helperText="URL file âm thanh hoặc video cho câu hỏi"
-              />
-            </Grid>
-          )}
+
 
           {/* Duration */}
           <Grid item xs={12}>
@@ -379,43 +375,7 @@ export default function QuestionForm({
           Nội dung câu hỏi
         </Typography>
         
-        {/* Debug Panel - only show in development */}
-        {process.env.NODE_ENV === 'development' && (
-          <Box sx={{ mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-            <Typography variant="subtitle2" color="primary" gutterBottom>
-              Debug Info (Dev Mode)
-            </Typography>
-            <Typography variant="caption" display="block">
-              Question Type: {selectedQuestionType?.code}
-            </Typography>
-            <Typography variant="caption" display="block">
-              Content Length: {questionContent?.length || 0}
-            </Typography>
-            <Typography variant="caption" display="block" color={isValidQuestionContent ? 'success.main' : 'error.main'}>
-              Content Validation: {isValidQuestionContent ? 'PASSED' : 'FAILED'}
-            </Typography>
-            <Typography variant="caption" display="block" color={Object.keys(formik.errors).length === 0 ? 'success.main' : 'error.main'}>
-              Form Validation: {Object.keys(formik.errors).length === 0 ? 'PASSED' : 'FAILED'}
-            </Typography>
-            {Object.keys(formik.errors).length > 0 && (
-              <Typography variant="caption" display="block" color="error">
-                Formik Errors: {JSON.stringify(formik.errors)}
-              </Typography>
-            )}
-            {validationResult.error && (
-              <Typography variant="caption" display="block" color="error">
-                Content Error: {validationResult.error}
-              </Typography>
-            )}
-            <Typography variant="caption" display="block">
-              Submit Disabled: {formik.isSubmitting || !isValidQuestionContent || Object.keys(formik.errors).length > 0}
-            </Typography>
-          </Box>
-        )}
-        
-        {/* Hiển thị hướng dẫn cấu trúc câu hỏi */}
-        <QuestionStructureGuide questionType={selectedQuestionType} />
-        
+ 
         {renderSpecificForm()}
       </Paper>
 

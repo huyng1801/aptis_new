@@ -30,6 +30,8 @@ export const questionApi = {
       content: questionData.content, // JSON string from forms
       media_url: questionData.media_url || null,
       duration_seconds: questionData.duration_seconds || null,
+      parent_question_id: questionData.parent_question_id || null,
+      additional_media: questionData.additional_media || null,
       status: questionData.status || 'draft'
     };
 
@@ -160,5 +162,24 @@ export const questionApi = {
   getFilterOptions: async () => {
     const response = await apiClient.get(API_ENDPOINTS.TEACHER.QUESTIONS.FILTER_OPTIONS);
     return getResponseData(response, {});
-  }
+  },
+
+  // Upload images for a question
+  uploadQuestionImages: async (questionId, imageFiles) => {
+    const formData = new FormData();
+    imageFiles.forEach(file => {
+      formData.append('images', file);
+    });
+
+    const response = await apiClient.post(
+      `/teacher/questions/${questionId}/upload-images`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
 };

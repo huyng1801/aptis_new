@@ -81,16 +81,9 @@ export default function WritingShortResponseForm({ content, onChange }) {
     return isValid;
   }, [prompt, instructions, minWords, maxWords, timeLimit]);
 
-  // Auto-validate when data changes
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (prompt.trim() || instructions.trim()) {
-        validateData();
-      }
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  }, [prompt, instructions, minWords, maxWords, timeLimit, validateData]);
+  // Remove auto-validation useEffect - causes infinite loops
+  // Data is sent to parent on every change (via onChange)
+  // Validation is only called on demand via button click
 
   // Update parent component
   useEffect(() => {
@@ -108,7 +101,8 @@ export default function WritingShortResponseForm({ content, onChange }) {
     if (onChange) {
       onChange(JSON.stringify(questionData));
     }
-  }, [prompt, instructions, formFields, minWords, maxWords, timeLimit, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prompt, instructions, formFields, minWords, maxWords, timeLimit]);
 
   return (
     <Box>
@@ -235,6 +229,17 @@ export default function WritingShortResponseForm({ content, onChange }) {
           </Box>
         )}
       </Paper>
+
+      {/* Manual Validation Button */}
+      <Button
+        onClick={validateData}
+        variant="contained"
+        color="info"
+        size="small"
+        sx={{ mb: 3 }}
+      >
+        Kiểm tra câu hỏi
+      </Button>
 
       {/* Validation Status */}
       {isValidated && (

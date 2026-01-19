@@ -14,17 +14,17 @@ class StorageService {
         throw new BadRequestError('No file provided');
       }
 
-      const uploadDir = path.join(STORAGE_CONFIG.basePath, subfolder);
-
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      const relativePath = file.path.replace(STORAGE_CONFIG.basePath, '').replace(/\\/g, '/');
+      // For multer uploaded files, file.path is already absolute path
+      // Check if file is already in correct subdirectory
+      const filePath = file.path;
+      const relativePath = filePath.replace(STORAGE_CONFIG.basePath, '').replace(/\\/g, '/');
+      
+      // Ensure the path starts with forward slash for URL
+      const cleanPath = relativePath.startsWith('/') ? relativePath : '/' + relativePath;
 
       return {
-        path: file.path,
-        url: `/uploads${relativePath}`,
+        path: filePath,
+        url: `/uploads${cleanPath}`,
         filename: file.filename,
         size: file.size,
         mimetype: file.mimetype,

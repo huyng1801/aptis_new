@@ -86,16 +86,9 @@ export default function ReadingOrderingForm({ content, onChange }) {
     return isValid;
   }, [title, passage, sentences, correctOrder]);
 
-  // Auto-validate when data changes
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (title.trim() || passage.trim() || sentences.some(sent => sent.trim())) {
-        validateData();
-      }
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  }, [title, passage, sentences, correctOrder, validateData]);
+  // Remove auto-validation useEffect - causes infinite loops
+  // Data is sent to parent on every change (via onChange)
+  // Validation is only called on demand via button click
 
   // Update parent component
   useEffect(() => {
@@ -109,7 +102,8 @@ export default function ReadingOrderingForm({ content, onChange }) {
     if (onChange) {
       onChange(JSON.stringify(questionData));
     }
-  }, [title, passage, sentences, correctOrder, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, passage, sentences, correctOrder]);
 
   // Handle adding new sentence
   const handleAddSentence = () => {
@@ -230,6 +224,17 @@ export default function ReadingOrderingForm({ content, onChange }) {
         disabled={sentences.length >= 10}
       >
         Thêm câu
+      </Button>
+
+      {/* Manual Validation Button */}
+      <Button
+        onClick={validateData}
+        variant="contained"
+        color="info"
+        size="small"
+        sx={{ mb: 3, ml: 1 }}
+      >
+        Kiểm tra câu hỏi
       </Button>
 
       {/* Preview correct order */}

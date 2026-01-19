@@ -92,11 +92,14 @@ export const createQuestion = createAsyncThunk(
         content: questionData.content,
         media_url: questionData.media_url || '',
         duration_seconds: questionData.duration_seconds ? parseInt(questionData.duration_seconds) : 0,
+        parent_question_id: questionData.parent_question_id || null,
+        additional_media: questionData.additional_media || null,
         status: questionData.status || 'draft'
       };
       
       console.log('[createQuestion thunk] Backend data:', backendData);
       const response = await questionApi.createQuestion(backendData);
+      console.log('[createQuestion thunk] Response:', response);
       return response.data;
     } catch (error) {
       console.error('[createQuestion thunk] Error:', error);

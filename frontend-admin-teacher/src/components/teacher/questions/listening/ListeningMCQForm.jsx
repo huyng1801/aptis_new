@@ -95,16 +95,9 @@ export default function ListeningMCQForm({ content, onChange }) {
     return isValid;
   }, [title, audioScript, questions]);
 
-  // Auto-validate when data changes
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (title.trim() || audioScript.trim() || questions.some(q => q.question.trim())) {
-        validateData();
-      }
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  }, [title, audioScript, questions, validateData]);
+  // Remove auto-validation useEffect - causes infinite loops
+  // Data is sent to parent on every change (via onChange)
+  // Validation is only called on demand via button click
 
   // Update parent component
   useEffect(() => {
@@ -121,7 +114,8 @@ export default function ListeningMCQForm({ content, onChange }) {
     if (onChange) {
       onChange(JSON.stringify(questionData));
     }
-  }, [title, audioScript, questions, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, audioScript, questions]);
 
   // Handle adding new question
   const handleAddQuestion = () => {
@@ -309,6 +303,17 @@ export default function ListeningMCQForm({ content, onChange }) {
         disabled={questions.length >= 13}
       >
         Thêm câu hỏi
+      </Button>
+
+      {/* Manual Validation Button */}
+      <Button
+        onClick={validateData}
+        variant="contained"
+        color="info"
+        size="small"
+        sx={{ mb: 3, ml: 1 }}
+      >
+        Kiểm tra câu hỏi
       </Button>
 
       {/* Validation Status */}
