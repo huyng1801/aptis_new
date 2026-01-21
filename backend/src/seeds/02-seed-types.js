@@ -134,28 +134,28 @@ async function seedQuestionTypes() {
     {
       skill_type_id: speaking.id,
       code: 'SPEAKING_INTRO',
-      question_type_name: 'Personal Introduction (A2)',
+      question_type_name: 'Personal Introduction',
       scoring_method: 'ai',
       description: 'Task 1: Personal introduction, A2 level, 0-5 scale'
     },
     {
       skill_type_id: speaking.id,
       code: 'SPEAKING_DESCRIPTION',
-      question_type_name: 'Picture Description (B1)',
+      question_type_name: 'Picture Description',
       scoring_method: 'ai',
       description: 'Task 2: Picture/topic description, B1 level, 0-5 scale'
     },
     {
       skill_type_id: speaking.id,
       code: 'SPEAKING_COMPARISON',
-      question_type_name: 'Comparison (B1)',
+      question_type_name: 'Comparison',
       scoring_method: 'ai',
       description: 'Task 3: Compare and contrast, B1 level, 0-5 scale'
     },
     {
       skill_type_id: speaking.id,
       code: 'SPEAKING_DISCUSSION',
-      question_type_name: 'Topic Discussion (B2)',
+      question_type_name: 'Topic Discussion',
       scoring_method: 'ai',
       description: 'Task 4: Extended discussion, B2 level, 0-6 scale with C1/C2 extension'
     },
@@ -164,28 +164,28 @@ async function seedQuestionTypes() {
     {
       skill_type_id: writing.id,
       code: 'WRITING_SHORT',
-      question_type_name: 'Short Response (A1 - basic information)',
+      question_type_name: 'Short Response',
       scoring_method: 'ai',
       description: 'Task 1: Basic form filling, A1 level, 0-4 scale'
     },
     {
       skill_type_id: writing.id,
       code: 'WRITING_FORM',
-      question_type_name: 'Form Filling (A2 - 20-30 words)',
+      question_type_name: 'Form Filling',
       scoring_method: 'ai',
       description: 'Task 2: Short constructed response to specific question, A2 level, 0-5 scale'
     },
     {
       skill_type_id: writing.id,
       code: 'WRITING_LONG',
-      question_type_name: 'Chat Responses (B1 - 30-40 words)', 
+      question_type_name: 'Chat Responses', 
       scoring_method: 'ai',
       description: 'Task 3: Chat room with 3 questions, B1 level, 0-5 scale'
     },
     {
       skill_type_id: writing.id,
       code: 'WRITING_EMAIL',
-      question_type_name: 'Email Writing (B2 - friend & authority)',
+      question_type_name: 'Email Writing',
       scoring_method: 'ai',
       description: 'Task 4: Two emails (friend + authority), B2 level, 0-6 scale with C1/C2 extension'
     },

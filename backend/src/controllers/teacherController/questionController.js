@@ -527,32 +527,42 @@ exports.getQuestions = async (req, res, next) => {
     const {
       page = 1,
       limit = 20,
-      question_type,
-      aptis_type,
-      skill,
+      question_type_id,
+      aptis_type_id,
+      skill_type_id,
       difficulty,
       status,
       search,
     } = req.query;
+    
+    console.log('[questionController.getQuestions] Received params:', {
+      page, limit, question_type_id, aptis_type_id, skill_type_id, difficulty, status, search
+    });
+    
     const { offset, limit: validLimit } = paginate(page, limit);
 
 
     const where = {};
 
-    if (question_type) {
-      where.question_type_id = question_type;
+    if (question_type_id) {
+      where.question_type_id = question_type_id;
+      console.log('[questionController] Filtering by question_type_id:', question_type_id);
     }
-    if (aptis_type) {
-      where.aptis_type_id = aptis_type;
+    if (aptis_type_id) {
+      where.aptis_type_id = aptis_type_id;
+      console.log('[questionController] Filtering by aptis_type_id:', aptis_type_id);
     }
     if (difficulty) {
       where.difficulty = difficulty;
+      console.log('[questionController] Filtering by difficulty:', difficulty);
     }
     if (status) {
       where.status = status;
+      console.log('[questionController] Filtering by status:', status);
     }
     if (search) {
       where.content = { [Op.like]: `%${search}%` };
+      console.log('[questionController] Filtering by search:', search);
     }
 
     const include = [
@@ -572,8 +582,8 @@ exports.getQuestions = async (req, res, next) => {
     ];
 
     let finalWhere = where;
-    if (skill) {
-      include[0].where = { skill_type_id: skill };
+    if (skill_type_id) {
+      include[0].where = { skill_type_id: skill_type_id };
       include[0].required = true; // INNER JOIN to enforce the filter
     }
 
@@ -804,15 +814,15 @@ exports.getFilterOptions = async (req, res, next) => {
 
     const filterOptions = {
       aptisTypes: aptisTypes.map(type => ({
-        value: type.id,
+        id: type.id,
         label: type.aptis_type_name
       })),
       questionTypes: questionTypes.map(type => ({
-        value: type.id,
+        id: type.id,
         label: type.question_type_name
       })),
       skills: skillTypes.map(skill => ({
-        value: skill.id,
+        id: skill.id,
         label: skill.skill_type_name
       })),
       difficulties,
