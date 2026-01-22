@@ -111,6 +111,32 @@ export default function DashboardLayout({ children }) {
     />
   );
 
+  // Don't render layout variations based on client-side state until mounted
+  if (!mounted) {
+    return (
+      <Box sx={{ display: 'flex' }} suppressHydrationWarning>
+        {/* Placeholder layout - server version */}
+        <AppBar position="fixed">
+          <Toolbar>
+            <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+              <School sx={{ mr: 1 }} />
+              <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
+                APTIS
+              </Typography>
+            </Box>
+            <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, ml: 2 }}>
+              APTIS Admin
+            </Typography>
+          </Toolbar>
+        </AppBar>
+        <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+          <Toolbar />
+          {children}
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ display: 'flex' }} suppressHydrationWarning>
       {/* App Bar */}
