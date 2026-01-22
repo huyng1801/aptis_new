@@ -34,21 +34,29 @@ export default function SubmissionFilters({
     const fetchSkillTypes = async () => {
       try {
         const response = await fetch('/api/public/skill-types');
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`);
+        }
         const data = await response.json();
+        
+        console.log('[DEBUG] Skill types API response:', data);
         
         // Filter to only show WRITING and SPEAKING
         const filteredSkills = data.data?.filter(skill => 
           skill.code === 'WRITING' || skill.code === 'SPEAKING'
         ) || [];
         
+        console.log('[DEBUG] Filtered skills:', filteredSkills);
         setSkillTypes(filteredSkills);
       } catch (error) {
         console.error('Error loading skill types:', error);
         // Fallback to hardcoded values
-        setSkillTypes([
-          { code: 'WRITING', skill_type_name: 'Writing' },
-          { code: 'SPEAKING', skill_type_name: 'Speaking' }
-        ]);
+        const fallbackSkills = [
+          { code: 'WRITING', name: 'Writing', skill_type_name: 'Writing' },
+          { code: 'SPEAKING', name: 'Speaking', skill_type_name: 'Speaking' }
+        ];
+        console.log('[DEBUG] Using fallback skills:', fallbackSkills);
+        setSkillTypes(fallbackSkills);
       }
     };
 
@@ -74,15 +82,6 @@ export default function SubmissionFilters({
   return (
     <Paper sx={{ p: 2, mb: 2 }}>
       <Box mb={2}>
-        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <FilterList />
-          Lọc bài cần chấm
-          {activeFiltersCount > 0 && (
-            <Typography variant="caption" color="primary" sx={{ ml: 1 }}>
-              ({activeFiltersCount} điều kiện)
-            </Typography>
-          )}
-        </Typography>
 
         <Grid container spacing={2} alignItems="center">
           {/* Kỹ năng - load từ API */}
@@ -98,7 +97,7 @@ export default function SubmissionFilters({
                 <MenuItem value="">Tất cả kỹ năng</MenuItem>
                 {skillTypes.map((skill) => (
                   <MenuItem key={skill.code} value={skill.code}>
-                    {skill.skill_type_name} ({skill.code === 'WRITING' ? 'Viết' : 'Nói'})
+                    {skill.name}
                   </MenuItem>
                 ))}
               </Select>
@@ -132,14 +131,14 @@ export default function SubmissionFilters({
                 onClick={onClearFilters}
                 disabled={activeFiltersCount === 0}
                 variant="outlined"
-                color="secondary"
+                color={activeFiltersCount > 0 ? 'error' : 'inherit'}
               >
                 Xóa bộ lọc
               </Button>
               {activeFiltersCount > 0 && (
                 <Chip 
                   label={`${activeFiltersCount} bộ lọc đang áp dụng`}
-                  color="primary"
+                  color="error"
                   variant="outlined"
                 />
               )}

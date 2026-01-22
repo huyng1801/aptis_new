@@ -233,7 +233,7 @@ export default function SubmissionList({
               <TableCell>Học sinh</TableCell>
               <TableCell>Bài thi</TableCell>
               <TableCell>Kỹ năng</TableCell>
-              <TableCell>Câu hỏi</TableCell>
+              <TableCell>Loại câu hỏi</TableCell>
               <TableCell>Điểm số</TableCell>
               <TableCell>Trạng thái</TableCell>
               <TableCell>Ưu tiên</TableCell>
@@ -289,27 +289,7 @@ export default function SubmissionList({
                     <Typography variant="body2" fontWeight="medium">
                       {submission.question?.questionType?.question_type_name || 'N/A'}
                     </Typography>
-                    <Box display="flex" alignItems="center" gap={1} mt={0.5}>
-                      <Chip 
-                        label={submission.question?.difficulty || 'N/A'}
-                        size="small"
-                        color={
-                          submission.question?.difficulty === 'easy' ? 'success' :
-                          submission.question?.difficulty === 'medium' ? 'warning' : 'error'
-                        }
-                        variant="outlined"
-                      />
-                      {submission.answer_type === 'audio' && (
-                        <Typography variant="caption" color="text.secondary">
-                          Âm thanh
-                        </Typography>
-                      )}
-                      {submission.answer_type === 'text' && (
-                        <Typography variant="caption" color="text.secondary">
-                          Văn bản
-                        </Typography>
-                      )}
-                    </Box>
+                    
                   </Box>
                 </TableCell>
                 <TableCell>

@@ -128,6 +128,19 @@ export default function QuestionList({
     });
   };
 
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (searchTerm) count++;
+    if (filters.question_type) count++;
+    if (filters.aptis_type) count++;
+    if (filters.skill) count++;
+    if (filters.difficulty) count++;
+    if (filters.status) count++;
+    return count;
+  };
+
+  const activeFiltersCount = getActiveFiltersCount();
+
   const handleClearFilters = () => {
     setSearchTerm('');
     setFilters({
@@ -424,15 +437,27 @@ export default function QuestionList({
 
             
 
-              <Button
-                variant="outlined"
-                startIcon={<Clear />}
-                onClick={handleClearFilters}
-                size="small"
-                sx={{ ml: 2 }}
-              >
-                Xóa bộ lọc
-              </Button>
+              <Box display="flex" gap={1} alignItems="center">
+                <Button
+                  variant="outlined"
+                  startIcon={<Clear />}
+                  onClick={handleClearFilters}
+                  size="small"
+                  sx={{ ml: 2 }}
+                  disabled={activeFiltersCount === 0}
+                  color={activeFiltersCount > 0 ? 'error' : 'inherit'}
+                >
+                  Xóa bộ lọc
+                </Button>
+                {activeFiltersCount > 0 && (
+                  <Chip 
+                    label={`${activeFiltersCount} bộ lọc đang áp dụng`}
+                    color="error"
+                    size="small"
+                    variant="outlined"
+                  />
+                )}
+              </Box>
             </Box>
           </CardContent>
         </Card>
