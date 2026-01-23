@@ -132,7 +132,6 @@ const examSchemas = {
     aptis_type_id: Joi.number().integer().positive().required(),
     title: Joi.string().min(3).max(255).required(),
     description: Joi.string().optional(),
-    duration_minutes: Joi.number().integer().positive().required(),
   }),
 
   // Cập nhật đề thi

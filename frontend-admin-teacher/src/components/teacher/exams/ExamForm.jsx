@@ -25,7 +25,6 @@ const validationSchema = yup.object({
   title: yup.string().required('Tên bài thi là bắt buộc').min(3, 'Tên bài thi phải có ít nhất 3 ký tự'),
   description: yup.string(),
   aptis_type_id: yup.number().required('Loại APTIS là bắt buộc'),
-  duration_minutes: yup.number().min(1, 'Thời gian phải lớn hơn 0').max(600, 'Thời gian không được quá 10 giờ').required('Thời gian là bắt buộc'),
 });
 
 const ExamForm = ({ examData, onSubmit, loading = false, isEditing = false }) => {
@@ -36,7 +35,6 @@ const ExamForm = ({ examData, onSubmit, loading = false, isEditing = false }) =>
       title: examData?.title || '',
       description: examData?.description || '',
       aptis_type_id: examData?.aptis_type_id || '',
-      duration_minutes: examData?.duration_minutes || 60,
     },
     validationSchema,
     enableReinitialize: true,
@@ -45,7 +43,6 @@ const ExamForm = ({ examData, onSubmit, loading = false, isEditing = false }) =>
         const submitData = {
           ...values,
           aptis_type_id: parseInt(values.aptis_type_id),
-          duration_minutes: parseInt(values.duration_minutes),
         };
         
         await onSubmit(submitData);
@@ -160,21 +157,7 @@ const ExamForm = ({ examData, onSubmit, loading = false, isEditing = false }) =>
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                type="number"
-                name="duration_minutes"
-                label="Thời gian (phút) *"
-                value={formik.values.duration_minutes}
-                onChange={(e) => handleFieldChange('duration_minutes', e.target.value)}
-                onBlur={formik.handleBlur}
-                error={formik.touched.duration_minutes && Boolean(formik.errors.duration_minutes)}
-                helperText={formik.touched.duration_minutes && formik.errors.duration_minutes}
-                disabled={loading}
-                inputProps={{ min: 1, max: 600 }}
-              />
-            </Grid>
+            {/* Duration field is hidden - auto-calculated from sections on backend */}
 
             {/* Submit Button */}
             <Grid item xs={12}>

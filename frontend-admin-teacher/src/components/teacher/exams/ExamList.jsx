@@ -149,6 +149,24 @@ export default function ExamList({
     setConfirmDelete(exam);
   };
 
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilters({
+      aptis_type: '',
+      skill: '',
+      status: ''
+    });
+  };
+
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (searchTerm) count++;
+    if (filters.aptis_type) count++;
+    if (filters.skill) count++;
+    if (filters.status) count++;
+    return count;
+  };
+
   const confirmDeleteExam = async () => {
     if (confirmDelete) {
       try {
@@ -199,16 +217,6 @@ export default function ExamList({
       )
     },
     {
-      id: 'duration_minutes',
-      label: 'Thời lượng',
-      render: (row) => `${row.duration_minutes || 0} phút`
-    },
-    {
-      id: 'total_questions',
-      label: 'Số câu',
-      align: 'center'
-    },
-    {
       id: 'total_sections',
       label: 'Số phần',
       align: 'center'
@@ -222,6 +230,10 @@ export default function ExamList({
           size="small"
           color={row.is_published ? 'success' : 'default'}
           variant={row.is_published ? 'filled' : 'outlined'}
+          sx={row.is_published
+            ? { '& .MuiChip-label': { color: '#fff' } }
+            : { '& .MuiChip-label': { color: '#333' }, borderColor: '#bdbdbd' }
+          }
         />
       )
     },
@@ -357,6 +369,25 @@ export default function ExamList({
                   <MenuItem value="draft">Bản nháp</MenuItem>
                 </Select>
               </FormControl>
+
+              {getActiveFiltersCount() > 0 && (
+                <>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleClearFilters}
+                    sx={{ color: 'error.main', borderColor: 'error.main', minWidth: 0, px: 2 }}
+                  >
+                    Xóa bộ lọc
+                  </Button>
+                  <Chip
+                    label={`${getActiveFiltersCount()} bộ lọc đang áp dụng`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ color: 'error.main', borderColor: 'error.main', fontWeight: 400 }}
+                  />
+                </>
+              )}
             </Box>
           </CardContent>
         </Card>

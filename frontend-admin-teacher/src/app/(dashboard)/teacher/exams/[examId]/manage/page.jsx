@@ -53,6 +53,8 @@ import { showNotification } from '@/store/slices/uiSlice';
 import { usePublicData } from '@/hooks/usePublicData';
 import { examApi } from '@/services/examService';
 import { LazyQuestionDisplay } from '@/components/teacher/questions/LazyQuestionDisplay';
+import AddQuestionDialog from '@/components/teacher/exams/AddQuestionDialog';
+import QuestionRenderer from '@/components/teacher/exams/QuestionRenderer';
 
 export default function ExamManagePage() {
   const router = useRouter();
@@ -69,18 +71,10 @@ export default function ExamManagePage() {
   const [openEditSectionDialog, setOpenEditSectionDialog] = useState(false);
   const [openQuestionDialog, setOpenQuestionDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [openAddQuestionFormDialog, setOpenAddQuestionFormDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [expandedSectionId, setExpandedSectionId] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
-  const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [removingQuestionId, setRemovingQuestionId] = useState(null);
-  const [availableQuestions, setAvailableQuestions] = useState([]);
-  const [questionsLoading, setQuestionsLoading] = useState(false);
-  const [addingQuestion, setAddingQuestion] = useState(false);
-  const [questionForm, setQuestionForm] = useState({
-    question_order: 1,
-    max_score: 10
-  });
   const [sectionForm, setSectionForm] = useState({
     skill_type_id: '',
     section_order: 1,
@@ -176,12 +170,19 @@ export default function ExamManagePage() {
   };
 
   const handleAddQuestion = (section) => {
+    if (currentExam?.status === 'published') {
+      setErrorMessage('Không thể thêm câu hỏi khi bài thi đang công khai!');
+      return;
+    }
     setSelectedSection(section);
-    loadAvailableQuestions(section.skill_type_id);
     setOpenQuestionDialog(true);
   };
 
   const handleEditSection = (section) => {
+    if (currentExam?.status === 'published') {
+      setErrorMessage('Không thể chỉnh sửa phần thi khi bài thi đang công khai!');
+      return;
+    }
     setSelectedSection(section);
     setEditSectionForm({
       skill_type_id: section.skill_type_id,
@@ -223,54 +224,14 @@ export default function ExamManagePage() {
     }
   };
 
-  const loadAvailableQuestions = async (skillTypeId) => {
-    setQuestionsLoading(true);
-    try {
-      console.log('[loadAvailableQuestions] Fetching questions for skill:', skillTypeId);
-      const result = await examApi.getQuestionsBySkill(skillTypeId, 100);
-      console.log('[loadAvailableQuestions] Response:', result);
-      
-      if (result.success && result.data) {
-        setAvailableQuestions(result.data);
-      } else {
-        setAvailableQuestions([]);
-      }
-    } catch (error) {
-      console.error('Error loading questions:', error);
-      dispatch(showNotification({
-        message: 'Lỗi khi tải danh sách câu hỏi: ' + error.message,
-        type: 'error'
-      }));
-      setAvailableQuestions([]);
-    } finally {
-      setQuestionsLoading(false);
-    }
-  };
+  const handleQuestionAdded = async (questionData) => {
+    if (!selectedSection) return;
 
-  const handleAddQuestionClick = (question) => {
-    setSelectedQuestion(question);
-    // Set default question order as next order after existing questions
-    const nextOrder = (selectedSection?.questions?.length || 0) + 1;
-    setQuestionForm({
-      question_order: nextOrder,
-      max_score: 10
-    });
-    setOpenAddQuestionFormDialog(true);
-  };
-
-  const confirmAddQuestion = async () => {
-    if (!selectedQuestion || !selectedSection) return;
-
-    setAddingQuestion(true);
     try {
       const result = await dispatch(addQuestionToSection({
         examId,
         sectionId: selectedSection.id,
-        questionData: {
-          question_id: selectedQuestion.id,
-          question_order: parseInt(questionForm.question_order),
-          max_score: parseFloat(questionForm.max_score)
-        }
+        questionData
       }));
 
       if (addQuestionToSection.fulfilled.match(result)) {
@@ -278,18 +239,13 @@ export default function ExamManagePage() {
           message: 'Thêm câu hỏi thành công!',
           type: 'success'
         }));
-        setOpenAddQuestionFormDialog(false);
-        setSelectedQuestion(null);
-        // Refresh exam data to update questions list
+        // Refresh exam data
         dispatch(fetchExamById(examId));
+        setOpenQuestionDialog(false);
+        setSelectedSection(null);
       }
     } catch (error) {
-      dispatch(showNotification({
-        message: 'Có lỗi xảy ra khi thêm câu hỏi',
-        type: 'error'
-      }));
-    } finally {
-      setAddingQuestion(false);
+      throw error; // Let AddQuestionDialog handle the error
     }
   };
 
@@ -352,6 +308,17 @@ export default function ExamManagePage() {
 
   return (
     <Box>
+      {/* Error Alert */}
+      {errorMessage && (
+        <Alert 
+          severity="error" 
+          onClose={() => setErrorMessage('')}
+          sx={{ mb: 3 }}
+        >
+          {errorMessage}
+        </Alert>
+      )}
+
       {/* Header */}
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
         <Box display="flex" alignItems="center">
@@ -372,13 +339,6 @@ export default function ExamManagePage() {
           </Box>
         </Box>
 
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleOpenSectionDialog}
-        >
-          Thêm phần thi
-        </Button>
       </Box>
 
       {/* Overview Stats */}
@@ -402,14 +362,7 @@ export default function ExamManagePage() {
                   total + (section.questions?.length || 0), 0) || 0}
               </Typography>
             </Grid>
-            <Grid item xs={6} sm={3}>
-              <Typography variant="body2" color="text.secondary">
-                Thời gian thi
-              </Typography>
-              <Typography variant="h5" color="primary">
-                {currentExam?.duration_minutes || 0} phút
-              </Typography>
-            </Grid>
+            
             <Grid item xs={6} sm={3}>
               <Typography variant="body2" color="text.secondary">
                 Trạng thái
@@ -418,6 +371,7 @@ export default function ExamManagePage() {
                 label={currentExam?.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
                 color={currentExam?.status === 'published' ? 'success' : 'default'}
                 size="small"
+                sx={{ '& .MuiChip-label': { color: '#fff', fontWeight: 400 } }}
               />
             </Grid>
           </Grid>
@@ -440,12 +394,7 @@ export default function ExamManagePage() {
               {currentExam.sections.map((section, index) => (
                 <Box key={section.id || index}>
                   <ListItem divider>
-                    <ListItemIcon>
-                      <DragIndicator color="action" />
-                    </ListItemIcon>
-                    <ListItemIcon>
-                      <SectionIcon color="primary" />
-                    </ListItemIcon>
+                   
                     <ListItemText
                       primary={
                         <Box display="flex" alignItems="center" gap={1}>
@@ -457,11 +406,7 @@ export default function ExamManagePage() {
                             label={`${section.questions?.length || 0} câu hỏi`}
                             variant="outlined"
                           />
-                          <Chip 
-                            size="small" 
-                            label={`${section.duration_minutes || 0} phút`}
-                            variant="outlined"
-                          />
+                        
                         </Box>
                       }
                       secondary={
@@ -503,14 +448,6 @@ export default function ExamManagePage() {
                         >
                           <EditIcon />
                         </IconButton>
-                        <IconButton 
-                          size="small" 
-                          color="error"
-                          onClick={() => handleRemoveSection(section)}
-                          disabled={loading}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
                       </Box>
                     </ListItemSecondaryAction>
                   </ListItem>
@@ -539,12 +476,14 @@ export default function ExamManagePage() {
                             </ListItemIcon>
                             <ListItemText
                               primary={
-                                <LazyQuestionDisplay 
-                                  questionId={question.question_id}
-                                  questionOrder={question.question_order}
-                                  maxScore={question.max_score}
-                                  compact={false}
-                                />
+                                <Box>
+                                  <Typography variant="body2" fontWeight={500}>
+                                    Câu {question.question_order} - ID: {question.question_id}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Điểm tối đa: {question.max_score}
+                                  </Typography>
+                                </Box>
                               }
                               secondary={null}
                             />
@@ -577,81 +516,6 @@ export default function ExamManagePage() {
         </CardContent>
       </Card>
 
-      {/* Add Section Dialog */}
-      <Dialog 
-        open={openSectionDialog} 
-        onClose={() => setOpenSectionDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Thêm phần thi mới</DialogTitle>
-        <DialogContent>
-          <Box display="flex" flexDirection="column" gap={3} sx={{ mt: 1 }}>
-            <FormControl fullWidth disabled={publicDataLoading}>
-              <InputLabel>Kỹ năng</InputLabel>
-              <Select
-                value={sectionForm.skill_type_id}
-                label="Kỹ năng"
-                onChange={(e) => setSectionForm(prev => ({ ...prev, skill_type_id: e.target.value }))}
-              >
-                {skillTypes && skillTypes.length > 0 ? (
-                  skillTypes.map((skill) => (
-                    <MenuItem key={skill.id} value={skill.id}>
-                      {skill.skill_type_name || skill.name || 'Unknown'}
-                    </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem value="" disabled>
-                    {publicDataLoading ? 'Đang tải...' : 'Không có dữ liệu'}
-                  </MenuItem>
-                )}
-              </Select>
-            </FormControl>
-
-            <TextField
-              fullWidth
-              label="Thứ tự phần"
-              type="number"
-              value={sectionForm.section_order}
-              disabled
-              helperText="Thứ tự được tự động gán dựa trên số phần thi hiện có"
-              inputProps={{ min: 1 }}
-            />
-
-            <TextField
-              fullWidth
-              label="Thời gian (phút)"
-              type="number"
-              value={sectionForm.duration_minutes}
-              onChange={(e) => setSectionForm(prev => ({ ...prev, duration_minutes: e.target.value }))}
-              inputProps={{ min: 1 }}
-            />
-
-            <TextField
-              fullWidth
-              label="Hướng dẫn"
-              multiline
-              rows={3}
-              value={sectionForm.instruction}
-              onChange={(e) => setSectionForm(prev => ({ ...prev, instruction: e.target.value }))}
-              placeholder="Nhập hướng dẫn cho phần thi này..."
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenSectionDialog(false)}>
-            Hủy
-          </Button>
-          <Button 
-            onClick={handleAddSection}
-            variant="contained"
-            disabled={loading || !sectionForm.skill_type_id}
-          >
-            {loading ? 'Đang thêm...' : 'Thêm phần thi'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Edit Section Dialog */}
       <Dialog 
         open={openEditSectionDialog} 
@@ -662,7 +526,7 @@ export default function ExamManagePage() {
         <DialogTitle>Chỉnh sửa phần thi</DialogTitle>
         <DialogContent>
           <Box display="flex" flexDirection="column" gap={3} sx={{ mt: 1 }}>
-            <FormControl fullWidth disabled={publicDataLoading}>
+            <FormControl fullWidth disabled>
               <InputLabel>Kỹ năng</InputLabel>
               <Select
                 value={editSectionForm.skill_type_id}
@@ -683,14 +547,8 @@ export default function ExamManagePage() {
               </Select>
             </FormControl>
 
-            <TextField
-              fullWidth
-              label="Thời gian (phút)"
-              type="number"
-              value={editSectionForm.duration_minutes}
-              onChange={(e) => setEditSectionForm(prev => ({ ...prev, duration_minutes: e.target.value }))}
-              inputProps={{ min: 1 }}
-            />
+            {/* Hidden field for duration_minutes, value still sent */}
+            <input type="hidden" value={editSectionForm.duration_minutes} readOnly />
 
             <TextField
               fullWidth
@@ -710,7 +568,7 @@ export default function ExamManagePage() {
           <Button 
             onClick={handleUpdateSection}
             variant="contained"
-            disabled={loading || !editSectionForm.skill_type_id}
+            disabled={loading}
           >
             {loading ? 'Đang cập nhật...' : 'Cập nhật'}
           </Button>
@@ -718,116 +576,15 @@ export default function ExamManagePage() {
       </Dialog>
 
       {/* Add Question Dialog */}
-      <Dialog 
-        open={openQuestionDialog} 
-        onClose={() => setOpenQuestionDialog(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: { maxHeight: '90vh' }
+      <AddQuestionDialog
+        open={openQuestionDialog}
+        onClose={() => {
+          setOpenQuestionDialog(false);
+          setSelectedSection(null);
         }}
-      >
-        <DialogTitle sx={{ py: 1.5 }}>
-          Thêm câu hỏi: {selectedSection?.skillType?.skill_type_name}
-        </DialogTitle>
-        <DialogContent dividers sx={{ py: 1, bgcolor: 'background.paper' }}>
-          <Box sx={{ mt: 0 }}>
-            {questionsLoading ? (
-              <Alert severity="info" sx={{ py: 0.5 }}>Đang tải danh sách câu hỏi...</Alert>
-            ) : availableQuestions.length > 0 ? (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                  Tìm thấy {availableQuestions.length} câu hỏi phù hợp (hiển thị 10 đầu tiên)
-                </Typography>
-                <List sx={{ py: 0 }}>
-                  {availableQuestions.slice(0, 10).map((question, index) => {
-                    // Extract and format content
-                    const renderContent = (() => {
-                      try {
-                        const content = question.content;
-                        if (!content) return '';
-                        return typeof content === 'string' ? content : JSON.stringify(content, null, 2);
-                      } catch (e) {
-                        return '';
-                      }
-                    })();
-
-                    return (
-                      <ListItem 
-                        key={question.id} 
-                        divider 
-                        sx={{ 
-                          py: 1.5, 
-                          px: 1,
-                          flexDirection: 'column',
-                          alignItems: 'flex-start'
-                        }}
-                        secondaryAction={
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => handleAddQuestionClick(question)}
-                            disabled={addingQuestion}
-                            sx={{ ml: 1 }}
-                          >
-                            Thêm
-                          </Button>
-                        }
-                      >
-                        <Box sx={{ width: '100%', mb: 0.5 }}>
-                          <Typography variant="caption" fontWeight={600}>
-                            Q{index + 1} (ID: {question.id}) • {question.question_type} • {question.skill} • {question.difficulty}
-                          </Typography>
-                        </Box>
-                        {renderContent && (
-                          <Box 
-                            component="pre"
-                            sx={{ 
-                              width: '100%',
-                              bgcolor: '#f5f5f5',
-                              p: 1,
-                              borderRadius: 0.5,
-                              fontSize: '0.75rem',
-                              fontFamily: 'monospace',
-                              whiteSpace: 'pre-wrap',
-                              wordBreak: 'break-word',
-                              maxHeight: '200px',
-                              overflow: 'auto',
-                              border: '1px solid #e0e0e0',
-                              margin: 0,
-                              color: '#333'
-                            }}
-                          >
-                            {renderContent}
-                          </Box>
-                        )}
-                      </ListItem>
-                    );
-                  })}
-                </List>
-              </Box>
-            ) : (
-              <Alert severity="warning" sx={{ py: 0.5 }}>
-                Không tìm thấy câu hỏi nào. Tạo câu hỏi trước khi thêm vào phần thi.
-              </Alert>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ py: 1, px: 2 }}>
-          <Button onClick={() => setOpenQuestionDialog(false)} size="small">
-            Đóng
-          </Button>
-          <Button 
-            variant="contained"
-            size="small"
-            onClick={() => {
-              window.open('/teacher/questions/new', '_blank');
-            }}
-          >
-            Tạo mới
-          </Button>
-        </DialogActions>
-      </Dialog>
+        section={selectedSection}
+        onQuestionAdded={handleQuestionAdded}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog 
@@ -874,70 +631,6 @@ export default function ExamManagePage() {
             disabled={loading}
           >
             {loading ? 'Đang xóa...' : 'Xóa phần thi'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Add Question Form Dialog */}
-      <Dialog 
-        open={openAddQuestionFormDialog} 
-        onClose={() => setOpenAddQuestionFormDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Thêm câu hỏi vào phần thi</DialogTitle>
-        <DialogContent>
-          {selectedQuestion && (
-            <Box sx={{ mt: 2 }}>
-              <Alert severity="info" sx={{ mb: 2 }}>
-                <LazyQuestionDisplay 
-                  questionId={selectedQuestion.id}
-                  questionOrder={1}
-                  maxScore={1}
-                  compact={false}
-                />
-                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                  Loại: {selectedQuestion.questionType?.question_type_name || selectedQuestion.questionType?.code || 'N/A'} | Độ khó: {selectedQuestion.difficulty}
-                </Typography>
-              </Alert>
-
-              <Box display="flex" flexDirection="column" gap={2}>
-                <TextField
-                  fullWidth
-                  label="Thứ tự câu hỏi"
-                  type="number"
-                  value={questionForm.question_order}
-                  onChange={(e) => setQuestionForm(prev => ({ ...prev, question_order: e.target.value }))}
-                  inputProps={{ min: 1 }}
-                  helperText="Vị trí của câu hỏi trong phần thi"
-                />
-
-                <TextField
-                  fullWidth
-                  label="Điểm tối đa"
-                  type="number"
-                  value={questionForm.max_score}
-                  onChange={(e) => setQuestionForm(prev => ({ ...prev, max_score: e.target.value }))}
-                  inputProps={{ min: 0.1, step: 0.1 }}
-                  helperText="Điểm tối đa mà học sinh có thể đạt được cho câu hỏi này"
-                />
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setOpenAddQuestionFormDialog(false)}
-            disabled={addingQuestion}
-          >
-            Hủy
-          </Button>
-          <Button 
-            onClick={confirmAddQuestion}
-            variant="contained"
-            disabled={addingQuestion || !questionForm.question_order || !questionForm.max_score}
-          >
-            {addingQuestion ? 'Đang thêm...' : 'Thêm câu hỏi'}
           </Button>
         </DialogActions>
       </Dialog>

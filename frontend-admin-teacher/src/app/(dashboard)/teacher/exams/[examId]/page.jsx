@@ -143,10 +143,11 @@ export default function ExamDetailPage() {
               {currentExam?.title || 'Bài thi'}
             </Typography>
             <Box display="flex" alignItems="center" gap={1} mt={1}>
-              <Chip 
-                size="small" 
+              <Chip
+                size="small"
                 label={currentExam?.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
                 color={currentExam?.status === 'published' ? 'success' : 'default'}
+                sx={{ '& .MuiChip-label': { color: '#fff', fontWeight: 400 } }}
               />
               <Chip 
                 size="small" 
@@ -167,18 +168,7 @@ export default function ExamDetailPage() {
             Quản lý Sections
           </Button>
 
-          {!isEditing && (
-            <Button
-              variant={currentExam?.status === 'published' ? 'outlined' : 'contained'}
-              startIcon={currentExam?.status === 'published' ? <UnpublishedOutlined /> : <Publish />}
-              onClick={handlePublishToggle}
-              disabled={publishLoading}
-              color={currentExam?.status === 'published' ? 'inherit' : 'primary'}
-            >
-              {publishLoading ? 'Đang xử lý...' : 
-               currentExam?.status === 'published' ? 'Hủy xuất bản' : 'Xuất bản'}
-            </Button>
-          )}
+         
         </Box>
       </Box>
 
@@ -205,24 +195,6 @@ export default function ExamDetailPage() {
               <Typography variant="h6">
                 {currentExam?.sections?.reduce((total, section) => 
                   total + (section.questions?.length || 0), 0) || 0}
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={6} sm={3}>
-              <Typography variant="body2" color="text.secondary">
-                Thời gian
-              </Typography>
-              <Typography variant="h6">
-                {currentExam?.duration_minutes || 0} phút
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={6} sm={3}>
-              <Typography variant="body2" color="text.secondary">
-                Điểm tối đa
-              </Typography>
-              <Typography variant="h6">
-                {currentExam?.total_score || 0}
               </Typography>
             </Grid>
           </Grid>
@@ -268,15 +240,22 @@ export default function ExamDetailPage() {
               <Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
                 Thông tin cơ bản
               </Typography>
+              {currentExam?.status === 'published' && (
+                  <Typography variant="caption" color="error" sx={{ ml: 1 }}>
+                    Không thể cập nhật bài khi thi đang công khai
+                  </Typography>
+                )}
               <Box display="flex" gap={1}>
                 <Button
                   variant="outlined"
                   startIcon={<Edit />}
                   onClick={() => setIsEditing(true)}
+                  disabled={currentExam?.status === 'published'}
                   size="small"
                 >
                   Chỉnh sửa
                 </Button>
+                
               </Box>
             </Box>
             
@@ -312,14 +291,14 @@ export default function ExamDetailPage() {
                 </Typography>
               </Grid>
 
-              <Grid item xs={6}>
+              {/* <Grid item xs={6}>
                 <Typography variant="body2" color="text.secondary">
                   Thời gian
                 </Typography>
                 <Typography variant="body1">
                   {currentExam?.duration_minutes || 0} phút
                 </Typography>
-              </Grid>
+              </Grid> */}
             </Grid>
           </CardContent>
         </Card>

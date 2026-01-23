@@ -15,18 +15,8 @@ const EmailService = require('../../services/EmailService');
 
 exports.createExam = async (req, res, next) => {
   try {
-    const { aptis_type_id, title, description, duration_minutes, total_score } = req.body;
+    const { aptis_type_id, title, description } = req.body;
     const teacherId = req.user.userId;
-
-    const exam = await Exam.create({
-      aptis_type_id,
-      title,
-      description: description || null,
-      duration_minutes,
-      status: 'draft',
-      created_by: teacherId,
-      total_score: total_score || 0,
-    });
 
     // Get skill types for mapping
     const skillTypes = await SkillType.findAll();
@@ -35,32 +25,45 @@ exports.createExam = async (req, res, next) => {
       skillMap[skill.skill_type_name] = skill.id;
     });
 
-    // Auto-create default sections for APTIS exam structure
+    // Auto-create default sections for APTIS exam structure with fixed durations
     const defaultSections = [
-      // Reading sections
-      { skill: 'Reading', part: 1, name: 'Gap Filling', questions: 1, duration: 5, instructions: 'Part 1: Gap Filling: Read carefully and answer all questions.' },
-      { skill: 'Reading', part: 2, name: 'Ordering', questions: 2, duration: 10, instructions: 'Part 2: Ordering: Read carefully and answer all questions.' },
-      { skill: 'Reading', part: 3, name: 'Matching', questions: 1, duration: 10, instructions: 'Part 3: Matching: Read carefully and answer all questions.' },
-      { skill: 'Reading', part: 4, name: 'Matching Headings', questions: 1, duration: 10, instructions: 'Part 4: Matching Headings: Read carefully and answer all questions.' },
+      // Reading sections (4 parts, 5+10+10+10 = 35 phút)
+      { skill: 'Reading', part: 1, name: 'Gap Filling', duration: 5, instructions: 'Part 1: Gap Filling: Read carefully and answer all questions.' },
+      { skill: 'Reading', part: 2, name: 'Ordering', duration: 10, instructions: 'Part 2: Ordering: Read carefully and answer all questions.' },
+      { skill: 'Reading', part: 3, name: 'Matching', duration: 10, instructions: 'Part 3: Matching: Read carefully and answer all questions.' },
+      { skill: 'Reading', part: 4, name: 'Matching Headings', duration: 10, instructions: 'Part 4: Matching Headings: Read carefully and answer all questions.' },
       
-      // Listening sections
-      { skill: 'Listening', part: 1, name: 'Multiple Choice', questions: 13, duration: 10, instructions: 'Part 1: Multiple Choice: Listen carefully and answer all questions.' },
-      { skill: 'Listening', part: 2, name: 'Speaker Matching', questions: 1, duration: 10, instructions: 'Part 2: Speaker Matching: Listen carefully and answer all questions.' },
-      { skill: 'Listening', part: 3, name: 'Statement Matching', questions: 1, duration: 10, instructions: 'Part 3: Statement Matching: Listen carefully and answer all questions.' },
-      { skill: 'Listening', part: 4, name: 'Extended MCQ', questions: 2, duration: 10, instructions: 'Part 4: Extended MCQ: Listen carefully and answer all questions.' },
+      // Listening sections (4 parts, 10+10+10+10 = 40 phút)
+      { skill: 'Listening', part: 1, name: 'Multiple Choice', duration: 10, instructions: 'Part 1: Multiple Choice: Listen carefully and answer all questions.' },
+      { skill: 'Listening', part: 2, name: 'Speaker Matching', duration: 10, instructions: 'Part 2: Speaker Matching: Listen carefully and answer all questions.' },
+      { skill: 'Listening', part: 3, name: 'Statement Matching', duration: 10, instructions: 'Part 3: Statement Matching: Listen carefully and answer all questions.' },
+      { skill: 'Listening', part: 4, name: 'Extended MCQ', duration: 10, instructions: 'Part 4: Extended MCQ: Listen carefully and answer all questions.' },
       
-      // Writing sections
-      { skill: 'Writing', part: 1, name: 'Form Filling (A1)', questions: 1, duration: 10, instructions: 'Part 1: Form Filling (A1): Follow the instructions carefully and complete within the time limit.' },
-      { skill: 'Writing', part: 2, name: 'Short Response (A2)', questions: 1, duration: 10, instructions: 'Part 2: Short Response (A2): Follow the instructions carefully and complete within the time limit.' },
-      { skill: 'Writing', part: 3, name: 'Chat Responses (B1)', questions: 1, duration: 10, instructions: 'Part 3: Chat Responses (B1): Follow the instructions carefully and complete within the time limit.' },
-      { skill: 'Writing', part: 4, name: 'Email Writing (B2)', questions: 1, duration: 20, instructions: 'Part 4: Email Writing (B2): Follow the instructions carefully and complete within the time limit.' },
+      // Writing sections (4 tasks, 10+10+10+20 = 50 phút)
+      { skill: 'Writing', part: 1, name: 'Form Filling (A1)', duration: 10, instructions: 'Part 1: Form Filling (A1): Follow the instructions carefully and complete within the time limit.' },
+      { skill: 'Writing', part: 2, name: 'Short Response (A2)', duration: 10, instructions: 'Part 2: Short Response (A2): Follow the instructions carefully and complete within the time limit.' },
+      { skill: 'Writing', part: 3, name: 'Chat Responses (B1)', duration: 10, instructions: 'Part 3: Chat Responses (B1): Follow the instructions carefully and complete within the time limit.' },
+      { skill: 'Writing', part: 4, name: 'Email Writing (B2)', duration: 20, instructions: 'Part 4: Email Writing (B2): Follow the instructions carefully and complete within the time limit.' },
       
-      // Speaking sections
-      { skill: 'Speaking', part: 1, name: 'Personal Introduction', questions: 3, duration: 2, instructions: 'Part 1: Personal Introduction: Record your response clearly within the time limit.' },
-      { skill: 'Speaking', part: 2, name: 'Picture Description', questions: 3, duration: 2, instructions: 'Part 2: Picture Description: Record your response clearly within the time limit.' },
-      { skill: 'Speaking', part: 3, name: 'Comparison', questions: 3, duration: 2, instructions: 'Part 3: Comparison: Record your response clearly within the time limit.' },
-      { skill: 'Speaking', part: 4, name: 'Topic Discussion', questions: 1, duration: 6, instructions: 'Part 4: Topic Discussion: Record your response clearly within the time limit.' }
+      // Speaking sections (4 tasks, 2+2+2+6 = 12 phút)
+      { skill: 'Speaking', part: 1, name: 'Personal Introduction', duration: 2, instructions: 'Part 1: Personal Introduction: Record your response clearly within the time limit.' },
+      { skill: 'Speaking', part: 2, name: 'Picture Description', duration: 2, instructions: 'Part 2: Picture Description: Record your response clearly within the time limit.' },
+      { skill: 'Speaking', part: 3, name: 'Comparison', duration: 2, instructions: 'Part 3: Comparison: Record your response clearly within the time limit.' },
+      { skill: 'Speaking', part: 4, name: 'Topic Discussion', duration: 6, instructions: 'Part 4: Topic Discussion: Record your response clearly within the time limit.' }
     ];
+
+    // Calculate total duration from sections (35 + 40 + 50 + 12 = 137 minutes)
+    const totalDuration = defaultSections.reduce((sum, section) => sum + section.duration, 0);
+
+    const exam = await Exam.create({
+      aptis_type_id,
+      title,
+      description: description || null,
+      duration_minutes: totalDuration,
+      status: 'draft',
+      created_by: teacherId,
+      total_score: 0,
+    });
 
     // Create exam sections automatically
     for (let i = 0; i < defaultSections.length; i++) {
@@ -131,6 +134,33 @@ exports.updateExam = async (req, res, next) => {
           model: AptisType,
           as: 'aptisType',
           attributes: ['id', 'code', 'aptis_type_name', 'description'],
+        },
+        {
+          model: ExamSection,
+          as: 'sections',
+          include: [
+            {
+              model: SkillType,
+              as: 'skillType',
+              attributes: ['id', 'code', 'skill_type_name'],
+            },
+            {
+              model: ExamSectionQuestion,
+              as: 'questions',
+              include: [
+                {
+                  model: Question,
+                  as: 'question',
+                  attributes: ['id', 'content', 'question_type_id', 'difficulty'],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['id', 'full_name'],
         },
       ],
     });
@@ -580,9 +610,14 @@ exports.getMyExams = async (req, res, next) => {
       published_at: exam.published_at,
     }));
 
+    const paginationData = paginationResponse(transformedRows, parseInt(page), validLimit, count);
     res.json({
       success: true,
-      ...paginationResponse(transformedRows, parseInt(page), validLimit, count),
+      data: paginationData.data,
+      page: paginationData.pagination.page,
+      limit: paginationData.pagination.limit,
+      total: paginationData.pagination.total,
+      totalPages: paginationData.pagination.totalPages,
     });
   } catch (error) {
     next(error);
