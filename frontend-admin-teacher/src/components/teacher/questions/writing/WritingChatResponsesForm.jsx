@@ -20,6 +20,15 @@ import {
  * Example: "Chat about your weekend\n\nReply to chat messages...\n\nAlex: Hi! Did you do anything fun last weekend?\nYour reply: _______"
  */
 const WritingChatResponsesForm = ({ questionData, onChange, onValidate }) => {
+  const parseContent = (content) => {
+    if (!content) return '';
+    try {
+      const parsed = JSON.parse(content);
+      return parsed.content || content;
+    } catch (e) {
+      return content;
+    }
+  };
   const defaultChatContent = `Chat about your weekend
 
 Reply to chat messages (30-40 words each):
@@ -33,8 +42,7 @@ Your reply: _______
 Jordan: Did you go anywhere during the weekend?
 Your reply: _______`;
 
-  const [chatContent, setChatContent] = React.useState(questionData?.content || questionData?.chatContent || defaultChatContent);
-  const [timeLimit, setTimeLimit] = React.useState(questionData?.time_limit || 12);
+  const [chatContent, setChatContent] = React.useState(parseContent(questionData?.content || questionData?.chatContent || defaultChatContent));
   const [errors, setErrors] = React.useState({});
 
   const validateForm = () => {
@@ -51,11 +59,6 @@ Your reply: _______`;
       }
     }
     
-    // Check time limit
-    if (timeLimit < 10 || timeLimit > 20) {
-      newErrors.timeLimit = 'Thời gian nên từ 10-20 phút';
-    }
-    
     setErrors(newErrors);
     
     const isValid = Object.keys(newErrors).length === 0;
@@ -64,7 +67,6 @@ Your reply: _______`;
     if (isValid && onChange) {
       const formData = {
         content: chatContent.trim(),
-        timeLimit: timeLimit,
         type: 'writing_chat_responses'
       };
       onChange(JSON.stringify(formData));
@@ -112,18 +114,6 @@ Your reply: _______`;
         error={!!errors.chatContent}
         helperText={errors.chatContent || 'Nhập đầy đủ: chủ đề chat, context và 3 câu hỏi với phần reply'}
         sx={{ mb: 2 }}
-      />
-
-      {/* Time Limit */}
-      <TextField
-        type="number"
-        label="Thời gian (phút)"
-        value={timeLimit}
-        onChange={(e) => setTimeLimit(parseInt(e.target.value) || 12)}
-        error={!!errors.timeLimit}
-        helperText={errors.timeLimit}
-        inputProps={{ min: 10, max: 20 }}
-        sx={{ mb: 2, width: '200px' }}
       />
 
       {/* Preview */}

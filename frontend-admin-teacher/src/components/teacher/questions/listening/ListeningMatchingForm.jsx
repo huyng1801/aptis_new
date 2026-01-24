@@ -28,7 +28,7 @@ import { questionApi } from '../../../../services/questionService';
  * APTIS Listening Speaker Matching Form  
  * Part 2-4: Listening comprehension with speaker matching tasks
  */
-const ListeningMatchingForm = ({ questionData, onChange, onValidate }) => {
+const ListeningMatchingForm = ({ questionData, onChange, onValidate, isEdit = false }) => {
   const [formData, setFormData] = React.useState({
     content: questionData?.content || '',
     title: questionData?.title || '',
@@ -91,10 +91,7 @@ const ListeningMatchingForm = ({ questionData, onChange, onValidate }) => {
       newErrors.title = 'Tiêu đề không được để trống';
     }
     
-    // Check main audio - allow either URL or file
-    if (!formData.audioUrl && !formData.audioFile) {
-      newErrors.audio = 'Vui lòng chọn file audio chính';
-    }
+    // Không cần validate audio chính cho phần này
     
     // Check speakers
     const validSpeakers = formData.speakers.filter(s => s.name.trim() && (s.audioUrl || s.audioFile));
@@ -201,47 +198,7 @@ const ListeningMatchingForm = ({ questionData, onChange, onValidate }) => {
         helperText={errors.title}
       />
 
-      {/* Main Audio Upload */}
-      <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          File Audio Chính
-        </Typography>
-        
-        <Box display="flex" alignItems="center" gap={2}>
-          <Button
-            variant="outlined"
-            component="label"
-            startIcon={isUploading ? <Upload /> : <AudioFile />}
-            disabled={isUploading}
-          >
-            {isUploading ? 'Đang tải lên...' : 'Chọn file audio'}
-            <input
-              type="file"
-              hidden
-              accept="audio/*"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  handleMainAudioFileSelect(file);
-                }
-              }}
-            />
-          </Button>
-          
-          {formData.audioUrl && (
-            <audio controls style={{ maxWidth: 300 }}>
-              <source src={formData.audioUrl} type="audio/mpeg" />
-              Your browser does not support the audio element.
-            </audio>
-          )}
-        </Box>
-        
-        {errors.audio && (
-          <Typography variant="caption" color="error" display="block" mt={1}>
-            {errors.audio}
-          </Typography>
-        )}
-      </Paper>
+
 
       {/* Speakers Section */}
       <Paper elevation={1} sx={{ p: 3, mb: 3 }}>

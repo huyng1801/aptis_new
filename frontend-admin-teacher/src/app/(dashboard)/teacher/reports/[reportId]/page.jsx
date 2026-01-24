@@ -496,13 +496,7 @@ export default function ReportDetailPage() {
           </Typography>
         </Box>
         
-        <Button
-          variant="contained"
-          startIcon={<GetApp />}
-          onClick={handleExport}
-        >
-          Xuất báo cáo
-        </Button>
+      
       </Box>
 
       {/* Report Type Badge */}

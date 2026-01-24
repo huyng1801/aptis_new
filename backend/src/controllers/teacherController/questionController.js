@@ -528,6 +528,7 @@ exports.getQuestions = async (req, res, next) => {
       page = 1,
       limit = 20,
       question_type_id,
+      question_type_code,
       aptis_type_id,
       skill_type_id,
       difficulty,
@@ -536,7 +537,7 @@ exports.getQuestions = async (req, res, next) => {
     } = req.query;
     
     console.log('[questionController.getQuestions] Received params:', {
-      page, limit, question_type_id, aptis_type_id, skill_type_id, difficulty, status, search
+      page, limit, question_type_id, question_type_code, aptis_type_id, skill_type_id, difficulty, status, search
     });
     
     const { offset, limit: validLimit } = paginate(page, limit);
@@ -585,6 +586,17 @@ exports.getQuestions = async (req, res, next) => {
     if (skill_type_id) {
       include[0].where = { skill_type_id: skill_type_id };
       include[0].required = true; // INNER JOIN to enforce the filter
+    }
+
+    // Handle question_type_code filter
+    if (question_type_code) {
+      if (include[0].where) {
+        include[0].where.code = question_type_code;
+      } else {
+        include[0].where = { code: question_type_code };
+        include[0].required = true; // INNER JOIN to enforce the filter
+      }
+      console.log('[questionController] Filtering by question_type_code:', question_type_code);
     }
 
 

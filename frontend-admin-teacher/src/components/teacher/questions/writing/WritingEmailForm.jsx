@@ -37,12 +37,9 @@ Teacher
 
 1. Email to a friend (50 words)
 
-2. Email to school manager (80-100 words)
-
-3. Formal discussion email (120-150 words)`;
+2. Email to school manager (80-100 words)`;
 
   const [emailContent, setEmailContent] = useState(content || defaultEmailContent);
-  const [timeLimit, setTimeLimit] = useState(20);
   
   // Error handling states
   const [errors, setErrors] = useState({});
@@ -51,8 +48,14 @@ Teacher
   // Parse existing content if available
   useEffect(() => {
     if (content) {
-      // Seed stores as simple content string
-      setEmailContent(content);
+      try {
+        // Try to parse if it's JSON (from form submission)
+        const parsed = JSON.parse(content);
+        setEmailContent(parsed.content || content);
+      } catch (e) {
+        // If it's not JSON, use it as is (from seed)
+        setEmailContent(content);
+      }
     }
   }, [content]);
 
@@ -71,11 +74,6 @@ Teacher
       }
     }
     
-    // Check time limit
-    if (timeLimit < 15 || timeLimit > 40) {
-      newErrors.timeLimit = 'Thời gian nên từ 15-40 phút';
-    }
-    
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     setIsValidated(isValid);
@@ -84,14 +82,13 @@ Teacher
     if (isValid && onChange) {
       const formData = {
         content: emailContent.trim(),
-        timeLimit: timeLimit,
         type: 'writing_email'
       };
       onChange(JSON.stringify(formData));
     }
     
     return isValid;
-  }, [emailContent, timeLimit, onChange]);
+  }, [emailContent, onChange]);
 
   // Remove auto-validation useEffect - causes infinite loops
   // Data is sent to parent on every change (via onChange)
@@ -126,18 +123,6 @@ Teacher
         error={!!errors.emailContent}
         helperText={errors.emailContent || 'Nhập đầy đủ: scenario, email mẫu, và yêu cầu viết 2 emails'}
         sx={{ mb: 2 }}
-      />
-
-      {/* Time Limit */}
-      <TextField
-        type="number"
-        label="Thời gian (phút)"
-        value={timeLimit}
-        onChange={(e) => setTimeLimit(parseInt(e.target.value) || 20)}
-        error={!!errors.timeLimit}
-        helperText={errors.timeLimit}
-        inputProps={{ min: 15, max: 40 }}
-        sx={{ mb: 2, width: '200px' }}
       />
 
       {/* Preview */}

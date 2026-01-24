@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import { Search, FilterList } from '@mui/icons-material';
 import { examApi } from '@/services/examService';
+import { publicApi } from '@/services/publicService';
 import { showNotification } from '@/store/slices/uiSlice';
 import QuestionRenderer from './QuestionRenderer';
 
@@ -41,6 +42,10 @@ export default function AddQuestionDialog({
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [openAddForm, setOpenAddForm] = useState(false);
   const [addingQuestion, setAddingQuestion] = useState(false);
+  const [questionTypes, setQuestionTypes] = useState([
+    { value: 'all', label: 'Tất cả loại câu hỏi' }
+  ]);
+  const [questionTypesLoading, setQuestionTypesLoading] = useState(false);
   const [questionForm, setQuestionForm] = useState({
     question_order: 1,
     max_score: 10
@@ -55,29 +60,42 @@ export default function AddQuestionDialog({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // Question types for filter
-  const questionTypes = [
-    { value: 'all', label: 'Tất cả loại câu hỏi' },
-    { value: 'READING_GAP_FILL', label: 'Reading - Gap Filling' },
-    { value: 'READING_ORDERING', label: 'Reading - Ordering' },
-    { value: 'READING_MATCHING', label: 'Reading - Matching' },
-    { value: 'READING_MATCHING_HEADINGS', label: 'Reading - Matching Headings' },
-    { value: 'LISTENING_MCQ', label: 'Listening - Multiple Choice' },
-    { value: 'LISTENING_MATCHING', label: 'Listening - Matching' },
-    { value: 'LISTENING_STATEMENT_MATCHING', label: 'Listening - Statement Matching' },
-    { value: 'WRITING_SHORT', label: 'Writing - Short Response' },
-    { value: 'SPEAKING_PERSONAL', label: 'Speaking - Personal Introduction' },
-    { value: 'SPEAKING_DESCRIPTION', label: 'Speaking - Description' },
-    { value: 'SPEAKING_COMPARISON', label: 'Speaking - Comparison' },
-    { value: 'SPEAKING_DISCUSSION', label: 'Speaking - Discussion' }
-  ];
-
   const difficulties = [
     { value: 'all', label: 'Tất cả độ khó' },
     { value: 'easy', label: 'Dễ' },
     { value: 'medium', label: 'Trung bình' },
     { value: 'hard', label: 'Khó' }
   ];
+
+  // Load question types from API
+  useEffect(() => {
+    loadQuestionTypes();
+  }, []);
+
+  const loadQuestionTypes = async () => {
+    setQuestionTypesLoading(true);
+    try {
+      const result = await publicApi.getQuestionTypes();
+      if (result.success && result.data) {
+        const types = [
+          { value: 'all', label: 'Tất cả loại câu hỏi' },
+          ...result.data.map(type => ({
+            value: type.code,
+            label: `${type.question_type_name}`
+          }))
+        ];
+        setQuestionTypes(types);
+      }
+    } catch (error) {
+      console.error('Error loading question types:', error);
+      dispatch(showNotification({
+        message: 'Lỗi khi tải loại câu hỏi: ' + error.message,
+        type: 'error'
+      }));
+    } finally {
+      setQuestionTypesLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (open && section) {
@@ -88,7 +106,7 @@ export default function AddQuestionDialog({
         max_score: 10
       });
     }
-  }, [open, section]);
+  }, [open, section, filters.questionType]);
 
   useEffect(() => {
     applyFilters();
@@ -98,7 +116,16 @@ export default function AddQuestionDialog({
     setQuestionsLoading(true);
     try {
       console.log('[AddQuestionDialog] Fetching questions for skill:', section.skill_type_id);
-      const result = await examApi.getQuestionsBySkill(section.skill_type_id, 100);
+      const params = {
+        skill_type_id: section.skill_type_id,
+        limit: 100,
+        page: 1
+      };
+      // Add question type filter if selected
+      if (filters.questionType && filters.questionType !== 'all') {
+        params.question_type_code = filters.questionType;
+      }
+      const result = await examApi.getQuestions(params);
       console.log('[AddQuestionDialog] Response:', result);
       
       if (result.success && result.data) {
@@ -138,13 +165,7 @@ export default function AddQuestionDialog({
       filtered = filtered.filter(q => q.difficulty === filters.difficulty);
     }
 
-    // Question type filter
-    if (filters.questionType !== 'all') {
-      filtered = filtered.filter(q => 
-        q.questionType?.code === filters.questionType ||
-        q.question_type === filters.questionType
-      );
-    }
+    // Note: Question type filter is done on backend via API, not here
 
     setFilteredQuestions(filtered);
   };
@@ -240,6 +261,7 @@ export default function AddQuestionDialog({
                     value={filters.questionType}
                     label="Loại câu hỏi"
                     onChange={(e) => handleFilterChange('questionType', e.target.value)}
+                    disabled={questionTypesLoading}
                   >
                     {questionTypes.map(type => (
                       <MenuItem key={type.value} value={type.value}>

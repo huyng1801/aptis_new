@@ -20,8 +20,16 @@ import {
  * Example: "What is your hobby?\n\nWrite about your hobby (20-30 words):\nWhat do you like to do in your free time?"
  */
 const WritingFormFillingForm = ({ questionData, onChange, onValidate }) => {
-  const [formContent, setFormContent] = React.useState(questionData?.content || questionData?.formContent || '');
-  const [timeLimit, setTimeLimit] = React.useState(questionData?.time_limit || 10);
+  const parseContent = (content) => {
+    if (!content) return '';
+    try {
+      const parsed = JSON.parse(content);
+      return parsed.content || content;
+    } catch (e) {
+      return content;
+    }
+  };
+  const [formContent, setFormContent] = React.useState(parseContent(questionData?.content || questionData?.formContent || ''));
   const [errors, setErrors] = React.useState({});
 
   const validateForm = () => {
@@ -38,11 +46,6 @@ const WritingFormFillingForm = ({ questionData, onChange, onValidate }) => {
       }
     }
     
-    // Check time limit
-    if (timeLimit < 5 || timeLimit > 15) {
-      newErrors.timeLimit = 'Thời gian nên từ 5-15 phút';
-    }
-    
     setErrors(newErrors);
     
     const isValid = Object.keys(newErrors).length === 0;
@@ -51,7 +54,6 @@ const WritingFormFillingForm = ({ questionData, onChange, onValidate }) => {
     if (isValid && onChange) {
       const formData = {
         content: formContent.trim(),
-        timeLimit: timeLimit,
         type: 'writing_form_filling'
       };
       onChange(JSON.stringify(formData));
@@ -105,18 +107,6 @@ Write about your hobby (20-30 words):
 What do you like to do in your free time?
 
 Write your answer here:`}
-      />
-
-      {/* Time Limit */}
-      <TextField
-        type="number"
-        label="Thời gian (phút)"
-        value={timeLimit}
-        onChange={(e) => setTimeLimit(parseInt(e.target.value) || 10)}
-        error={!!errors.timeLimit}
-        helperText={errors.timeLimit}
-        inputProps={{ min: 5, max: 15 }}
-        sx={{ mb: 2, width: '200px' }}
       />
 
       {/* Preview */}

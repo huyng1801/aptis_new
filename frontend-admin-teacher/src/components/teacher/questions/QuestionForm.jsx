@@ -126,7 +126,7 @@ export default function QuestionForm({
   initialData = {},
   onSubmit,
   onBack,
-  isEditing = false
+  isEdit = false
 }) {
   const [questionContent, setQuestionContent] = useState(initialData.content || '');
   const [mediaUrl, setMediaUrl] = useState(initialData.media_url || '');
@@ -149,11 +149,18 @@ export default function QuestionForm({
     validationSchema: questionSchema,
     enableReinitialize: false, // Disable to prevent infinite loops
     onSubmit: async (values) => {
+      // For Writing and Speaking, always set duration_seconds to null
+      const questionCode = selectedQuestionType?.code;
+      const isSpeakingOrWriting = [
+        'SPEAKING_INTRO', 'SPEAKING_DISCUSSION', 'SPEAKING_DESCRIPTION', 'SPEAKING_COMPARISON',
+        'WRITING_SHORT', 'WRITING_FORM', 'WRITING_LONG', 'WRITING_EMAIL'
+      ].includes(questionCode);
+      
       const submissionData = {
         ...values,
         content: questionContent,
         media_url: mediaUrl,
-        duration_seconds: hasDuration ? duration * 60 : null
+        duration_seconds: isSpeakingOrWriting ? null : (hasDuration ? duration * 60 : null)
       };
       
       try {
@@ -323,39 +330,49 @@ export default function QuestionForm({
 
 
 
-          {/* Duration */}
-          <Grid item xs={12}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={hasDuration}
-                  onChange={(e) => setHasDuration(e.target.checked)}
-                />
-              }
-              label="Giới hạn thời gian làm bài"
-            />
+          {/* Duration - Only show for Reading and Listening, not for Speaking and Writing */}
+          {(() => {
+            const questionCode = selectedQuestionType?.code;
+            const isSpeakingOrWriting = [
+              'SPEAKING_INTRO', 'SPEAKING_DISCUSSION', 'SPEAKING_DESCRIPTION', 'SPEAKING_COMPARISON',
+              'WRITING_SHORT', 'WRITING_FORM', 'WRITING_LONG', 'WRITING_EMAIL'
+            ].includes(questionCode);
             
-            {hasDuration && (
-              <Box sx={{ ml: 4, mt: 2 }}>
-                <Typography gutterBottom>
-                  Thời gian: {duration} phút
-                </Typography>
-                <Slider
-                  value={duration}
-                  onChange={(e, value) => setDuration(value)}
-                  min={1}
-                  max={30}
-                  step={1}
-                  marks={[
-                    { value: 1, label: '1 phút' },
-                    { value: 10, label: '10 phút' },
-                    { value: 20, label: '20 phút' },
-                    { value: 30, label: '30 phút' }
-                  ]}
-                />
-              </Box>
-            )}
-          </Grid>
+            return !isSpeakingOrWriting;
+          })() && (
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={hasDuration}
+                    onChange={(e) => setHasDuration(e.target.checked)}
+                  />
+                }
+                label="Giới hạn thời gian làm bài"
+              />
+              
+              {hasDuration && (
+                <Box sx={{ ml: 4, mt: 2 }}>
+                  <Typography gutterBottom>
+                    Thời gian: {duration} phút
+                  </Typography>
+                  <Slider
+                    value={duration}
+                    onChange={(e, value) => setDuration(value)}
+                    min={1}
+                    max={30}
+                    step={1}
+                    marks={[
+                      { value: 1, label: '1 phút' },
+                      { value: 10, label: '10 phút' },
+                      { value: 20, label: '20 phút' },
+                      { value: 30, label: '30 phút' }
+                    ]}
+                  />
+                </Box>
+              )}
+            </Grid>
+          )}
         </Grid>
       </Paper>
 
@@ -389,7 +406,7 @@ export default function QuestionForm({
             size="large"
             title={!(typeof questionContent === 'string' && questionContent.trim()) ? 'Vui lòng điền nội dung câu hỏi' : ''}
           >
-            {isEditing ? 'Cập nhật câu hỏi' : 'Tiếp tục'}
+            {isEdit ? 'Cập nhật câu hỏi' : 'Tiếp tục'}
           </Button>
           {!(typeof questionContent === 'string' && questionContent.trim()) && (
             <Typography variant="caption" color="error" sx={{ mt: 1 }}>

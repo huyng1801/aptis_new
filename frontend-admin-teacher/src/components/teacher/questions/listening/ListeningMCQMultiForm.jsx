@@ -23,7 +23,7 @@ import { questionApi } from '../../../../services/questionService';
  * Listening MCQ Multiple Questions Form - Part 4 của Listening skill
  * Nhiều câu hỏi liên quan đến cùng một đoạn audio
  */
-export default function ListeningMCQMultiForm({ content, onChange }) {
+export default function ListeningMCQMultiForm({ content, onChange, isEdit = false }) {
   const [title, setTitle] = useState('');
   const [audioFile, setAudioFile] = useState(null);
   const [audioUrl, setAudioUrl] = useState('');

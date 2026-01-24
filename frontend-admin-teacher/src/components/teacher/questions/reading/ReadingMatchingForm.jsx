@@ -57,10 +57,7 @@ export default function ReadingMatchingForm({ content, onChange }) {
       newErrors.instructions = 'Hướng dẫn làm bài không được để trống';
     }
     
-    // Check passage
-    if (!passage.trim()) {
-      newErrors.passage = 'Đoạn văn giới thiệu không được để trống';
-    }
+    // Không cần đoạn văn giới thiệu
     
     // Check persons - filter by text content only
     const validPersons = persons.filter(person => person.text && person.text.trim());
@@ -94,7 +91,6 @@ export default function ReadingMatchingForm({ content, onChange }) {
     if (isValid && onChange) {
       const formData = {
         instructions: instructions.trim(),
-        passage: passage.trim(),
         persons: persons.filter(p => p.text && p.text.trim()),
         questions: questions.filter(q => q.text && q.text.trim()),
         type: 'reading_matching'
@@ -205,19 +201,7 @@ export default function ReadingMatchingForm({ content, onChange }) {
         placeholder="Four people share their feelings about reading books. Read their answers and answer the questions below."
       />
 
-      {/* Passage */}
-      <TextField
-        fullWidth
-        label="Đoạn văn giới thiệu"
-        value={passage}
-        onChange={(e) => setPassage(e.target.value)}
-        multiline
-        rows={2}
-        error={!!errors.passage}
-        helperText={errors.passage}
-        sx={{ mb: 3 }}
-        placeholder="Giới thiệu ngắn về bối cảnh hoặc chủ đề..."
-      />
+      {/* Không cần đoạn văn giới thiệu */}
 
       {/* Persons */}
       <Typography variant="subtitle1" gutterBottom>

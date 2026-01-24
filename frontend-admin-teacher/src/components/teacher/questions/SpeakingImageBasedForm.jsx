@@ -25,7 +25,7 @@ import { CloudUpload, Delete, Image as ImageIcon, Add } from '@mui/icons-materia
  * Component đặc biệt cho SPEAKING_DESCRIPTION và SPEAKING_COMPARISON
  * 1 câu hỏi chính có ảnh + 2 câu hỏi con không có ảnh (cùng tham chiếu ảnh của câu chính)
  */
-export default function SpeakingImageBasedForm({ questionType, initialData, onSubmit, onBack }) {
+export default function SpeakingImageBasedForm({ questionType, initialData, onSubmit, onBack, isEdit = false }) {
   const isSpeakingDescription = questionType?.code === 'SPEAKING_DESCRIPTION';
   const isSpeakingComparison = questionType?.code === 'SPEAKING_COMPARISON';
   

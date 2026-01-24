@@ -297,14 +297,7 @@ export default function ReportsPage() {
           >
             <Visibility />
           </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => handleDownload(row)}
-            color="success"
-            title="Tải xuống"
-          >
-            <GetApp />
-          </IconButton>
+
         </Box>
       )
     }
@@ -325,13 +318,7 @@ export default function ReportsPage() {
           >
             Làm mới
           </Button>
-          <Button
-            variant="contained"
-            onClick={() => setExportOpen(true)}
-            startIcon={<GetApp />}
-          >
-            Xuất báo cáo
-          </Button>
+          
         </Box>
       </Box>
 

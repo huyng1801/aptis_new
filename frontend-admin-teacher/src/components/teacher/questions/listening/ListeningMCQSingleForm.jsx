@@ -22,7 +22,7 @@ import { questionApi } from '../../../../services/questionService';
  * Listening MCQ Single Question Form - Part 1 của Listening skill
  * Chỉ 1 câu hỏi với nhiều lựa chọn
  */
-export default function ListeningMCQSingleForm({ content, onChange }) {
+export default function ListeningMCQSingleForm({ content, onChange, isEdit = false }) {
   const [title, setTitle] = useState('');
   const [audioFile, setAudioFile] = useState(null);
   const [audioUrl, setAudioUrl] = useState('');
@@ -52,8 +52,11 @@ export default function ListeningMCQSingleForm({ content, onChange }) {
       newErrors.title = 'Tiêu đề không được để trống';
     }
     
-    // Check audio file - allow either audioUrl OR audioFile
-    if (!audioUrl && !audioFile) {
+    // Check audio file - allow either audioUrl OR audioFile (File object or string)
+    const hasAudioUrl = audioUrl && typeof audioUrl === 'string' && audioUrl.trim();
+    const hasAudioFile = audioFile && (audioFile instanceof File || typeof audioFile === 'object');
+    
+    if (!hasAudioUrl && !hasAudioFile) {
       newErrors.audio = 'Vui lòng chọn file audio';
     }
     
@@ -88,6 +91,7 @@ export default function ListeningMCQSingleForm({ content, onChange }) {
         }],
         isMultiple: false, // Single choice MCQ
         audioUrl: audioUrl,
+        audioFile: audioFile, // Include file object for upload
         instructions: instructions.trim(),
         title: title.trim()
       };
@@ -97,7 +101,7 @@ export default function ListeningMCQSingleForm({ content, onChange }) {
     }
     
     return isValid;
-  }, [title, audioUrl, question, options, correctAnswer, instructions, onChange]);
+  }, [title, audioUrl, audioFile, question, options, correctAnswer, instructions, onChange]);
 
   // Handle option changes
   const handleOptionChange = (index, value) => {

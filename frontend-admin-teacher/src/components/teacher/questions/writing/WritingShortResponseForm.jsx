@@ -21,7 +21,6 @@ import { CheckCircle, Warning, Edit } from '@mui/icons-material';
 export default function WritingShortResponseForm({ content, onChange }) {
   const [questionContent, setQuestionContent] = useState('');
   const [instructions, setInstructions] = useState('Fill in the form with basic information. Answer each question with a few words.');
-  const [timeLimit, setTimeLimit] = useState(10);
   
   // Error handling states
   const [errors, setErrors] = useState({});
@@ -30,8 +29,14 @@ export default function WritingShortResponseForm({ content, onChange }) {
   // Parse existing content if available
   useEffect(() => {
     if (content) {
-      // Seed stores as simple content string
-      setQuestionContent(content || '');
+      try {
+        // Try to parse if it's JSON (from form submission)
+        const parsed = JSON.parse(content);
+        setQuestionContent(parsed.content || content);
+      } catch (e) {
+        // If it's not JSON, use it as is (from seed)
+        setQuestionContent(content || '');
+      }
     }
   }, [content]);
 
@@ -55,11 +60,6 @@ export default function WritingShortResponseForm({ content, onChange }) {
       newErrors.instructions = 'Hướng dẫn không được để trống';
     }
     
-    // Check time limit
-    if (timeLimit < 5 || timeLimit > 20) {
-      newErrors.timeLimit = 'Thời gian nên từ 5-20 phút';
-    }
-    
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     setIsValidated(isValid);
@@ -69,14 +69,13 @@ export default function WritingShortResponseForm({ content, onChange }) {
       const formData = {
         content: questionContent.trim(),
         instructions: instructions.trim(),
-        timeLimit: timeLimit,
         type: 'writing_form_filling'
       };
       onChange(JSON.stringify(formData));
     }
     
     return isValid;
-  }, [questionContent, instructions, timeLimit, onChange]);
+  }, [questionContent, instructions, onChange]);
 
   // Remove auto-validation useEffect - causes infinite loops
   // Data is sent to parent on every change (via onChange)
@@ -125,18 +124,6 @@ export default function WritingShortResponseForm({ content, onChange }) {
         error={!!errors.instructions}
         helperText={errors.instructions}
         sx={{ mb: 2 }}
-      />
-
-      {/* Time Limit */}
-      <TextField
-        type="number"
-        label="Thời gian (phút)"
-        value={timeLimit}
-        onChange={(e) => setTimeLimit(parseInt(e.target.value) || 10)}
-        error={!!errors.timeLimit}
-        helperText={errors.timeLimit}
-        inputProps={{ min: 5, max: 20 }}
-        sx={{ mb: 2, width: '200px' }}
       />
 
       {/* Preview */}
